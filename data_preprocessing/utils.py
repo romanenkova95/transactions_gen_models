@@ -1,18 +1,31 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-def preprocess_features(data, mcc, client_id, date, date_format=None):
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+def preprocess_features(data, mcc, client_id, date, amount, date_format=None):
     '''
     data - pd.DataFrame with transactions data
-    mcc : mcc-column-name, 
-    client_id : client-id-column-name, 
+    mcc : mcc column name, 
+    client_id : client id column name, 
+    date : datetime column name,
+    amount : amount column name,
+    date_format - datetime format that is used in the dataset (for example, 26OCT17:00:00:00 -'%d%b%y:%H:%M:%S'); 
+    if None, date is the number of the day in chronological order, starting from the specified date
     '''
-    data = data.rename(columns={mcc : 'mcc', client_id: 'client_id'})
+    data = data.rename(columns={mcc : 'mcc', client_id: 'client_id', date: 'datetime', amount: 'amount'})
+
+    if date_format is not None:
+        data['datetime'] = data['datetime'].apply(lambda x: pd.to_datetime(x, format=date_format))
 
     enc = LabelEncoder()
     data['mcc'] = enc.fit_transform(data['mcc'])
 
-    df = data.groupby('client_id')['mcc'].agg(lambda x: list(x))
+    df = pd.DataFrame(
+        data.groupby('client_id')[['datetime', 'mcc', 'amount']].aggregate(
+            lambda x: list(x)).aggregate(lambda x: sorted(list(zip(*x)), key=lambda x: x[0]), axis=1))
+    df = df.rename(columns={0 : 'transactions'})
     df = pd.DataFrame(df)
     df.reset_index(inplace=True)
     
