@@ -24,6 +24,7 @@ import random
 from ptls.frames.inference_module import InferenceModule
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from matplotlib import pyplot as plt
 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import wandb
@@ -218,10 +219,12 @@ def train_and_eval():
         cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, 
                                       display_labels=[0, 1])
+        plt.switch_backend('agg')
         cmd = disp.plot()
 
         logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc, 'Test accuracy' : acc})
         logger.experiment.log({'Confusion matrix, test': wandb.Image(cmd.figure_)})
+        plt.close()
 
 
 if __name__ == '__main__':
