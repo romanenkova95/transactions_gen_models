@@ -65,13 +65,13 @@ class RNNclassifier(torch.nn.Module):
             activation
         )
 
-
     def forward(self, input):
         output, (h_n, c_n) = self.backbone(input.payload)
         # output, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]
         h_n = h_n.view(batch_size, -1)
         return self.linear(h_n)
+
 
 def preprocess_data():
     df = pd.read_csv(base_path / 'churn' / 'train.csv')
@@ -166,13 +166,13 @@ def train_and_eval():
 
         model = RNNclassifier(input_size=cfg['encoder']['hidden_size'], 
                               hidden_size=cfg['rnn']['hidden_size'],
-                              num_classes=2, num_layers=1, bidirectional=cfg['rnn']['bidirectional'])
+                              num_classes=2, num_layers=1, bidirectional=bool(cfg['rnn']['bidirectional']))
 
         sup_module = SequenceToTarget(
             seq_encoder=seq_encoder,
             head=model,
             loss=torch.nn.NLLLoss(),
-            metric_list=[torchmetrics.Accuracy(), torchmetrics.F1Score(), torchmetrics.AUROC()],
+            metric_list=[torchmetrics.Accuracy(), torchmetrics.F1Score()],
             optimizer_partial=partial(torch.optim.AdamW, lr=1e-3, weight_decay=1e-3),
             lr_scheduler_partial=partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=5),
         )

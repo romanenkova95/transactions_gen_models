@@ -27,5 +27,5 @@ parameters:
       hidden_size:
         values: [4, 6, 8, 10, 12, 16]
       bidirectional:
-        value: [False, True]
+        values: [0, 1]
           
