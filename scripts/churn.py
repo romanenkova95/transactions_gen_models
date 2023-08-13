@@ -22,7 +22,8 @@ from ptls.frames import PtlsDataModule
 from ptls.data_load.utils import collate_feature_dict
 import random
 from ptls.frames.inference_module import InferenceModule
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import wandb
@@ -212,8 +213,15 @@ def train_and_eval():
 
         fscore = f1_score(y_true, y_pred)
         auroc = roc_auc_score(y_true, df_predict['log_prob_0001'].values)
+        acc = accuracy_score(y_true, y_pred)
 
-        logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc})
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, 
+                                      display_labels=[0, 1])
+        
+
+        logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc, 'Test accuracy' : acc})
+        logger.experiment.log({'Confusion matrix, test': wandb.Image(disp.figure_)})
 
 
 if __name__ == '__main__':
