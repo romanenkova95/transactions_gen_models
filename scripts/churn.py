@@ -67,7 +67,7 @@ class RNNclassifier(torch.nn.Module):
 
 
     def forward(self, input):
-        output, (h_n, c_n) = self.lstm(input.payload)
+        output, (h_n, c_n) = self.backbone(input.payload)
         # output, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]
         h_n = h_n.view(batch_size, -1)
@@ -177,11 +177,11 @@ def train_and_eval():
             lr_scheduler_partial=partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=5),
         )
 
-        logger = pl_loggers.WandbLogger(name=cfg['experiment']['dataset'])
+        logger = pl_loggers.WandbLogger(name=cfg['experiment']['dataset'] + '_' + cfg['experiment']['model'] )
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=False, mode="max")
 
         trainer = pl.Trainer(
-            max_epochs=100,
+            max_epochs=cfg['experiment']['n_epochs'],
             gpus=1 if torch.cuda.is_available() else 0,
             logger=logger,
             callbacks=[early_stop_callback],
@@ -211,7 +211,7 @@ def train_and_eval():
         y_true = df_predict['target_flag'].values
 
         fscore = f1_score(y_true, y_pred)
-        auroc = roc_auc_score(y_true, df_predict[[f'log_prob_{i:04d}' for i in range(1)]].values)
+        auroc = roc_auc_score(y_true, df_predict['log_prob_0001'].values)
 
         logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc})
 
