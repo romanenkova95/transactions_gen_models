@@ -218,10 +218,10 @@ def train_and_eval():
         cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, 
                                       display_labels=[0, 1])
-        
+        cmd = disp.plot()
 
         logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc, 'Test accuracy' : acc})
-        logger.experiment.log({'Confusion matrix, test': wandb.Image(disp.figure_)})
+        logger.experiment.log({'Confusion matrix, test': wandb.Image(cmd.figure_)})
 
 
 if __name__ == '__main__':
