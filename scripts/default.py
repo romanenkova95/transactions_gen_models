@@ -22,7 +22,7 @@ from ptls.frames import PtlsDataModule
 from ptls.data_load.utils import collate_feature_dict
 import random
 from ptls.frames.inference_module import InferenceModule
-from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
+from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, roc_curve
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from matplotlib import pyplot as plt
 
@@ -168,7 +168,7 @@ def train_and_eval():
         )
 
         logger = pl_loggers.WandbLogger(name=cfg['experiment']['dataset'] + '_' + cfg['experiment']['model'] )
-        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=False, mode="max")
+        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=2, verbose=False, mode="min")
 
         trainer = pl.Trainer(
             max_epochs=cfg['experiment']['n_epochs'],
@@ -197,11 +197,16 @@ def train_and_eval():
         df_predict = trainer.predict(inf_module, inference_dl)
         df_predict = pd.concat(df_predict, axis=0)
 
-        y_pred = df_predict[[f'prob_{i:04d}' for i in range(2)]].values.argmax(axis=1)
+        # y_pred = df_predict[[f'prob_{i:04d}' for i in range(2)]].values.argmax(axis=1)
         y_true = df_predict['target'].values
+        
+        auroc = roc_auc_score(y_true, df_predict['prob_0001'].values)
+        fpr, tpr, thresholds = roc_curve(y_true, df_predict['prob_0001'].values, pos_label=1)
+
+        th = thresholds[np.argmax(tpr-fpr)]
+        y_pred =  df_predict['prob_0001'].values > th
 
         fscore = f1_score(y_true, y_pred)
-        auroc = roc_auc_score(y_true, df_predict['prob_0001'].values)
         acc = accuracy_score(y_true, y_pred)
 
         cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
@@ -210,7 +215,9 @@ def train_and_eval():
         plt.switch_backend('agg')
         cmd = disp.plot()
 
-        logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc, 'Test accuracy' : acc})
+        logger.experiment.log({'Test f1-score, th={:.3f}'.format(th): fscore, 
+                               'Test AUROC': auroc, 
+                               'Test accuracy, th={:.3f}'.format(th) : acc})
         logger.experiment.log({'Confusion matrix, test': wandb.Image(cmd.figure_)})
 
         plt.close()
