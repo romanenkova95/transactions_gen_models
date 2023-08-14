@@ -123,9 +123,16 @@ def preprocess_data():
 
 def train_and_eval():
 
-    with wandb.init():
+    with wandb.init() as run:
 
         cfg = wandb.config
+
+        seed = 42
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.cuda.manual_seed_all(seed)
 
         dataset_train, dataset_valid, dataset_test = preprocess_data()
 
@@ -179,7 +186,11 @@ def train_and_eval():
         
         trainer.fit(sup_module, sup_data)
 
-        torch.save(sup_module.state_dict(), '../notebooks/saves/default_lstm.pth')
+        ds = cfg['experiment']['dataset']
+        mdl = cfg['experiment']['model']
+
+        torch.save(sup_module.state_dict(), 
+                   f'../notebooks/saves/{ds}_{mdl}_{run.name}.pth')
 
         inference_dl = torch.utils.data.DataLoader(
             dataset=dataset_test,
