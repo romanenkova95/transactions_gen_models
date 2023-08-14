@@ -227,9 +227,9 @@ def train_and_eval():
         plt.switch_backend('agg')
         cmd = disp.plot()
 
-        logger.experiment.log({'Test f1-score, th={:.3f}'.format(th): fscore, 
+        logger.experiment.log({'Test f1-score': fscore, 
                                'Test AUROC': auroc, 
-                               'Test accuracy, th={:.3f}'.format(th) : acc})
+                               'Test accuracy' : acc})
         logger.experiment.log({'Confusion matrix, test': wandb.Image(cmd.figure_)})
 
         plt.close()
