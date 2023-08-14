@@ -161,8 +161,8 @@ def train_and_eval():
             seq_encoder=seq_encoder,
             head=model,
             loss=torch.nn.CrossEntropyLoss(weight=torch.tensor([1., 25.])), 
-            metric_list=[torchmetrics.Accuracy(), 
-                        torchmetrics.F1Score()],
+            metric_list=[torchmetrics.Accuracy(task='binary'), 
+                        torchmetrics.F1Score(task='binary')],
             optimizer_partial=partial(torch.optim.Adam, lr=1e-3, weight_decay=1e-2),
             lr_scheduler_partial=partial(torch.optim.lr_scheduler.StepLR, step_size=20, gamma=0.5),
         )
@@ -178,6 +178,8 @@ def train_and_eval():
             check_val_every_n_epoch=10)
         
         trainer.fit(sup_module, sup_data)
+
+        torch.save(sup_module.state_dict(), '../notebooks/saves/default_lstm.pth')
 
         inference_dl = torch.utils.data.DataLoader(
             dataset=dataset_test,
@@ -210,6 +212,7 @@ def train_and_eval():
 
         logger.experiment.log({'Test f1-score': fscore, 'Test AUROC': auroc, 'Test accuracy' : acc})
         logger.experiment.log({'Confusion matrix, test': wandb.Image(cmd.figure_)})
+
         plt.close()
 
 
