@@ -12,7 +12,7 @@ from ptls.data_load.datasets import MemoryMapDataset
 from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import loggers as pl_loggers
 
-import torchmetrics
+from torchmetrics import Accuracy, F1Score, Precision, Recall
 from ptls.nn import TrxEncoder, RnnSeqEncoder
 
 from functools import partial
@@ -168,8 +168,10 @@ def train_and_eval():
             seq_encoder=seq_encoder,
             head=model,
             loss=torch.nn.CrossEntropyLoss(weight=torch.tensor([1., 25.])), 
-            metric_list=[torchmetrics.Accuracy(task='binary'), 
-                        torchmetrics.F1Score(task='binary')],
+            metric_list=[Accuracy(task='binary', num_classes=2, average='macro'), 
+                        F1Score(task='binary', num_classes=2, average='macro'),
+                        Precision(task='binary', num_classes=2, average='macro'),
+                        Recall(task='binary', num_classes=2, average='macro')],
             optimizer_partial=partial(torch.optim.Adam, lr=1e-3, weight_decay=1e-2),
             lr_scheduler_partial=partial(torch.optim.lr_scheduler.StepLR, step_size=20, gamma=0.5),
         )
@@ -188,7 +190,6 @@ def train_and_eval():
 
         ds = cfg['experiment']['dataset']
         mdl = cfg['experiment']['model']
-
         torch.save(sup_module.state_dict(), 
                    f'../notebooks/saves/{ds}_{mdl}_{run.name}.pth')
 
