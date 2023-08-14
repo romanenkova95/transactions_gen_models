@@ -45,7 +45,7 @@ class RNNclassifier(torch.nn.Module):
 
         super().__init__()
 
-        self.backbone = torch.nn.LSTM(
+        self.backbone = torch.nn.GRU(
                     input_size=input_size,
                     hidden_size=hidden_size,
                     num_layers=num_layers,
@@ -68,8 +68,8 @@ class RNNclassifier(torch.nn.Module):
         )
 
     def forward(self, input):
-        output, (h_n, c_n) = self.backbone(input.payload)
-        # output, h_n = self.backbone(input.payload)
+        # output, (h_n, c_n) = self.backbone(input.payload)
+        output, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]
         h_n = h_n.view(batch_size, -1)
         return self.linear(h_n)
