@@ -110,7 +110,19 @@ def preprocess_data():
     df_data_valid = pd.merge(df_data_valid, df_target, on='user_id')
     df_data_test = pd.merge(df_data_test, df_target, on='user_id')
 
-    df_data_train = df_data_train.to_dict(orient='records')
+    df_data_train_ = pd.DataFrame(columns=df_data_train.columns)
+
+    pos_samples = list(df_data_train['user_id'][df_data_train['target'] == 1])
+    neg_samples = list(df_data_train['user_id'][df_data_train['target'] == 0])
+
+    for _ in range(2640):
+        pos_uid = np.random.choice(pos_samples)
+        neg_uid = np.random.choice(neg_samples)
+
+        df_data_train_ = df_data_train_.append(df_data_train[df_data_train['user_id'] == pos_uid])
+        df_data_train_ = df_data_train_.append(df_data_train[df_data_train['user_id'] == neg_uid])
+
+    df_data_train = df_data_train_.to_dict(orient='records')
     df_data_valid = df_data_valid.to_dict(orient='records')
     df_data_test = df_data_test.to_dict(orient='records')
 
@@ -167,7 +179,7 @@ def train_and_eval():
         sup_module = SequenceToTarget(
             seq_encoder=seq_encoder,
             head=model,
-            loss=torch.nn.CrossEntropyLoss(weight=torch.tensor([1., 25.])), 
+            loss=torch.nn.CrossEntropyLoss(), 
             metric_list=[Accuracy(task='binary', num_classes=2, average='macro'), 
                         F1Score(task='binary', num_classes=2, average='macro'),
                         Precision(task='binary', num_classes=2, average='macro'),

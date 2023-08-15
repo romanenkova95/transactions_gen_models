@@ -12,7 +12,7 @@ from ptls.data_load.datasets import MemoryMapDataset
 from sklearn.preprocessing import LabelEncoder
 from pytorch_lightning import loggers as pl_loggers
 
-import torchmetrics
+from torchmetrics import Accuracy, F1Score, Precision, Recall
 from ptls.nn import TrxEncoder, RnnSeqEncoder
 
 from functools import partial
@@ -22,7 +22,7 @@ from ptls.frames import PtlsDataModule
 from ptls.data_load.utils import collate_feature_dict
 import random
 from ptls.frames.inference_module import InferenceModule
-from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
+from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, roc_curve
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from matplotlib import pyplot as plt
 
@@ -45,7 +45,7 @@ class RNNclassifier(torch.nn.Module):
 
         super().__init__()
 
-        self.backbone = torch.nn.LSTM(
+        self.backbone = torch.nn.GRU(
                     input_size=input_size,
                     hidden_size=hidden_size,
                     num_layers=num_layers,
@@ -68,8 +68,8 @@ class RNNclassifier(torch.nn.Module):
         )
 
     def forward(self, input):
-        output, (h_n, c_n) = self.backbone(input.payload)
-        # output, h_n = self.backbone(input.payload)
+       # output, (h_n, c_n) = self.backbone(input.payload)
+        output, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]
         h_n = h_n.view(batch_size, -1)
         return self.linear(h_n)
@@ -124,22 +124,20 @@ def preprocess_data():
     dataset_valid = MemoryMapDataset(df_data_valid)
     dataset_test = MemoryMapDataset(df_data_test)
 
-    sup_data = PtlsDataModule(
-        train_data=SeqToTargetDataset(dataset_train, target_col_name='target_flag', target_dtype=torch.long),
-        valid_data=SeqToTargetDataset(dataset_valid, target_col_name='target_flag', target_dtype=torch.long),
-        test_data=SeqToTargetDataset(dataset_test, target_col_name='target_flag', target_dtype=torch.long),
-        train_batch_size=128,
-        valid_batch_size=1024,
-        train_num_workers=8,
-    )
-
     return dataset_train, dataset_valid, dataset_test
 
 def train_and_eval():
 
-    with wandb.init():
+    with wandb.init() as run:
 
         cfg = wandb.config
+        
+        seed = 42
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.cuda.manual_seed_all(seed)
 
         dataset_train, dataset_valid, dataset_test = preprocess_data()
 
@@ -174,13 +172,16 @@ def train_and_eval():
             seq_encoder=seq_encoder,
             head=model,
             loss=torch.nn.NLLLoss(),
-            metric_list=[torchmetrics.Accuracy(), torchmetrics.F1Score()],
+            metric_list=[Accuracy(task='binary', num_classes=2, average='macro'), 
+                        F1Score(task='binary', num_classes=2, average='macro'),
+                        Precision(task='binary', num_classes=2, average='macro'),
+                        Recall(task='binary', num_classes=2, average='macro')],
             optimizer_partial=partial(torch.optim.AdamW, lr=1e-3, weight_decay=1e-3),
             lr_scheduler_partial=partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=5),
         )
 
         logger = pl_loggers.WandbLogger(name=cfg['experiment']['dataset'] + '_' + cfg['experiment']['model'] )
-        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10, verbose=False, mode="max")
+        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=2, verbose=False, mode="min")
 
         trainer = pl.Trainer(
             max_epochs=cfg['experiment']['n_epochs'],
@@ -190,6 +191,11 @@ def train_and_eval():
             check_val_every_n_epoch=10)
         
         trainer.fit(sup_module, sup_data)
+
+        ds = cfg['experiment']['dataset']
+        mdl = cfg['experiment']['model']
+        torch.save(sup_module.state_dict(), 
+                   f'../notebooks/saves/{ds}_{mdl}_{run.name}.pth')
 
         inference_dl = torch.utils.data.DataLoader(
             dataset=dataset_test,
@@ -209,8 +215,13 @@ def train_and_eval():
 
         df_predict[['log_prob_0000', 'log_prob_0001']] = df_predict[['log_prob_0000', 'log_prob_0001']].apply(np.exp, axis=0)
 
-        y_pred = df_predict[[f'log_prob_{i:04d}' for i in range(2)]].values.argmax(axis=1)
         y_true = df_predict['target_flag'].values
+
+        auroc = roc_auc_score(y_true, df_predict['log_prob_0001'].values)
+        fpr, tpr, thresholds = roc_curve(y_true, df_predict['log_prob_0001'].values, pos_label=1)
+
+        th = thresholds[np.argmax(tpr-fpr)]
+        y_pred =  df_predict['log_prob_0001'].values > th
 
         fscore = f1_score(y_true, y_pred)
         auroc = roc_auc_score(y_true, df_predict['log_prob_0001'].values)
