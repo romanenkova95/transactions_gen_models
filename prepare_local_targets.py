@@ -5,30 +5,23 @@ import pandas as pd
 import argparse
 from data_preprocessing import utils
 
-def main(args: dict) -> str:
-    dataset = args["dataset"]
-    print(f"Dataset '{dataset}'")
-    
+def main(args: dict) -> None:
+    dataset = args["dataset"]    
     if dataset == "churn":
-        print("Reading")
         churn_raw = pd.read_csv(f'{args["path_to_raw_data"]}/{dataset}/train.csv')
         
-        print("Preprocessing features")
         features_df = utils.preprocess_features(
             churn_raw, "MCC", "cl_id", "TRDATETIME", "amount", date_format='%d%b%y:%H:%M:%S', churn_horizon_months = 1.
         )
-        print("Preprocessing targtes")
         targets_df = utils.preprocess_targets(churn_raw, "cl_id", "target_flag", "target_sum")
         
     elif dataset == "default":
         default_trans = pd.read_csv(f'{args["path_to_raw_data"]}/{dataset}/transactions_finetune.csv')
         default_target = pd.read_csv(f'{args["path_to_raw_data"]}/{dataset}/target_finetune.csv')
         
-        print("Preprocessing features")
         features_df = utils.preprocess_features(
             default_trans, "mcc_code", "user_id", "transaction_dttm", "transaction_amt", date_format='%Y-%m-%d %H:%M:%S'
         )
-        print("Preprocessing targtes")
         targets_df = utils.preprocess_targets(default_target, "user_id", "target")
 
         
@@ -39,20 +32,17 @@ def main(args: dict) -> str:
         raif_clients = pd.read_csv(
             f'{args["path_to_raw_data"]}/{dataset}/clients_last_2_fixed.csv', sep=";", engine="python", on_bad_lines='skip'
         )
-        print("Preprocessing features")
+        
         features_df = utils.preprocess_features(
             raif_trans, "mcc", "cnum", "purchdate", "amount", date_format='%Y-%m-%d %H:%M:%S'
         )
-        print("Preprocessing targtes")
         targets_df = utils.preprocess_targets(raif_clients, "cnum_", "gender", "age", "married_", "residenttype")
         
     else:
         raise ValueError(f"Unknown dataset name {dataset}.")
        
-    print("Meargning and saving")
     df_prepr = utils.merge(features_df, targets_df)
     utils.save_parquet(df_prepr, path_to_folder=args["path_to_save_folder"], dataset_name=args["dataset"])
-
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Prepare and local validation dataset.")
