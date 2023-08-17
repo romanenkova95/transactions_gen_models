@@ -50,7 +50,6 @@ class BestClassifier(torch.nn.Module):
         dropout: float = 0,
         bidirectional: bool = True,
         num_classes: int = 2,
-        logsoftmax: bool = False,
     ):
         super().__init__()
 
@@ -80,8 +79,6 @@ class BestClassifier(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(classifier_units, num_classes),
         )
-
-        self.logsoftmax = logsoftmax
 
     def forward(self, input):
         embs = input.payload  # (N, L, C)
@@ -164,7 +161,7 @@ class RNNclassifier(torch.nn.Module):
     ):
         super().__init__()
 
-        self.backbone = torch.nn.GRU(
+        self.backbone = torch.nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
@@ -186,8 +183,8 @@ class RNNclassifier(torch.nn.Module):
         )
 
     def forward(self, input):
-        # output, (h_n, c_n) = self.backbone(input.payload)
-        output, h_n = self.backbone(input.payload)
+        output, (h_n, c_n) = self.backbone(input.payload)
+        # output, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]
         h_n = h_n.view(batch_size, -1)
         return self.linear(h_n)
@@ -315,7 +312,15 @@ def train_and_eval():
             is_reduce_sequence=False,
         )
 
-        model = BestClassifier(input_size=cfg["encoder"]["hidden_size"])
+        # model = BestClassifier(
+        #     input_size=cfg["encoder"]["hidden_size"],
+        #     rnn_units=cfg["encoder"]["rnn_units"],
+        #     classifier_units=cfg["encoder"]["rnn_units"] // 2,
+        # )
+        model = RNNclassifier(input_size=cfg['encoder']['hidden_size'], 
+                              hidden_size=cfg['rnn']['hidden_size'],
+                              num_classes=2, num_layers=1, bidirectional=bool(cfg['rnn']['bidirectional']),
+                              logsoftmax=False)
 
         sup_module = SequenceToTarget(
             seq_encoder=seq_encoder,
@@ -328,9 +333,9 @@ def train_and_eval():
                 Recall(task="binary", num_classes=2, average="macro"),
                 AveragePrecision(task="binary", num_classes=2, average="macro"),
             ],
-            optimizer_partial=partial(torch.optim.Adam, lr=1e-3, weight_decay=1e-2),
+            optimizer_partial=partial(torch.optim.AdamW, lr=3e-4),
             lr_scheduler_partial=partial(
-                torch.optim.lr_scheduler.StepLR, step_size=20, gamma=0.5
+                torch.optim.lr_scheduler.StepLR, step_size=40, gamma=0.5
             ),
         )
 
