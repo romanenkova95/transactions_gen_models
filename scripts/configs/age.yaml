@@ -9,7 +9,7 @@ parameters:
   experiment:
     parameters:
       model: 
-        value: best
+        value: cnn
       dataset: 
         value: age
       n_epochs:
