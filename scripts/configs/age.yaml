@@ -1,0 +1,30 @@
+method: random
+
+metric:
+  name: F1Score
+  goal: maximize
+
+parameters:
+
+  experiment:
+    parameters:
+      model: 
+        value: best
+      dataset: 
+        value: age
+      n_epochs:
+        value: 100
+
+  encoder:
+    parameters:
+      hidden_size:
+        values: [64, 96, 112, 128]
+      mcc_out:
+        values: [4, 8, 10, 12, 14, 16]
+      # rnn_units:
+      #   values: [64, 80, 96, 112, 128, 160, 196]
+
+  cnn:
+    parameters:
+      kernel_size:
+        values: [4, 8, 12]
