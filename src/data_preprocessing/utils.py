@@ -26,7 +26,7 @@ def preprocess_features(data, mcc, client_id, date, amount, date_format=None):
 
     df = pd.DataFrame(
         data.groupby("client_id")[["datetime", "mcc", "amount"]]
-        .aggregate(lambda x: list(x))
+        .aggregate(list)
         .aggregate(lambda x: sorted(list(zip(*x)), key=lambda x: x[0]), axis=1)
     )
     df = df.rename(columns={0: "transactions"})

@@ -1,108 +1,111 @@
-import os
+from pathlib import Path
 import pickle
 
+from hydra.utils import instantiate
 from omegaconf import DictConfig
+
+import pandas as pd
 
 from ptls.preprocessing import PandasDataPreprocessor
 from ptls.frames import PtlsDataModule
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import CometLogger
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from sklearn.model_selection import train_test_split
 
 from src.coles import MyCoLES, MyColesDataset
 from src.utils.logging_utils import get_logger
-from src.temp import preprocessing
+
 
 logger = get_logger(name=__name__)
 
 
+def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
+    # Read data from csv
+    dataframe = pd.read_csv(
+        Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])
+    )
+    logger.info("dataframed initialized")
 
-def train_coles(
-    cfg_preprop: DictConfig, cfg_model: DictConfig, api_token: str
-) -> None:
-    # My method for data preprocessing
-    _, preproc_df = preprocessing(cfg_preprop, True)
-
-    preproc_df.drop(columns=['sample_label', 'target'], inplace=True)
-
-    dir_path    : str = cfg_preprop['dir_path']
     user_column : str = cfg_preprop['user_column']
-    dttm_column : str = cfg_preprop['transaction_dttm_column']
+    dttm_column : str = cfg_preprop['dttm_column']
     mcc_column  : str = cfg_preprop['mcc_column']
-    amt_column  : str = cfg_preprop['transaction_amt_column']
+    amt_column  : str = cfg_preprop['amt_column']
 
+    # Rename columns for the versatility
+    dataframe.rename(columns={
+        user_column: "user_id",
+        mcc_column: "mcc_code",
+        amt_column: "amount",
+        dttm_column: "timestamp"
+    }, inplace=True)
 
-    dir_coles = os.path.join(dir_path, 'coles')
+    # Define the pandas preprocessor. If it exists, loading from the path
+    # (if no, save to the path)
+    path_to_preprocessor = Path(cfg_preprop["coles"]["pandas_preprocessor"]["dir_path"])
+    if not path_to_preprocessor.exists():
+        logger.warning("Preprocessor directory does not exist. Creating")
+        path_to_preprocessor.mkdir(parents=True)
+    path_to_preprocessor = path_to_preprocessor.joinpath(
+        cfg_preprop["coles"]["pandas_preprocessor"]["name"]
+    )
 
-    if not os.path.exists(dir_coles):
-        logger.warning('Coles folder does not exist. Creating...')
-        os.mkdir(dir_coles)
-
-    if not os.path.exists(os.path.join(dir_coles, 'preprocessor.p')):
+    if not path_to_preprocessor.exists():
+        logger.info("Preprocessor was not saved, so the fitting process will be provided")
         preprocessor = PandasDataPreprocessor(
-            user_column,
-            dttm_column,
-            cols_category=[mcc_column, 'is_income'],
-            cols_numerical=[amt_column],
+            col_id="user_id",
+            col_event_time="timestamp",
+            event_time_transformation="none",
+            cols_category=["mcc_code"],
+            cols_numerical=["amount"],
             return_records=True
         )
-        logger.info('Fitting CoLES preprocessor')
-        dataset = preprocessor.fit_transform(preproc_df)
-        with open(os.path.join(dir_coles, 'preprocessor.p'), 'wb') as f:
-            pickle.dump(preprocessor, f)
+        dataset = preprocessor.fit_transform(dataframe)
+        with path_to_preprocessor.open('wb') as file:
+            pickle.dump(preprocessor, file)
     else:
-        with open(os.path.join(dir_coles, 'preprocessor.p'), 'rb') as f:
-            dataset = pickle.load(f).transform(preproc_df)
+        with path_to_preprocessor.open('rb') as file:
+            preprocessor: PandasDataPreprocessor = pickle.load(file)
+        dataset = preprocessor.transform(dataframe)
 
-    for i in range(cfg_model['num_iters']):
+    # train val splitting
+    train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
 
-        train, val = train_test_split(dataset, test_size=.2)
+    # Define our ColesDataset wrapper from the config
+    train_data: MyColesDataset = instantiate(cfg_model["dataset"], data=train)
+    val_data: MyColesDataset = instantiate(cfg_model["dataset"], data=val)
 
-        training_params: DictConfig = cfg_model['learning_params']
+    # Pytorch-lifestream datamodule for the model training and evaluation
+    datamodule: PtlsDataModule = instantiate(
+        cfg_model["datamodule"],
+        train_data=train_data,
+        valid_data=val_data
+    )
 
-        datamodule = PtlsDataModule(
-            train_data=MyColesDataset(train, cfg_model),
-            train_batch_size=training_params['train_batch_size'],
-            train_num_workers=training_params['train_num_workers'],
-            valid_data=MyColesDataset(val, cfg_model),
-            valid_batch_size=training_params['val_batch_size'],
-            valid_num_workers=training_params['val_num_workers']
-        )
+    # Define our CoLES wrapper from the config
+    model: MyCoLES = instantiate(cfg_model["model"])
 
-        model = MyCoLES(cfg_preprop, cfg_model)
-        model_name = f'coles_hidden_size_{cfg_model["hidden_size"]}_{i}'
+    # Initializing and fitting the trainer for the model
+    model_checkpoint: ModelCheckpoint = instantiate(
+        cfg_model["trainer_coles"]["checkpoint_callback"],
+        monitor=model.metric_name,
+        mode="max"
+    )
 
-        model_checkpoint = ModelCheckpoint(
-            monitor=model.metric_name,
-            mode='max',
-            dirpath=os.path.join('logs', 'checkpoints', 'coles'),
-            filename=model_name
-        )
+    early_stopping: EarlyStopping = instantiate(
+        cfg_model["trainer_coles"]["early_stopping"],
+        monitor=model.metric_name,
+        mode="max"
+    )
 
-        early_stopping = EarlyStopping(
-            model.metric_name,
-            training_params['early_stopping']['min_delta'],
-            training_params['early_stopping']['patience'],
-            True,
-            'max'
-        )
+    coles_logger: TensorBoardLogger = instantiate(cfg_model["trainer_coles"]["logger"])
 
-        comet_logger = CometLogger(
-            api_token,
-            project_name='coles_diploma',
-            experiment_name=model_name
-        )
+    trainer: Trainer = instantiate(
+        cfg_model["trainer_coles"]["trainer"],
+        callbacks=[model_checkpoint, early_stopping],
+        logger=coles_logger
+    )
 
-        trainer = Trainer(
-            accelerator='gpu',
-            devices=1,
-            max_epochs=training_params['epochs'],
-            log_every_n_steps=20,
-            logger=comet_logger,
-            callbacks=[model_checkpoint, early_stopping]
-        )
-
-        trainer.fit(model, datamodule)
+    trainer.fit(model, datamodule)

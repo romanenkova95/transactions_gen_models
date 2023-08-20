@@ -1,0 +1,17 @@
+name: age
+
+dir_path: data/${.name}
+train_file_name: transactions_train.csv
+
+ignore_existing_preproc: False
+
+user_column: client_id
+mcc_column: small_group
+amt_column: amount_rur
+dttm_column: trans_date
+
+coles:
+  pandas_preprocessor:
+    dir_path: preproc_data/${dataset.name}
+    name: pandas_preprocessor.p
+  test_size: .2
