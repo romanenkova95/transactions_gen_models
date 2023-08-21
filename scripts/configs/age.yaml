@@ -18,7 +18,7 @@ parameters:
   encoder:
     parameters:
       hidden_size:
-        values: [64, 96, 112, 128]
+        values: [64, 128]
       mcc_out:
         values: [4, 8, 10, 12, 14, 16]
       # rnn_units:

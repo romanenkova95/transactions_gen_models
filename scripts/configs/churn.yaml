@@ -9,7 +9,7 @@ parameters:
   experiment:
     parameters:
       model: 
-        value: gru
+        value: best
       dataset: 
         value: churn
       n_epochs:
@@ -18,14 +18,13 @@ parameters:
   encoder:
     parameters:
       hidden_size:
-        values: 16
+        values: [32, 64, 96]
       mcc_out:
-        values: 16
+        values: [12, 14, 16]
+      # rnn_units:
+      #   values: [64, 96, 128, 160, 192]
 
-  rnn:
+  cnn:
     parameters:
-      hidden_size:
-        values: 16
-      bidirectional:
-        values: 1
-          
+      kernel_size:
+        values: [4, 8, 12]
