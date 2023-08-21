@@ -30,3 +30,12 @@ class CustomCoLES(CoLESModule):
             optimizer_partial=optimizer_partial,
             lr_scheduler_partial=lr_scheduler_partial
         )
+        self.sequence_encoder_model = sequence_encoder
+
+    def get_seq_encoder_weights(self) -> dict:
+        """Get weights of the sequnce encoder in torch format
+
+        Returns:
+            dict: Encoder weights
+        """
+        return self.sequence_encoder_model.state_dict()
