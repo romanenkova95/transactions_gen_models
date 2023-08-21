@@ -11,7 +11,7 @@ from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.frames.coles import CoLESModule
 
 
-class MyCoLES(CoLESModule):
+class CustomCoLES(CoLESModule):
 
     def __init__(
         self,

@@ -1,2 +1,2 @@
-from .model import MyCoLES
-from .datamodule import MyColesDataset
+from .model import CustomCoLES
+from .datamodule import CustomColesDataset

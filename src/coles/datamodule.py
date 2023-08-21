@@ -1,12 +1,10 @@
-from omegaconf import DictConfig
-
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import SampleUniform
 
 
-class MyColesDataset(ColesDataset):
+class CustomColesDataset(ColesDataset):
 
     def __init__(
         self,

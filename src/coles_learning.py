@@ -15,7 +15,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from sklearn.model_selection import train_test_split
 
-from src.coles import MyCoLES, MyColesDataset
+from src.coles import CustomCoLES, CustomColesDataset
 from src.utils.logging_utils import get_logger
 
 
@@ -27,7 +27,7 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     dataframe = pd.read_csv(
         Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])
     )
-    logger.info("dataframed initialized")
+    logger.info("dataframe initialized")
 
     user_column : str = cfg_preprop['user_column']
     dttm_column : str = cfg_preprop['dttm_column']
@@ -74,8 +74,8 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
 
     # Define our ColesDataset wrapper from the config
-    train_data: MyColesDataset = instantiate(cfg_model["dataset"], data=train)
-    val_data: MyColesDataset = instantiate(cfg_model["dataset"], data=val)
+    train_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=train)
+    val_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=val)
 
     # Pytorch-lifestream datamodule for the model training and evaluation
     datamodule: PtlsDataModule = instantiate(
@@ -85,7 +85,7 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     )
 
     # Define our CoLES wrapper from the config
-    model: MyCoLES = instantiate(cfg_model["model"])
+    model: CustomCoLES = instantiate(cfg_model["model"])
 
     # Initializing and fitting the trainer for the model
     model_checkpoint: ModelCheckpoint = instantiate(
