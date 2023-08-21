@@ -1,3 +1,4 @@
+"""Main coles learning script"""
 from pathlib import Path
 import pickle
 
@@ -23,6 +24,12 @@ logger = get_logger(name=__name__)
 
 
 def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
+    """Full pipeline for the coles model fitting.
+
+    Args:
+        cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
+        cfg_model (DictConfig): Model config (specified in the 'config/model')
+    """
     # Read data from csv
     dataframe = pd.read_csv(
         Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])

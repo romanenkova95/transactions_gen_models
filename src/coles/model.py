@@ -1,17 +1,14 @@
 """CoLES model"""
 from typing import Callable
-from functools import partial
 
-from omegaconf import DictConfig
-
-import torch
-
-from ptls.nn import TrxEncoder, RnnSeqEncoder
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.frames.coles import CoLESModule
 
 
 class CustomCoLES(CoLESModule):
+    """
+    Custom coles module inhereted from ptls coles module.
+    """
 
     def __init__(
         self,
@@ -19,6 +16,15 @@ class CustomCoLES(CoLESModule):
         lr_scheduler_partial: Callable,
         sequence_encoder: SeqEncoderContainer
     ) -> None:
+        """Overrided initialize method, which is suitable for our tasks
+
+        Args:
+            optimizer_partial (Callable): Partial initialized torch optimizer (with parameters)
+            lr_scheduler_partial (Callable): Partial initialized torch lr scheduler 
+                (with parameters)
+            sequence_encoder (SeqEncoderContainer): Ptls sequence encoder 
+                (including sequence encoder and single transaction encoder)
+        """
         super().__init__(
             seq_encoder=sequence_encoder,
             optimizer_partial=optimizer_partial,
