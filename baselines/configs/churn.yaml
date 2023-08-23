@@ -11,20 +11,22 @@ parameters:
       model: 
         value: best
       dataset: 
-        value: raif
+        value: churn
       n_epochs:
         value: 100
 
   encoder:
     parameters:
+      dict_size:
+        value: 344
       hidden_size:
-        values: [64, 96]
+        value: 64
       mcc_out:
-        values: [4, 8, 10, 12, 14, 16]
-      # rnn_units:
-      #   values: [128, 160, 192, 256]
+        value: 16
+      rnn_units:
+        value: 160
 
-  cnn:
-    parameters:
-      kernel_size:
-        values: [4, 8, 12]
+  # cnn:
+  #   parameters:
+  #     kernel_size:
+  #       values: [4, 8, 12]

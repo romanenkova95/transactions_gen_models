@@ -9,7 +9,7 @@ parameters:
   experiment:
     parameters:
       model: 
-        value: gru
+        value: best
       dataset: 
         value: default
       n_epochs:
@@ -17,14 +17,18 @@ parameters:
 
   encoder:
     parameters:
+      dict_size:
+        value: 309
       hidden_size:
-        values: 16
+        value: 64
       mcc_out:
-        values: 16
+        value: 16
+      rnn_units:
+        value: 160
 
-  rnn:
-    parameters:
-      hidden_size:
-        values: 12
-      bidirectional:
-        values: 0
+  # rnn:
+  #   parameters:
+  #     hidden_size:
+  #       values: 12
+  #     bidirectional:
+  #       values: 0
