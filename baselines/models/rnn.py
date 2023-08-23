@@ -2,6 +2,23 @@ import torch
 
 
 class RNNClassifier(torch.nn.Module):
+    """
+    A simple classification model based on a recurrent neural network.
+
+    Attributes:
+        input_size: int - number of channels in the input data
+        hidden_size: int - hidden size of the GRU
+        num_layers: int - number of layers in the GRU
+        bias: bool - whether the GRU uses bias weights
+        batch_first: bool - if True, then the input and output tensors are provided
+            as (batch, seq, feature) instead of (seq, batch, feature)
+        dropout: float -  if non-zero, introduces a Dropout layer on
+            the outputs of each GRU layer except the last layer, with dropout
+            probability equal to dropout
+        bidirectional: bool - whether the GRU is bidirectional or not
+        num_classes: int - number of classes in the classification task
+    """
+
     def __init__(
         self,
         input_size: int = None,
@@ -12,7 +29,6 @@ class RNNClassifier(torch.nn.Module):
         dropout: float = 0,
         bidirectional: bool = False,
         num_classes: int = 1,
-        logsoftmax: bool = True,
     ):
         super().__init__()
 
@@ -28,10 +44,7 @@ class RNNClassifier(torch.nn.Module):
 
         d = 2 if bidirectional else 1
 
-        if logsoftmax:
-            activation = torch.nn.LogSoftmax(dim=-1)
-        else:
-            activation = torch.nn.Softmax(dim=-1)
+        activation = torch.nn.Softmax(dim=-1)
 
         self.linear = torch.nn.Sequential(
             torch.nn.Linear(d * num_layers * hidden_size, num_classes), activation

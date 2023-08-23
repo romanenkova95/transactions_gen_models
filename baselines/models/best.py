@@ -2,6 +2,22 @@ import torch
 
 
 class BestClassifier(torch.nn.Module):
+    """
+    Classification model from the open VTB competition.
+
+    Attributes:
+        input_size: int - number of channels in the input data
+        rnn_units: int - hidden size of the GRU
+        classifier_units: int - output size of the 1st linear layer
+        num_layers: int - number of layers in the GRU
+        bias: bool - whether the GRU uses bias weights
+        dropout: float -  if non-zero, introduces a Dropout layer on
+            the outputs of each GRU layer except the last layer, with dropout
+            probability equal to dropout
+        bidirectional: bool - whether the GRU is bidirectional or not
+        num_classes: int - number of classes in the classification task
+    """
+
     def __init__(
         self,
         input_size: int = None,

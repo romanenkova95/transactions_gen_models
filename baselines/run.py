@@ -8,7 +8,6 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import wandb
-from matplotlib import pyplot as plt
 from ptls.data_load.utils import collate_feature_dict
 from ptls.frames import PtlsDataModule
 from ptls.frames.inference_module import InferenceModule
@@ -18,12 +17,15 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from torchmetrics import Accuracy, AveragePrecision, F1Score, Precision, Recall
 
-from metrics import val_metrics
-from models import BestClassifier, CNNClassifier, RNNClassifier
-from preprocessing import load_dataset
+from baselines.metrics import val_metrics
+from baselines.models import BestClassifier
+from baselines.preprocessing import load_dataset
 
 
 def train_and_eval():
+    """
+    Trains and evaluates a classification model.
+    """
     with wandb.init() as run:
         cfg = wandb.config
 

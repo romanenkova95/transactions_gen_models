@@ -3,6 +3,19 @@ import torch
 
 
 class CNNClassifier(torch.nn.Module):
+    """
+    A classification model based on sequential 1d-convlutions.
+
+    Attributes:
+        in_channels: int - number of channels in the input data
+        kernel_size: int - size of the convolving kernel
+        stride: int - stride of the convolution
+        dilation: int - spacing between kernel elements
+        bias: bool - if True, adds a learnable bias to the output
+        num_classes: int - number of classes in the classification task
+        sequence_length: int - length of each sequence of transactions
+    """
+
     def __init__(
         self,
         in_channels: int = None,
@@ -41,8 +54,8 @@ class CNNClassifier(torch.nn.Module):
 
     def forward(self, input):
         inp = torch.transpose(input.payload, 1, 2)  # (N, L, C) -> (N, C, L)
-        l = inp.shape[-1]
-        inp = torch.nn.functional.pad(inp, pad=(0, self.sequence_length - l))
+        length = inp.shape[-1]
+        inp = torch.nn.functional.pad(inp, pad=(0, self.sequence_length - length))
 
         output = self.convolutions(inp)
         output = output.view(output.shape[0], -1)
