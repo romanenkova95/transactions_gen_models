@@ -1,6 +1,6 @@
 name: age
 
-dir_path: data/${.name}
+dir_path: ../data/${.name}
 train_file_name: transactions_train.csv
 
 ignore_existing_preproc: False

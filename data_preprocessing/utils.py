@@ -18,7 +18,8 @@ def preprocess_features(
     date: str,
     amount: str,
     date_format: str = None,
-    churn_horizon_months: float = None
+    churn_horizon_months: float = None,
+    prepare_local_targets: bool = True
 ) -> pd.DataFrame:
     """Preprocess features of the transaction dataset.
         
@@ -43,28 +44,36 @@ def preprocess_features(
             lambda x: pd.to_datetime(x, format=date_format)
         )
     
-    # add holiday targets and weekend targets (5 - Saturday, 6 - Sunday)
-    data["holiday_target"] = data["datetime"].apply(lambda x: int(x in RU_HOLIDAYS))
-    data["weekend_target"] = data["datetime"].apply(lambda x: int(x.weekday() in [5, 6]))
+    if prepare_local_targets:
+        # add holiday targets and weekend targets (5 - Saturday, 6 - Sunday)
+        data["holiday_target"] = data["datetime"].apply(lambda x: int(x in RU_HOLIDAYS))
+        data["weekend_target"] = data["datetime"].apply(lambda x: int(x.weekday() in [5, 6]))
 
     # encode MCC codes
     enc = LabelEncoder()
     data["mcc"] = enc.fit_transform(data["mcc"])
 
+    if prepare_local_targets:
+        group_columns = ["datetime", "mcc", "amount", "holiday_target", "weekend_target"]
+    else:
+        group_columns = ["datetime", "mcc", "amount"]
+    
     df = pd.DataFrame(
-        data.groupby("client_id")[["datetime", "mcc", "amount", "holiday_target", "weekend_target"]]
-        .aggregate(lambda x: list(x))
+        data.groupby("client_id")[group_columns].aggregate(lambda x: list(x))
     ) 
     
     # sort feature lists according to datetime
     def permute_list(original_list, perm):
         return [original_list[p] for p in perm]
     
-    df["mcc"]            = df.apply(lambda x: permute_list(x.mcc, np.argsort(x.datetime)), axis=1)
-    df["amount"]         = df.apply(lambda x: permute_list(x.amount, np.argsort(x.datetime)), axis=1)
-    df["holiday_target"] = df.apply(lambda x: permute_list(x.holiday_target, np.argsort(x.datetime)), axis=1)
-    df["weekend_target"] = df.apply(lambda x: permute_list(x.weekend_target, np.argsort(x.datetime)), axis=1)
-    df["datetime"]       = df.apply(lambda x: permute_list(x.datetime, np.argsort(x.datetime)), axis=1)
+    df["mcc"] = df.apply(lambda x: permute_list(x.mcc, np.argsort(x.datetime)), axis=1)
+    df["amount"] = df.apply(lambda x: permute_list(x.amount, np.argsort(x.datetime)), axis=1)
+    
+    if prepare_local_targets:
+        df["weekend_target"] = df.apply(lambda x: permute_list(x.weekend_target, np.argsort(x.datetime)), axis=1)
+        df["holiday_target"] = df.apply(lambda x: permute_list(x.holiday_target, np.argsort(x.datetime)), axis=1)
+
+    df["datetime"] = df.apply(lambda x: permute_list(x.datetime, np.argsort(x.datetime)), axis=1)
     
     df = pd.DataFrame(df)
     df.reset_index(inplace=True)

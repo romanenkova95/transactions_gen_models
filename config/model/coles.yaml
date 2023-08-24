@@ -5,7 +5,15 @@ dataset:
   min_len: 20
   split_count: 5
   seq_len: 40
-
+  col_time: timestamp
+  
+validation_dataset:
+  _target_: src.coles.CustomColesValidationDataset
+  min_len: 20
+  seq_len: 40
+  stride: 1
+  local_target_col: local_label
+  col_time: timestamp
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
