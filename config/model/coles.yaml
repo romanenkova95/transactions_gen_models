@@ -4,7 +4,8 @@ dataset:
   _target_: src.coles.CustomColesDataset
   min_len: 20
   split_count: 5
-  seq_len: 40
+  random_min_seq_len: 20
+  random_max_seq_len: 60
 
 
 datamodule:
