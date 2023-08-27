@@ -1,19 +1,20 @@
-name: coles
+name: coles_churn
 
 dataset:
   _target_: src.coles.CustomColesDataset
   min_len: 20
   split_count: 5
-  seq_len: 40
-  col_time: timestamp
+  random_min_seq_len: 20
+  random_max_seq_len: 60
+  col_time: event_time
   
 validation_dataset:
   _target_: src.coles.CustomColesValidationDataset
   min_len: 20
   seq_len: 40
   stride: 1
-  local_target_col: local_label
-  col_time: timestamp
+  local_target_col: churn_target
+  col_time: event_time
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
@@ -39,8 +40,8 @@ model:
     trx_encoder:
       _target_: ptls.nn.TrxEncoder
       embeddings_noise: .005
-      embeddings: {mcc_code: {in: 377, out: 32}}
-      numeric_values: {timestamp: log}
+      embeddings: {mcc_code: {in: 344, out: 32}}
+      numeric_values: {event_time: log}
     hidden_size: 32
     type: gru
 

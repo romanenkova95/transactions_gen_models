@@ -6,6 +6,9 @@ import pyarrow.parquet as pq
 
 from sklearn.preprocessing import LabelEncoder
 
+from tqdm import tqdm
+tqdm.pandas()
+
 import holidays
 
 RU_HOLIDAYS = holidays.country_holidays('RU')
@@ -34,21 +37,25 @@ def preprocess_features(
         :return dataframe with the preprocessed features
     """
     # rename columns for consistency across different datasets
+    print("Renaming columns")
     data = data.rename(
         columns={mcc: "mcc", client_id: "client_id", date: "datetime", amount: "amount"}
     )
 
+    print("Fixing datetime")
     # fix datetime format
     if date_format is not None:
-        data["datetime"] = data["datetime"].apply(
+        data["datetime"] = data["datetime"].progress_apply(
             lambda x: pd.to_datetime(x, format=date_format)
         )
     
     if prepare_local_targets:
+        print("Preparing local targets")
         # add holiday targets and weekend targets (5 - Saturday, 6 - Sunday)
-        data["holiday_target"] = data["datetime"].apply(lambda x: int(x in RU_HOLIDAYS))
-        data["weekend_target"] = data["datetime"].apply(lambda x: int(x.weekday() in [5, 6]))
+        data["holiday_target"] = data["datetime"].progress_apply(lambda x: int(x in RU_HOLIDAYS))
+        data["weekend_target"] = data["datetime"].progress_apply(lambda x: int(x.weekday() in [5, 6]))
 
+    print("Encoding MCC codes")
     # encode MCC codes
     enc = LabelEncoder()
     data["mcc"] = enc.fit_transform(data["mcc"])
@@ -58,6 +65,7 @@ def preprocess_features(
     else:
         group_columns = ["datetime", "mcc", "amount"]
     
+    print("Group transactions")
     df = pd.DataFrame(
         data.groupby("client_id")[group_columns].aggregate(lambda x: list(x))
     ) 
@@ -66,23 +74,25 @@ def preprocess_features(
     def permute_list(original_list, perm):
         return [original_list[p] for p in perm]
     
-    df["mcc"] = df.apply(lambda x: permute_list(x.mcc, np.argsort(x.datetime)), axis=1)
-    df["amount"] = df.apply(lambda x: permute_list(x.amount, np.argsort(x.datetime)), axis=1)
+    print("Sorting lists")
+    df["mcc"] = df.progress_apply(lambda x: permute_list(x.mcc, np.argsort(x.datetime)), axis=1)
+    df["amount"] = df.progress_apply(lambda x: permute_list(x.amount, np.argsort(x.datetime)), axis=1)
     
     if prepare_local_targets:
-        df["weekend_target"] = df.apply(lambda x: permute_list(x.weekend_target, np.argsort(x.datetime)), axis=1)
-        df["holiday_target"] = df.apply(lambda x: permute_list(x.holiday_target, np.argsort(x.datetime)), axis=1)
+        df["weekend_target"] = df.progress_apply(lambda x: permute_list(x.weekend_target, np.argsort(x.datetime)), axis=1)
+        df["holiday_target"] = df.progress_apply(lambda x: permute_list(x.holiday_target, np.argsort(x.datetime)), axis=1)
 
-    df["datetime"] = df.apply(lambda x: permute_list(x.datetime, np.argsort(x.datetime)), axis=1)
+    df["datetime"] = df.progress_apply(lambda x: permute_list(x.datetime, np.argsort(x.datetime)), axis=1)
     
     df = pd.DataFrame(df)
     df.reset_index(inplace=True)
     
     # prepare 'churn' target for the Churn dataset
     if churn_horizon_months is not None:
-        df["churn_target"] = df["datetime"].apply(
+        print("Prepare Churn targets")
+        df["churn_target"] = df["datetime"].progress_apply(
             lambda x: (
-                np.array(list(map(lambda y: y.total_seconds(), (x[-1] - np.array(x))))) < SECONDS_IN_MONTH
+                np.array(list(map(lambda y: y.total_seconds(), (x[-1] - np.array(x))))) < SECONDS_IN_MONTH * churn_horizon_months
             ).astype(np.int32).tolist()
         )
     
