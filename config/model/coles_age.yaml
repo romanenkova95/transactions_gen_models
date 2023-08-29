@@ -1,0 +1,49 @@
+name: coles_age
+
+dataset:
+  _target_: src.coles.CustomColesDataset
+  min_len: 20
+  split_count: 5
+  random_min_seq_len: 20
+  random_max_seq_len: 60
+  col_time: timestamp
+  
+validation_dataset:
+  _target_: src.coles.CustomColesValidationDataset
+  min_len: 20
+  seq_len: 40
+  stride: 10
+  local_target_col: fake_local_label
+  col_time: timestamp
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 256
+  valid_batch_size: 256
+  train_num_workers: 4
+  valid_num_workers: 4
+
+model:
+  _target_: src.coles.CustomCoLES
+  optimizer_partial:
+    _partial_: True
+    _target_: torch.optim.Adam
+    lr: .001
+    weight_decay: .00005
+  lr_scheduler_partial:
+    _partial_: True
+    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+    factor: .5
+    patience: 2
+  sequence_encoder:
+    _target_: ptls.nn.RnnSeqEncoder
+    trx_encoder:
+      _target_: ptls.nn.TrxEncoder
+      embeddings_noise: .005
+      embeddings: {mcc_code: {in: 202, out: 32}}
+      numeric_values: {event_time: log}
+    hidden_size: 32
+    type: gru
+
+defaults:
+  - trainer_coles: trainer 
