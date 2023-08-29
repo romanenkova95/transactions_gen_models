@@ -1,0 +1,34 @@
+method: random
+
+metric:
+  name: F1Score
+  goal: maximize
+
+parameters:
+
+  experiment:
+    parameters:
+      model: 
+        value: best
+      dataset: 
+        value: default
+      n_epochs:
+        value: 100
+
+  encoder:
+    parameters:
+      dict_size:
+        value: 309
+      hidden_size:
+        value: 64
+      mcc_out:
+        value: 16
+      rnn_units:
+        value: 160
+
+  # rnn:
+  #   parameters:
+  #     hidden_size:
+  #       values: 12
+  #     bidirectional:
+  #       values: 0
