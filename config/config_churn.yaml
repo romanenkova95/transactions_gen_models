@@ -1,0 +1,4 @@
+defaults:
+  - dataset: churn
+  - model: coles_churn
+  - _self_
