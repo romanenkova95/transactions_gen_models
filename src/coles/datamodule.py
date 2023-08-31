@@ -5,6 +5,7 @@ import numpy as np
 
 import torch
 
+from typing import Optional
 from functools import reduce
 from operator import iadd
 
@@ -98,7 +99,7 @@ class CustomColesValidationDataset(ColesDataset):
         stride: int,
         *args,
         col_time: str = 'event_time',
-        local_target_col: str = None,
+        local_target_col: Optional[str] = None,
         **kwargs
     ) -> None:
         """Overrided initialize method, which is suitable for local validation pipeline.
