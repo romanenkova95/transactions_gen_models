@@ -1,0 +1,32 @@
+method: random
+
+metric:
+  name: F1Score
+  goal: maximize
+
+parameters:
+
+  experiment:
+    parameters:
+      model: 
+        value: best
+      dataset: 
+        value: raif
+      n_epochs:
+        value: 100
+
+  encoder:
+    parameters:
+      dict_size:
+        value: 150
+      hidden_size:
+        value: 96
+      mcc_out:
+        value: 8
+      rnn_units:
+        value: 192
+
+  # cnn:
+  #   parameters:
+  #     kernel_size:
+  #       values: [4, 8, 12]

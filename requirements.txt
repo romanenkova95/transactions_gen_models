@@ -1,0 +1,17 @@
+matplotlib
+numpy
+ipykernel
+torchmetrics==0.9.*
+omegaconf
+ipykernel
+pandas
+pytorch_lightning==1.6.*
+PyYAML
+ruptures
+scikit_learn
+scipy
+torch
+torchvision
+tqdm
+wandb
+

@@ -12,6 +12,7 @@ from operator import iadd
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
+from ptls.frames.coles.split_strategy import SampleRandom
 from ptls.frames.coles.split_strategy import SampleRandom, AbsSplit
 from ptls.data_load.utils import collate_feature_dict
 from ptls.data_load.padded_batch import PaddedBatch
