@@ -11,11 +11,11 @@ from operator import iadd
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
-from ptls.frames.coles.split_strategy import SplitRandom, AbsSplit
+from ptls.frames.coles.split_strategy import SampleSlices, AbsSplit
 from ptls.data_load.utils import collate_feature_dict
 from ptls.data_load.padded_batch import PaddedBatch
 
-        
+     
 class SampleAll(AbsSplit):
     """
     Custom sliding window subsequence sampler.
@@ -80,7 +80,7 @@ class CustomColesDataset(ColesDataset):
         """
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-            SplitRandom(split_count, random_min_seq_len, random_max_seq_len),
+            SampleSlices(split_count, random_min_seq_len, random_max_seq_len),
             col_time,
             *args, **kwargs
         )
