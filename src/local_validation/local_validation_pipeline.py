@@ -36,7 +36,7 @@ class LocalValidationModel(pl.LightningModule):
         self.pred_head = nn.Sequential(
             nn.Linear(backbone_embd_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(backbone_embd_size, 1),
+            nn.Linear(hidden_size, 1),
             nn.Sigmoid()
         )
         
@@ -50,7 +50,7 @@ class LocalValidationModel(pl.LightningModule):
         out = self.pred_head(out).squeeze(1)
         return out
 
-    def training_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
+    def training_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int) -> dict[str, float]:
         inputs, labels = batch
         preds = self.forward(inputs)
 
@@ -62,7 +62,7 @@ class LocalValidationModel(pl.LightningModule):
 
         return {"loss": train_loss, "acc": train_accuracy}
 
-    def validation_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
+    def validation_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int) -> dict[str, float]:
         inputs, labels = batch
         preds = self.forward(inputs)
 
@@ -74,7 +74,7 @@ class LocalValidationModel(pl.LightningModule):
 
         return {"loss": val_loss, "acc": val_accuracy}
     
-    def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
+    def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int) -> dict[str, float]:
         inputs, labels = batch
         preds = self.forward(inputs)
 
