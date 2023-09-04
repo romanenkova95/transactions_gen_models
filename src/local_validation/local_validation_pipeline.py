@@ -2,7 +2,12 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
-from torchmetrics.classification import BinaryF1Score
+from torchmetrics.classification import (
+    BinaryF1Score,
+    BinaryAUROC,
+    BinaryAveragePrecision,
+    BinaryAccuracy
+)
 
 from ptls.data_load.padded_batch import PaddedBatch
 
@@ -45,6 +50,13 @@ class LocalValidationModel(pl.LightningModule):
         
         self.lr = learning_rate
 
+        self.metrics = {
+            "AUROC": BinaryAUROC(),
+            "PR-AUC": BinaryAveragePrecision(),
+            "Accuracy": BinaryAccuracy(),
+            "F1Score": BinaryF1Score()
+        }
+
     def forward(self, inputs: PaddedBatch) -> torch.Tensor:
         out = self.backbone(inputs)
         out = self.pred_head(out).squeeze(1)
@@ -78,14 +90,22 @@ class LocalValidationModel(pl.LightningModule):
         inputs, labels = batch
         preds = self.forward(inputs)
 
-        acc_score = ((preds.squeeze() > 0.5).long() == labels).float().mean().item()
-        F1Score = BinaryF1Score().to(inputs.device)
-        f1_score = F1Score(preds, labels).item()
+        dict_out = {"preds": preds, "labels": labels}
+        for name, metric in self.metrics.items():
+            metric.to(inputs.device)
+            metric.update(preds, labels)
+            
+            dict_out[name] = metric.compute().item()
 
-        self.log("Test acc", acc_score)
-        self.log("Test f1_score", f1_score)
-        
-        return {"preds": preds, "labels": labels, "acc": acc_score, "f1": f1_score}        
+        return dict_out
+
+    def on_test_epoch_end(self):
+        results = {}
+        for name, metric in self.metrics.items():
+            results[name] = metric.compute()
+            self.log(name, metric.compute())
+
+        return results    
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
