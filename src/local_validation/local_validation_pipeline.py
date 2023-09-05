@@ -85,7 +85,7 @@ class LocalValidationModel(pl.LightningModule):
         self.log("Test acc", acc_score)
         self.log("Test f1_score", f1_score)
         
-        return {"preds": preds, "labels": labels, "acc": acc_score, "f1": f1_score}        
+        return {"preds": preds, "labels": labels, "acc": acc_score, "f1": f1_score}
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
