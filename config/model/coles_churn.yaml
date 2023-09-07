@@ -6,19 +6,6 @@ dataset:
   split_count: 5
   random_min_seq_len: 20
   random_max_seq_len: 60
-<<<<<<< HEAD:config/model/coles.yaml
-
-=======
-  col_time: event_time
-  
-validation_dataset:
-  _target_: src.coles.CustomColesValidationDataset
-  min_len: 20
-  seq_len: 40
-  stride: 1
-  local_target_col: churn_target
-  col_time: event_time
->>>>>>> af981365587dec1d81765dd1e4b2373740b46c41:config/model/coles_churn.yaml
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
