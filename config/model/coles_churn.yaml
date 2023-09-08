@@ -18,17 +18,17 @@ validation_dataset:
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
-  train_batch_size: 256
-  valid_batch_size: 256
-  train_num_workers: 4
-  valid_num_workers: 4
+  train_batch_size: 64
+  valid_batch_size: 64
+  train_num_workers: 1
+  valid_num_workers: 1
 
 model:
   _target_: src.coles.CustomCoLES
   optimizer_partial:
     _partial_: True
     _target_: torch.optim.Adam
-    lr: .001
+    lr: .004
     weight_decay: .00005
   lr_scheduler_partial:
     _partial_: True
@@ -42,8 +42,8 @@ model:
       embeddings_noise: .005
       embeddings: {mcc_code: {in: 344, out: 32}}
       numeric_values: {event_time: log}
-    hidden_size: 32
-    type: gru
+    hidden_size: 1024
+    type: lstm
 
 defaults:
   - trainer_coles: trainer 
