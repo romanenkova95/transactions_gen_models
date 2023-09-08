@@ -5,11 +5,6 @@ train_file_name: ${.name}.parquet
 
 ignore_existing_preproc: False
 
-user_column: client_id
-mcc_column: small_group
-amt_column: amount_rur
-dttm_column: trans_date
-
 coles:
   pandas_preprocessor:
     dir_path: preproc_data/${dataset.name}

@@ -5,12 +5,6 @@ train_file_name: ${.name}.parquet
 
 ignore_existing_preproc: False
 
-user_column: cl_id
-mcc_column: MCC
-amt_column: amount
-dttm_column: TRDATETIME
-datetime_format: '%d%b%y:%H:%M:%S'
-
 coles:
   pandas_preprocessor:
     dir_path: preproc_data/${dataset.name}
