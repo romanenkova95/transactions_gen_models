@@ -105,10 +105,10 @@ class PoolingModel(torch.nn.Module):
         indexes = np.where(np.array(times) < time)[0]
 
         if len(indexes) == 0:
-            None
-        
-        closest_time = times[indexes[-1]]
-        pooled_vector = self.pooled_embegings_dataset[closest_time]
+            pooled_vector =  torch.rand(self.local_model_emb_dim)
+        else:
+            closest_time = times[indexes[-1]]
+            pooled_vector = self.pooled_embegings_dataset[closest_time]
 
         if self.agregating_model is not None:
             pooled_vector = pooled_vector.to(self.device)
