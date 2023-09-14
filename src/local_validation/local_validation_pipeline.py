@@ -24,6 +24,10 @@ class LocalValidationModel(pl.LightningModule):
         hidden_size: int,
         learning_rate: float = 1e-3,
         backbone_output_type: str = "tensor",
+        use_lstm: bool = False,
+        lstm_hidden_size: int = 64,
+        lstm_num_layers: int = 1,
+        lstm_bidirectional: bool = False
     ) -> None:
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 
@@ -48,12 +52,28 @@ class LocalValidationModel(pl.LightningModule):
         for param in self.backbone.parameters():
             param.requires_grad = False
 
-        self.pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, 1),
-            nn.Sigmoid(),
-        )
+        self.use_lstm = use_lstm
+
+        if use_lstm:
+            self.lstm = torch.nn.LSTM(input_size = backbone_embd_size, 
+                                      hidden_size = lstm_hidden_size,
+                                      num_layers = lstm_num_layers,
+                                      bidirectional = lstm_bidirectional)
+
+            self.pred_head = nn.Sequential(
+                nn.Linear(lstm_hidden_size * (lstm_bidirectional + 1) + backbone_embd_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, 1),
+                nn.Sigmoid(),
+            )
+
+        else:
+            self.pred_head = nn.Sequential(
+                nn.Linear(backbone_embd_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, 1),
+                nn.Sigmoid(),
+            )
 
         # BCE loss for seq2seq binary classification
         self.loss = nn.BCELoss()
@@ -68,9 +88,9 @@ class LocalValidationModel(pl.LightningModule):
         }
 
         self.backbone_output_type = backbone_output_type
-
+    
     def forward(self, inputs: PaddedBatch) -> torch.Tensor:
-        """Do forward pass through the local validation model.
+        """Do forward pass through the global validation model.
 
         Args:
             inputs (PaddedBatch) - inputs if ptls format
@@ -81,6 +101,9 @@ class LocalValidationModel(pl.LightningModule):
         out = self.backbone(inputs)
         if self.backbone_output_type == "padded_batch":
             out = out.payload
+        if self.use_lstm:
+            lstm_out = self.lstm(out)[0]
+            out = torch.cat((out, lstm_out), dim = 1)
         out = self.pred_head(out).squeeze(-1)
         return out
 
@@ -143,3 +166,4 @@ class LocalValidationModel(pl.LightningModule):
         """Initialize optimizer for the LocalValidationModel."""
         opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
         return opt
+    
