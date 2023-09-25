@@ -25,6 +25,7 @@ class PoolingModel(pl.LightningModule):
                  agregating_model_emb_dim: int = 0,
                  learning_rate: float = 1e-3,
                  backbone_output_type: str = "tensor",
+                 max_users_in_train_dataloader =3000,
                  ) -> None:
         
         """Initialize method for PoolingModel
@@ -55,10 +56,10 @@ class PoolingModel(pl.LightningModule):
         if agregating_model is None:
             self.agregating_model_emb_dim = 0
 
-        self.pooled_embegings_dataset = self.make_pooled_embegings_dataset(train_dataloader, pooling_type)
+        self.pooled_embegings_dataset = self.make_pooled_embegings_dataset(train_dataloader, pooling_type, max_users_in_train_dataloader)
 
         self.pred_head = nn.Sequential(
-                nn.Linear(self.get_emb_dim() + self.agregating_model_emb_dim, hidden_size),
+                nn.Linear(self.get_emb_dim(), hidden_size),
                 nn.ReLU(),
                 nn.Linear(hidden_size, 1),
                 nn.Sigmoid(),
@@ -77,9 +78,8 @@ class PoolingModel(pl.LightningModule):
         }
 
         self.backbone_output_type = backbone_output_type
-
         
-    def make_pooled_embegings_dataset(self, train_dataloader, pooling_type):
+    def make_pooled_embegings_dataset(self, train_dataloader, pooling_type, max_users_in_train_dataloader,):
 
         """Creation of pooled embeding dataset. This function for each timestamp get 
         sequences in dataset which ends close to this timestamp, 
@@ -102,6 +102,8 @@ class PoolingModel(pl.LightningModule):
             times = x.payload["event_time"][:, -1].cpu().numpy()
             for emb, time in zip(embs, times):
                     data[i][time] = emb
+            if i > max_users_in_train_dataloader:
+                break
         
         data = pd.DataFrame(data).sort_index().ffill()
         pooled_embegings_dataset = {}
