@@ -27,7 +27,7 @@ class LocalValidationModel(pl.LightningModule):
         use_lstm: bool = False,
         lstm_hidden_size: int = 64,
         lstm_num_layers: int = 1,
-        lstm_bidirectional: bool = False
+        lstm_bidirectional: bool = False,
     ) -> None:
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 
@@ -55,13 +55,18 @@ class LocalValidationModel(pl.LightningModule):
         self.use_lstm = use_lstm
 
         if use_lstm:
-            self.lstm = torch.nn.LSTM(input_size = backbone_embd_size, 
-                                      hidden_size = lstm_hidden_size,
-                                      num_layers = lstm_num_layers,
-                                      bidirectional = lstm_bidirectional)
+            self.lstm = torch.nn.LSTM(
+                input_size=backbone_embd_size,
+                hidden_size=lstm_hidden_size,
+                num_layers=lstm_num_layers,
+                bidirectional=lstm_bidirectional,
+            )
 
             self.pred_head = nn.Sequential(
-                nn.Linear(lstm_hidden_size * (lstm_bidirectional + 1) + backbone_embd_size, hidden_size),
+                nn.Linear(
+                    lstm_hidden_size * (lstm_bidirectional + 1) + backbone_embd_size,
+                    hidden_size,
+                ),
                 nn.ReLU(),
                 nn.Linear(hidden_size, 1),
                 nn.Sigmoid(),
@@ -88,7 +93,7 @@ class LocalValidationModel(pl.LightningModule):
         }
 
         self.backbone_output_type = backbone_output_type
-    
+
     def forward(self, inputs: PaddedBatch) -> torch.Tensor:
         """Do forward pass through the global validation model.
 
@@ -103,7 +108,7 @@ class LocalValidationModel(pl.LightningModule):
             out = out.payload
         if self.use_lstm:
             lstm_out = self.lstm(out)[0]
-            out = torch.cat((out, lstm_out), dim = 1)
+            out = torch.cat((out, lstm_out), dim=1)
         out = self.pred_head(out).squeeze(-1)
         return out
 
@@ -166,4 +171,3 @@ class LocalValidationModel(pl.LightningModule):
         """Initialize optimizer for the LocalValidationModel."""
         opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
         return opt
-    
