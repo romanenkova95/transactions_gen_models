@@ -1,13 +1,7 @@
 """Main coles learning script"""
-from pathlib import Path
-import pickle
-
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
-import pandas as pd
-
-from ptls.preprocessing import PandasDataPreprocessor
 from ptls.frames import PtlsDataModule
 
 from pytorch_lightning import Trainer
@@ -17,6 +11,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.model_selection import train_test_split
 
 from src.coles import CustomCoLES, CustomColesDataset
+from src.preprocessing import preprocess
 from src.utils.logging_utils import get_logger
 
 
@@ -30,52 +25,8 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
         cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
         cfg_model (DictConfig): Model config (specified in the 'config/model')
     """
-    dataframe = pd.read_parquet(
-        Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])
-    )
-    logger.info("dataframe initialized")
-
-    dataset_name = cfg_preprop["name"]
-
-    path_to_preprocessor = Path(cfg_preprop["coles"]["pandas_preprocessor"]["dir_path"])
-    if not path_to_preprocessor.exists():
-        logger.warning("Preprocessor directory does not exist. Creating")
-        path_to_preprocessor.mkdir(parents=True)
-    path_to_preprocessor = path_to_preprocessor.joinpath(
-        cfg_preprop["coles"]["pandas_preprocessor"]["name"]
-    )
-
-    if not path_to_preprocessor.exists():
-        logger.info(
-            "Preprocessor was not saved, so the fitting process will be provided"
-        )
-        event_time_transformation = (
-            "none" if dataset_name == "age" else "dt_to_timestamp"
-        )
-
-        cols_numerical = ["amount"]
-        if dataset_name != "age":
-            local_target = cfg_model["validation_dataset"]["local_target_col"]
-            cols_numerical += [local_target]
-
-        preprocessor = PandasDataPreprocessor(
-            col_id="user_id",
-            col_event_time="timestamp",
-            event_time_transformation=event_time_transformation,
-            cols_category=["mcc_code"],
-            cols_numerical=cols_numerical,
-            cols_first_item=[
-                "global_target"
-            ],  # global target is duplicated, use 1st value
-            return_records=True,
-        )
-        dataset = preprocessor.fit_transform(dataframe)
-        with path_to_preprocessor.open("wb") as file:
-            pickle.dump(preprocessor, file)
-    else:
-        with path_to_preprocessor.open("rb") as file:
-            preprocessor: PandasDataPreprocessor = pickle.load(file)
-        dataset = preprocessor.transform(dataframe)
+    dataframe = preprocess(cfg_preprop, cfg_model["validation_dataset"]["local_target_col"])
+    dataset = dataframe.to_dict(orient='records')
 
     logger.info("Preparing datasets and datamodule")
     # train val splitting

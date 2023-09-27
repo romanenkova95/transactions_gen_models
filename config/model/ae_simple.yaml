@@ -1,0 +1,23 @@
+trainer_args:
+  max_epochs: 500
+  fast_dev_run: true
+
+train_dl_args:
+  batch_size: 196
+  num_workers: 4
+
+val_dl_args:
+  batch_size: 8
+  num_workers: 4
+
+dataset:
+  n_mccs_keep: 344
+  min_len: 20
+  split_count: 5
+  random_min_seq_len: 20
+  random_max_seq_len: 60
+
+defaults:
+ - encoder: rnn_seq2seq
+ - decoder: lstm
+ - module_ae: vanilla_pretrained

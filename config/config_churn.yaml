@@ -1,4 +1,4 @@
 defaults:
   - dataset: churn
-  - model: coles_churn
+  - model: ae_nlp
   - _self_
