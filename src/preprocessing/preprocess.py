@@ -11,7 +11,7 @@ from ptls.preprocessing.base import ColTransformer
 
 @Memory("cache").cache()
 def preprocess(cfg: DictConfig) -> List[Dict]:
-    """Preprocess data according to given config
+    """Preprocess data according to given config. Caches function result using joblib to cache directory
 
     Args:
         cfg (DictConfig): loaded OmegaConf config. Needs fields:

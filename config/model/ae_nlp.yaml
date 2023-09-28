@@ -11,9 +11,7 @@ val_dl_args:
   num_workers: 4
 
 dataset:
-  n_mccs_keep: 344
   min_len: 20
-  split_count: 5
   random_min_seq_len: 20
   random_max_seq_len: 60
 

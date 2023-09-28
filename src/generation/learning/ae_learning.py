@@ -21,6 +21,20 @@ logger = get_logger(name=__name__)
 def train_autoencoder(
     cfg_preprop: DictConfig, cfg_model: DictConfig
 ) -> None:
+    """Train autoencoder, specified in the model config, on the data, specified by the preprocessing config.
+    Model config should contain:
+     - encoder: nn.Module of encoder
+     - decoder: nn.Module of decoder
+     - module_ae: pl.Module, used to train & validate the model, subclass of AbsAE
+     - trainer_args: arguments to pass to pl.Trainer
+     - train_dl_args: arguments to pass when constructing the train DataLoader
+     - val_dl_args: arguments to pass when constructing the val DataLoader
+     - dataset: dataset-specific args: min_len, random_min_seq_len, random_max_seq_len
+     
+    Args:
+        cfg_preprop (DictConfig): the preprocessing config
+        cfg_model (DictConfig): the model config
+    """
     dataset = preprocess(cfg_preprop)
     dataset = AugmentationDataset(
         MemoryMapDataset(dataset, [SeqLenFilter(cfg_model["dataset"]["min_len"])]),

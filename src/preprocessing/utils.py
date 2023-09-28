@@ -4,7 +4,15 @@ from ptls.preprocessing.base import ColTransformer
 
 
 class ToType(ColTransformer):
+    """Cast certain columns to given types
+    """
     def __init__(self, type_mapping: Dict[str, str]):
+        """Initialize transformer object.
+
+        Args:
+            type_mapping (Dict[str, str]): dictionary with column names as keys, 
+            and desired column types as values
+        """
         self.type_mapping = type_mapping
         
     def fit(self, x):
