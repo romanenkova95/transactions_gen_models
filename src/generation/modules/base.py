@@ -89,7 +89,8 @@ class AbsAE(LightningModule):
             lr=self.lr, params=self.parameters()
         )
 
-        if (scheduler := cnf.get("lr_scheduler", None)):
+        scheduler = cnf.get("lr_scheduler")
+        if scheduler:
             if isinstance(scheduler, dict):
                 scheduler["scheduler"] = scheduler["scheduler"](optimizer=cnf["optimizer"])
             else:
