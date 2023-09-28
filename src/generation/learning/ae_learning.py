@@ -21,7 +21,6 @@ logger = get_logger(name=__name__)
 def train_autoencoder(
     cfg_preprop: DictConfig, cfg_model: DictConfig
 ) -> None:
-    dataframe: pd.DataFrame
     dataframe = preprocess(cfg_preprop)
     dataframe["mcc_code"] = dataframe["mcc_code"].apply(lambda t: t[t < cfg_model["dataset"]["n_mccs_keep"]])
     dataframe["amount"] = dataframe["amount"].apply(lambda t: t.float())
