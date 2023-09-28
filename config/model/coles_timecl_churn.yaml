@@ -1,0 +1,50 @@
+name: coles_churn
+
+dataset:
+  _target_: src.coles.ColesTimeCLDataset
+  min_len: 20
+  max_len: 60
+  llambda: 0.4
+  rlambda: 0.6
+  split_count: 5
+  col_time: event_time
+  
+validation_dataset:
+  _target_: src.coles.CustomColesValidationDataset
+  min_len: 20
+  seq_len: 40
+  stride: 1
+  local_target_col: churn_target
+  col_time: event_time
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 64
+  valid_batch_size: 64
+  train_num_workers: 1
+  valid_num_workers: 1
+
+model:
+  _target_: src.coles.CustomCoLES
+  optimizer_partial:
+    _partial_: True
+    _target_: torch.optim.Adam
+    lr: .004
+    weight_decay: .00005
+  lr_scheduler_partial:
+    _partial_: True
+    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+    factor: .5
+    patience: 2
+  sequence_encoder:
+    _target_: ptls.nn.RnnSeqEncoder
+    trx_encoder:
+      _target_: ptls.nn.TrxEncoder
+      embeddings_noise: .005
+      embeddings: {mcc_code: {in: 344, out: 32}}
+      numeric_values: {event_time: log}
+    hidden_size: 1024
+    type: lstm
+
+defaults:
+  - trainer_coles: trainer 
