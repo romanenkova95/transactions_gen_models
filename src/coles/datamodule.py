@@ -1,6 +1,7 @@
 """
 Custom coles datamodule
 """
+import random
 from functools import reduce
 from operator import iadd
 from typing import Dict, List, Optional, Tuple
@@ -105,19 +106,19 @@ class TimeCLSampler(AbsSplit):
             idxs[: date_len // 2],
             idxs[date_len // 2 :],
         )
+        l_dense, l_sparse = len(dense_timestamps), len(sparse_timestamps)
 
         max_len = date_len if date_len < self.max_len else self.max_len
 
-        lengths = np.random.randint(self.min_len, max_len, size=self.split_count)
+        lengths = np.random.randint(self.min_len, max_len + 1, size=self.split_count)
         lambdas = np.random.uniform(self.llambda, self.rlambda, size=self.split_count)
 
-        n_dense, n_sparse = np.floor(lengths * lambdas).astype(int), np.ceil(
-            lengths * (1 - lambdas)
-        ).astype(int)
+        n_dense = np.floor(lengths * lambdas).astype(int)
+        n_sparse = np.ceil(lengths * (1 - lambdas)).astype(int)
 
         idxs = [
-            list(np.random.choice(dense_timestamps, size=n_d, replace=False)) +
-            list(np.random.choice(sparse_timestamps, size=n_s, replace=False))
+            list(np.random.choice(dense_timestamps, size=min(n_d, l_dense), replace=False)) +
+            list(np.random.choice(sparse_timestamps, size=min(n_s, l_sparse), replace=False))
             for (n_d, n_s) in list(zip(n_dense, n_sparse))
         ]
 

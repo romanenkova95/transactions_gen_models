@@ -1,3 +1,3 @@
 """Init module"""
 from .model import CustomCoLES
-from .datamodule import CustomColesDataset, CustomColesValidationDataset
+from .datamodule import CustomColesDataset, CustomColesValidationDataset, ColesTimeCLDataset

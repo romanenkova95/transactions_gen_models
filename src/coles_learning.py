@@ -1,24 +1,20 @@
 """Main coles learning script"""
-from pathlib import Path
 import pickle
-
-from hydra.utils import instantiate
-from omegaconf import DictConfig
+from pathlib import Path
 
 import pandas as pd
-
-from ptls.preprocessing import PandasDataPreprocessor
+from hydra.utils import instantiate
+from omegaconf import DictConfig
 from ptls.frames import PtlsDataModule
-
+from ptls.frames.coles import ColesDataset
+from ptls.preprocessing import PandasDataPreprocessor
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-
 from sklearn.model_selection import train_test_split
 
-from src.coles import CustomCoLES, CustomColesDataset
+from src.coles import CustomCoLES
 from src.utils.logging_utils import get_logger
-
 
 logger = get_logger(name=__name__)
 
@@ -82,8 +78,8 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
     train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
 
     # Define our ColesDataset wrapper from the config
-    train_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=train)
-    val_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=val)
+    train_data: ColesDataset = instantiate(cfg_model["dataset"], data=train)
+    val_data: ColesDataset = instantiate(cfg_model["dataset"], data=val)
 
     # Pytorch-lifestream datamodule for the model training and evaluation
     datamodule: PtlsDataModule = instantiate(
