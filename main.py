@@ -6,6 +6,7 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from src import learn_coles
+from src.preprocessing import preprocess
 from src.generation.learning.ae_learning import train_autoencoder
 
 logging.basicConfig(level=logging.INFO)

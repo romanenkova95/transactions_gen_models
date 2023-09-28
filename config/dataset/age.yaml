@@ -1,12 +1,15 @@
-name: age
+transforms:
+ - 
+    _target_: src.preprocessing.ToType
+    type_mapping:
+        amount: float32
+ - 
+    _target_: ptls.preprocessing.PandasDataPreprocessor
+    col_id: user_id
+    col_event_time: timestamp
+    event_time_transformation: dt_to_timestamp
+    cols_category: [mcc_code]
+    cols_numerical: [amount]
+    return_records: False
 
-dir_path: data/preprocessed_new
-train_file_name: ${.name}.parquet
-
-ignore_existing_preproc: False
-
-coles:
-  pandas_preprocessor:
-    dir_path: preproc_data/${dataset.name}
-    name: pandas_preprocessor.p
-  test_size: .2
+source: data/preprocessed_new/age.parquet

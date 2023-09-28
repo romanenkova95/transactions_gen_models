@@ -11,7 +11,7 @@ logger = get_logger(name=__name__)
 
 
 def preprocess(cfg_preprop: DictConfig, local_target_col: str = "") -> pd.DataFrame:
-    dataframe = pd.read_parquet(
+    dataframe: pd.DataFrame = pd.read_parquet(
         Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])
     )
     logger.info("dataframe initialized")
@@ -25,8 +25,6 @@ def preprocess(cfg_preprop: DictConfig, local_target_col: str = "") -> pd.DataFr
     path_to_preprocessor = path_to_preprocessor.joinpath(
         cfg_preprop["coles"]["pandas_preprocessor"]["name"]
     )
-
-    dataset: pd.DataFrame
 
     if not path_to_preprocessor.exists():
         logger.info(
@@ -49,12 +47,12 @@ def preprocess(cfg_preprop: DictConfig, local_target_col: str = "") -> pd.DataFr
             cols_numerical=cols_numerical,
             return_records=False,
         )
-        dataset = preprocessor.fit_transform(dataframe)  # type: ignore (return_records=False)
+        dataframe = preprocessor.fit_transform(dataframe)  # type: ignore (return_records=False)
         with path_to_preprocessor.open("wb") as file:
             pickle.dump(preprocessor, file)
     else:
         with path_to_preprocessor.open("rb") as file:
             preprocessor: PandasDataPreprocessor = pickle.load(file)
-        dataset = preprocessor.transform(dataframe)
+        dataframe = preprocessor.transform(dataframe)
 
-    return dataset
+    return dataframe

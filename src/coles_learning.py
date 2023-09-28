@@ -25,9 +25,7 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
         cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
         cfg_model (DictConfig): Model config (specified in the 'config/model')
     """
-    dataframe = preprocess(cfg_preprop, cfg_model["validation_dataset"]["local_target_col"])
-    dataset = dataframe.to_dict(orient='records')
-
+    dataset = preprocess(cfg_preprop)
     logger.info("Preparing datasets and datamodule")
     # train val splitting
     train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
