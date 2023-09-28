@@ -1,4 +1,4 @@
-_target_: src.nn.decoders.LSTMCellDecoder
+_target_: src.generation.decoders.LSTMCellDecoder
 input_size: 1024
 hidden_size: 2048
 num_layers: 2

@@ -10,7 +10,7 @@ from torcheval.metrics.functional import multiclass_auroc, multiclass_f1_score, 
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
-from src.nn.decoders.base import AbsDecoder
+from src.generation.decoders.base import AbsDecoder
 from src.generation.modules.base import AbsAE
 from src.utils.logging_utils import get_logger
 

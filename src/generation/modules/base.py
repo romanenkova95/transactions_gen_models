@@ -12,7 +12,7 @@ from torch import Tensor
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.data_load import PaddedBatch
 
-from src.nn.decoders.base import AbsDecoder
+from src.generation.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
 
 logger = get_logger(name=__name__)
