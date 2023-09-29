@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Union
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
@@ -9,6 +9,7 @@ from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
 
 import torch
 from torch import Tensor
+from torch.nn.parameter import Parameter
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.data_load import PaddedBatch
@@ -26,12 +27,12 @@ class AbsAE(LightningModule):
         lr (float): The learning rate, extracted from the optimizer_config.
         ae_output_size (int): The output size of the decoder.
     """
+
     def __init__(
         self,
         encoder_config: DictConfig,
         decoder_config: DictConfig,
         mcc_vocab_size: int,
-        optimizer_config: DictConfig,
         encoder_weights: Optional[str] = "",
         decoder_weights: Optional[str] = "",
         unfreeze_enc_after: Optional[int] = 0,
@@ -40,28 +41,22 @@ class AbsAE(LightningModule):
         """Initialize AbsAE internal state
 
         Args:
-            encoder_config (DictConfig): 
+            encoder_config (DictConfig):
                 An instantiate-compatible config of the encoder.
-            decoder_config (DictConfig): 
+            decoder_config (DictConfig):
                 An instantiate-compatible config of the decoder.
-            mcc_vocab_size (int): 
+            mcc_vocab_size (int):
                 Total amount of mcc codes (except padding).
-            optimizer_config (DictConfig): 
-                A dict config with an optimizer key and optionally an lr_scheduler key.
-                Both optimizer & scheduler are partially instantiated, and then initialized with
-                model parameters & optimizer respectfully. 
-                lr_scheduler may be either a torch lr_scheduler instance, 
-                or a dict with lr_scheduler config (see configure_optimizers docs).
-            encoder_weights (Optional[str], optional): 
+            encoder_weights (Optional[str], optional):
                 Path to encoder weights. Defaults to "", in which case no weights are loaded.
-            decoder_weights (Optional[str], optional): 
+            decoder_weights (Optional[str], optional):
                 Path to decoder weights. Defaults to "", in which case no weights are loaded.
-            unfreeze_enc_after (Optional[int], optional): 
-                Number of epochs to wait before unfreezing encoder weights. 
+            unfreeze_enc_after (Optional[int], optional):
+                Number of epochs to wait before unfreezing encoder weights.
                 Defaults to 0, in which case the module isn't frozen.
                 A negative number would freeze the weights for the whole training duration.
-            unfreeze_dec_after (Optional[int], optional): 
-                Number of epochs to wait before unfreezing encoder weights. 
+            unfreeze_dec_after (Optional[int], optional):
+                Number of epochs to wait before unfreezing encoder weights.
                 Defaults to 0, in which case the module isn't frozen.
                 A negative number would freeze the weights for the whole training duration.
         """
@@ -74,8 +69,6 @@ class AbsAE(LightningModule):
         self.unfreeze_enc_after = unfreeze_enc_after
         self.unfreeze_dec_after = unfreeze_dec_after
         self.ae_output_size = self.decoder.output_size
-        self.optimizer_config = optimizer_config
-        self.lr = optimizer_config["optimizer"]["lr"]
 
         if encoder_weights:
             self.encoder.load_state_dict(torch.load(encoder_weights))
@@ -98,7 +91,7 @@ class AbsAE(LightningModule):
             x (PaddedBatch): Input, presumably raw transactional data.
 
         Raises:
-            ValueError: 
+            ValueError:
             Unknown format of encoder output. The encoder should output one of the following:
                 - 3D Tensor of shape (B, L, C), sequence of embeddings.
                 - PaddedBatch of shape (B, L, C), sequence of embeddings.
@@ -129,28 +122,33 @@ class AbsAE(LightningModule):
 
         if self.unfreeze_dec_after and self.current_epoch == self.unfreeze_dec_after:
             logger.info("Unfreezing decoder weights")
+
             self.decoder.requires_grad_(True)
+            self.parameters()
 
         return super().on_train_epoch_start()
 
-    def configure_optimizers(self):
-        cnf: Dict = instantiate(self.optimizer_config, _convert_="all")
-        cnf["optimizer"] = cnf["optimizer"](
-            lr=self.lr, params=self.parameters()
-        )
-
-        scheduler = cnf.get("lr_scheduler")
+    @staticmethod
+    def _parse_optimizer_config(
+        optimizer_config: DictConfig, params: Iterator[Parameter]
+    ):
+        optimizer = instantiate(optimizer_config["optimizer"], params=params)
+        scheduler = optimizer_config.get("lr_scheduler")
         if scheduler:
             if isinstance(scheduler, dict):
-                scheduler["scheduler"] = scheduler["scheduler"](optimizer=cnf["optimizer"])
+                scheduler = instantiate(scheduler, scheduler={"optimizer": optimizer})
             else:
-                cnf["lr_scheduler"] = scheduler(optimizer=cnf["optimizer"])
+                scheduler = instantiate(scheduler, optimizer=optimizer)
 
-        return cnf
-    
+            return {"lr_scheduler": scheduler, "optimizer": optimizer}
+        else:
+            return {"optimizer": optimizer}
+
     # Overriding lr_scheduler_step to fool the exception (which doesn't appear in later versions of pytorch_lightning):
-    # pytorch_lightning.utilities.exceptions.MisconfigurationException: 
-    #   The provided lr scheduler `...` doesn't follow PyTorch's LRScheduler API. 
+    # pytorch_lightning.utilities.exceptions.MisconfigurationException:
+    #   The provided lr scheduler `...` doesn't follow PyTorch's LRScheduler API.
     #   You should override the `LightningModule.lr_scheduler_step` hook with your own logic if you are using a custom LR scheduler.
-    def lr_scheduler_step(self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric) -> None:
+    def lr_scheduler_step(
+        self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
+    ) -> None:
         return super().lr_scheduler_step(scheduler, optimizer_idx, metric)

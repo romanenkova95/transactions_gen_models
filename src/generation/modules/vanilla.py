@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
@@ -46,6 +47,7 @@ class VanillaAE(AbsAE):
     def __init__(
         self,
         loss_weights: Dict[Literal["amount", "mcc"], float],
+        optimizer_config: DictConfig,
         **kwargs,
     ) -> None:
         """Initialize VanillaAE internal state.
@@ -53,6 +55,12 @@ class VanillaAE(AbsAE):
         Args:
             loss_weights (Dict):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
+            optimizer_config (DictConfig): 
+                A dict config with an optimizer key and optionally an lr_scheduler key.
+                Both optimizer & scheduler are partially instantiated, and then initialized with
+                model parameters & optimizer respectfully. 
+                lr_scheduler may be either a torch lr_scheduler instance, 
+                or a dict with lr_scheduler config (see configure_optimizers docs).
         """
         super().__init__(**kwargs)
 
@@ -61,6 +69,8 @@ class VanillaAE(AbsAE):
         self.out_amount = nn.Linear(self.ae_output_size, 1)
         self.out_mcc = nn.Linear(self.ae_output_size, self.mcc_vocab_size + 1)
 
+        self.lr = optimizer_config["optimizer"]["lr"]
+        self.optimizer_config = optimizer_config
         self.amount_loss_weight = loss_weights["amount"] / sum(loss_weights.values())
         self.mcc_loss_weight = loss_weights["mcc"] / sum(loss_weights.values())
 
@@ -281,3 +291,6 @@ class VanillaAE(AbsAE):
         amount_rec_trim = amount_rec[lens_mask]
 
         return mcc_rec_trim.split(lens), amount_rec_trim.split(lens)
+
+    def configure_optimizers(self):
+        return self._parse_optimizer_config(self.optimizer_config, self.parameters())
