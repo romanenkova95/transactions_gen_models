@@ -1,0 +1,4 @@
+defaults:
+  - dataset: churn
+  - validation: global_target
+  - _self_

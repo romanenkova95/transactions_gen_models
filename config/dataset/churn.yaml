@@ -9,4 +9,6 @@ coles:
   pandas_preprocessor:
     dir_path: preproc_data/${dataset.name}
     name: pandas_preprocessor.p
-  test_size: .2
+  valid_size: .1
+  test_size: .1
+  random_state: 42

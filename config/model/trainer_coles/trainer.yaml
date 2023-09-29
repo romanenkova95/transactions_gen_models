@@ -3,6 +3,8 @@ checkpoint_callback:
   dirpath: logs/checkpoints/coles
   filename: coles_model
 
+enable_early_stopping: False
+
 early_stopping:
   _target_: pytorch_lightning.callbacks.EarlyStopping
   min_delta: .01
@@ -16,6 +18,6 @@ logger:
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
-  devices: 1
-  max_epochs: 50
-  log_every_n_steps: 20
+  devices: [1]
+  max_epochs: 60
+  log_every_n_steps: 10
