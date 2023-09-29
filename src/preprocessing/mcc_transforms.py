@@ -1,18 +1,26 @@
 import pandas as pd
-from ptls.preprocessing.base import ColTransformer
+from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 
 
-class DropLargeMccs(ColTransformer):
-    """Drops mccs larger than n_mccs_keep. 
+class DropRareMccs(FrequencyEncoder):
+    """Encode mccs frequency-wise, and keep only top-k most frequent mccs. 
     To be used after frequency encoder to drop the rarest mcc codes.
     """
-    def __init__(self, col_name_original: str, n_mccs_keep: int):
-        self.col_name_original = col_name_original
-        self.n_mccs_keep = n_mccs_keep
+    def __init__(self, col_name_original: str, k: int):
+        """Initialize DropRareMccs transform
 
-    def fit(self, x):
+        Args:
+            col_name_original (str): original column name
+            k (int): amount of mccs to keep (excluding padding token)
+        """
+        super().__init__(col_name_original)
+        self.col_name_original = col_name_original
+        self.k = k
+
+    def fit(self, x: pd.DataFrame):
+        super().fit(x)
         return self
     
     def transform(self, x: pd.DataFrame):
-        x = x[x[self.col_name_original] < self.n_mccs_keep]
-        return x
+        x = super().transform(x)
+        return x[x[self.col_name_original] < self.k]

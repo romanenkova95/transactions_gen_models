@@ -1,5 +1,5 @@
 defaults:
   - preprocessing: churn
   - dataset: simple
-  - model: ae_simple
+  - model: ae_nlp
   - _self_

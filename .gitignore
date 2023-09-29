@@ -196,3 +196,4 @@ outputs/
 multirun/
 docker_scripts/
 cache/
+sweeps/

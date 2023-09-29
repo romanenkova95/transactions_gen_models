@@ -1,0 +1,19 @@
+transforms:
+ - 
+    _target_: src.preprocessing.ToType
+    type_mapping:
+    amount: float32
+ - 
+    _target_: src.preprocessing.DropRareMccs
+    col_name_original: mcc_code
+    k: 100
+ - 
+    _target_: ptls.preprocessing.PandasDataPreprocessor
+    col_id: user_id
+    col_event_time: timestamp
+    event_time_transformation: dt_to_timestamp
+    cols_category: [mcc_code]
+    cols_numerical: [amount]
+    return_records: False
+
+source: data/preprocessed_new/churn.parquet
