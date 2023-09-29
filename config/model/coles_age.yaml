@@ -1,5 +1,5 @@
 name: coles_age
-test_size: 0.8
+test_size: 0.2
 
 dataset:
   _target_: src.coles.CustomColesDataset
