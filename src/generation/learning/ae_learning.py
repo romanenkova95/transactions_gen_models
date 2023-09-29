@@ -2,13 +2,8 @@
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from torch.utils.data import random_split, DataLoader
-from ptls.data_load.datasets.memory_dataset import MemoryMapDataset
-from ptls.data_load.datasets.augmentation_dataset import AugmentationDataset
-from ptls.data_load.iterable_processing import SeqLenFilter
-from ptls.data_load.augmentations import RandomSlice
-from ptls.data_load.utils import collate_feature_dict
-import pandas as pd
+from ptls.frames import PtlsDataModule
+from sklearn.model_selection import train_test_split
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -21,38 +16,33 @@ from src.preprocessing import preprocess
 logger = get_logger(name=__name__)
 
 def train_autoencoder(
-    cfg_preprop: DictConfig, cfg_model: DictConfig
+    cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: DictConfig
 ) -> None:
     """Train autoencoder, specified in the model config, on the data, specified by the preprocessing config.
-    Model config should contain:
-     - encoder: nn.Module of encoder
-     - decoder: nn.Module of decoder
-     - module_ae: pl.Module, used to train & validate the model, subclass of AbsAE
-     - trainer_args: arguments to pass to pl.Trainer
-     - train_dl_args: arguments to pass when constructing the train DataLoader
-     - val_dl_args: arguments to pass when constructing the val DataLoader
-     - dataset: dataset-specific args: min_len, random_min_seq_len, random_max_seq_len
-     
-    For preprocessing config specification, see preprocess.
      
     Args:
-        cfg_preprop (DictConfig): the preprocessing config
-        cfg_model (DictConfig): the model config
+        cfg_preprop (DictConfig): 
+            the preprocessing config, for specifications see preprocess.
+        cfg_dataset (DictConfig): 
+            the dataset config, to be partially instantiated, and later supplied the data argument,
+            a list of dicts of features, outputted by preprocess.
+        cfg_model (DictConfig): 
+            the model config, which should contain:
+                - encoder: nn.Module of encoder
+                - decoder: nn.Module of decoder
+                - module_ae: pl.Module, used to train & validate the model, subclass of AbsAE
+                - trainer_args: arguments to pass to pl.Trainer
+                - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
+                - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
     """
-    dataset = preprocess(cfg_preprop)
-    dataset = AugmentationDataset(
-        MemoryMapDataset(dataset, [SeqLenFilter(cfg_model["dataset"]["min_len"])]),
-        [RandomSlice(cfg_model["dataset"]["random_min_seq_len"], cfg_model["dataset"]["random_max_seq_len"])]
-    )
+    data = preprocess(OmegaConf.to_container(cfg_preprop)) # type: ignore
 
-    train, val = random_split(dataset, [0.8, 0.2])
-
-    train_dataloader = DataLoader(
-        train, collate_fn=collate_feature_dict, **cfg_model.get("train_dl_args", {})
-    )
-
-    val_dataloader = DataLoader(
-        val, collate_fn=collate_feature_dict, **cfg_model.get("val_dl_args", {})
+    train, valid = train_test_split(data, test_size=cfg_model["test_size"])
+    ds_factory = instantiate(cfg_dataset, _partial_=True)
+    datamodule = PtlsDataModule(
+        train_data=ds_factory(train),
+        valid_data=ds_factory(valid),
+        **cfg_model.get("datamodule_args", {})
     )
 
     module: AbsAE = instantiate(cfg_model["module_ae"], _recursive_=False)(
@@ -77,4 +67,4 @@ def train_autoencoder(
         **cfg_model["trainer_args"],
     )
 
-    trainer.fit(module, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
+    trainer.fit(module, datamodule=datamodule)

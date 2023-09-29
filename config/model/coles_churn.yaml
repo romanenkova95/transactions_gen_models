@@ -1,4 +1,5 @@
 name: coles_churn
+test_size: 0.8
 
 dataset:
   _target_: src.coles.CustomColesDataset

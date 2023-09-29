@@ -1,6 +1,6 @@
 """Main coles learning script"""
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from ptls.frames import PtlsDataModule
 
@@ -18,21 +18,22 @@ from src.utils.logging_utils import get_logger
 logger = get_logger(name=__name__)
 
 
-def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
+def learn_coles(cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: DictConfig) -> None:
     """Full pipeline for the coles model fitting.
 
     Args:
-        cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
-        cfg_model (DictConfig): Model config (specified in the 'config/model')
+        cfg_preprop (DictConfig): Preprocessing config (specified in 'config/preprocessing')
+        cfg_dataset (DictConfig): Dataset config (specified in 'config/dataset')
+        cfg_model (DictConfig): Model config (specified in 'config/model')
     """
-    dataset = preprocess(cfg_preprop)
+    dataset = preprocess(OmegaConf.to_container(cfg_preprop)) # type: ignore
     logger.info("Preparing datasets and datamodule")
     # train val splitting
-    train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
+    train, val = train_test_split(dataset, test_size=cfg_model["test_size"])
 
     # Define our ColesDataset wrapper from the config
-    train_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=train)
-    val_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=val)
+    train_data: CustomColesDataset = instantiate(cfg_dataset, data=train)
+    val_data: CustomColesDataset = instantiate(cfg_dataset, data=val)
 
     # Pytorch-lifestream datamodule for the model training and evaluation
     datamodule: PtlsDataModule = instantiate(

@@ -91,15 +91,16 @@ class VanillaAE(AbsAE):
         """
         seqs_after_lstm = super().forward(batch)  # supposedly (B * S, L, E)
 
-        mcc_rec = self.out_mcc(seqs_after_lstm)
-        amount_rec = self.out_amount(seqs_after_lstm)
-
+        mcc_rec: Tensor = self.out_mcc(seqs_after_lstm)
+        amount_rec: Tensor = self.out_amount(seqs_after_lstm).squeeze(dim=-1)
+    
         # zero-out padding to disable grad flow
-        mcc_rec[~batch.seq_len_mask.bool()] = 0
-        amount_rec[~batch.seq_len_mask.bool()] = 0
+        pad_mask = batch.seq_len_mask.bool().reshape(*(amount_rec.shape))
+        mcc_rec[~pad_mask] = 0
+        amount_rec[~pad_mask] = 0
 
         # squeeze for amount is required to reduce last dimension
-        return (mcc_rec, amount_rec.squeeze(dim=-1))
+        return (mcc_rec, amount_rec)
 
     def _calculate_metrics(
         self,

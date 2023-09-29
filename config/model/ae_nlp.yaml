@@ -1,3 +1,5 @@
+test_size: 0.8
+
 trainer_args:
   max_epochs: 500
   fast_dev_run: true

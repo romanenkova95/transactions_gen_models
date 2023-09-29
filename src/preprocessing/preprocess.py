@@ -8,15 +8,15 @@ import pandas as pd
 
 from ptls.preprocessing.base import ColTransformer
 
-
-@Memory("cache").cache()
-def preprocess(cfg: DictConfig) -> List[Dict]:
+@Memory("cache", verbose=5).cache
+def preprocess(cfg: Dict) -> List[Dict]:
     """Preprocess data according to given config. Caches function result using joblib to cache directory
 
     Args:
-        cfg (DictConfig): loaded OmegaConf config. Needs fields:
+        cfg (Dict): loaded OmegaConf config, converted to dict for compatibility with joblib. Needs fields:
             - source: .parquet file to read the dataframe from
             - transforms: sequence of ColTransformer/scikit-learn transforms of the pandas dataframe
+        Other fields are allowed and ignored.
 
     Returns:
         List[Dict]: FeatureDict, compatible with ptls

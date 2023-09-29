@@ -18,11 +18,11 @@ def main(cfg: DictConfig) -> None:
     model_name: str = hydra_cfg.runtime.choices["model"]
 
     if model_name.startswith("coles"):
-        learn_coles(cfg["dataset"], cfg["model"])
+        learn_coles(cfg["preprocessing"], cfg["dataset"], cfg["model"])
     elif model_name.startswith("cpc"):
         pass
     elif model_name.startswith("ae"):
-        train_autoencoder(cfg["dataset"], cfg["model"])
+        train_autoencoder(cfg["preprocessing"], cfg["dataset"], cfg["model"])
     else:
         raise ValueError(f"Unsupported model type: {model_name=}")
 
