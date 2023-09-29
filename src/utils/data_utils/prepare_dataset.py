@@ -9,6 +9,8 @@ import pandas as pd
 
 from ptls.preprocessing import PandasDataPreprocessor
 
+from src.custom_preprocessing import CustomDatetimeNormalization
+
 
 def prepare_dataset(cfg_preprop: DictConfig, logger: logging.Logger) -> list[dict]:
     """Prepares dataset.
@@ -39,22 +41,47 @@ def prepare_dataset(cfg_preprop: DictConfig, logger: logging.Logger) -> list[dic
         logger.info(
             "Preprocessor was not saved, so the fitting process will be provided"
         )
-        event_time_transformation = (
-            "none" if dataset_name == "age" else "dt_to_timestamp"
-        )
 
-        preprocessor = PandasDataPreprocessor(
-            col_id="user_id",
-            col_event_time="timestamp",
-            event_time_transformation=event_time_transformation,
-            cols_category=["mcc_code"],
-            cols_numerical=["amount"],
-            cols_first_item=[
-                "global_target"
-            ],  # global target is duplicated, use 1st value
-            return_records=True,
-        )
+        if cfg_preprop["datetime_transformation"] is None:
+        # default datetime stransformation
+            event_time_transformation = (
+                "none" if dataset_name == "age" else "dt_to_timestamp"
+            )
+
+            preprocessor = PandasDataPreprocessor(
+                col_id="user_id",
+                col_event_time="timestamp",
+                event_time_transformation=event_time_transformation,
+                cols_category=["mcc_code"],
+                cols_numerical=["amount"],
+                cols_first_item=[
+                    "global_target"
+                ],  # global target is duplicated, use 1st value
+                return_records=True,
+            )
+        
+        elif cfg_preprop["datetime_transformation"] == "normalize":
+        # normalize times
+            min_timestamp = int(dataframe["timestamp"].min().timestamp())
+
+            datetime_transformer = CustomDatetimeNormalization(
+                min_timestamp=min_timestamp, col_name_original="timestamp"
+            )
+
+            preprocessor = PandasDataPreprocessor(
+                col_id="user_id",
+                col_event_time=datetime_transformer,
+                cols_category=["mcc_code"],
+                category_transformation="frequency",
+                cols_numerical=["amount"],
+                cols_first_item=["global_target"],
+                return_records=True,
+            )
+        else:
+            raise ValueError(f"Unknown datetime transformation {cfg_preprop['datetime_transformation']}.")
+
         dataset = preprocessor.fit_transform(dataframe)
+
         with path_to_preprocessor.open("wb") as file:
             pickle.dump(preprocessor, file)
     else:

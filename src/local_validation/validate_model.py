@@ -74,7 +74,7 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
     for i in range(cfg_validation["n_runs"]):
         logger.info(f'Training LocalValidationModel. Run {i+1}/{cfg_validation["n_runs"]}')
 
-        seed_everything(cfg_preprop["coles"]["random_state"])
+        seed_everything(i)
 
         valid_model: LocalValidationModel = instantiate(
             cfg_validation["model"],

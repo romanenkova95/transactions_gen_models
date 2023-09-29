@@ -31,7 +31,7 @@ datamodule:
  valid_num_workers: 2
  test_num_workers: 2
 
-n_runs: 1
+n_runs: 3
 
 model:
   _target_: src.local_validation.LocalValidationModel
