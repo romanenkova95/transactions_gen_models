@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.loggers.logger import DummyLogger
+from pytorch_lightning.loggers.base import DummyLogger
 
 from src.generation.modules.base import AbsAE
 from src.utils.logging_utils import get_logger
@@ -50,11 +50,15 @@ def train_autoencoder(
         decoder_config=cfg_model["decoder"]
     )
 
+    callbacks = []
+
     if "fast_dev_run" not in cfg_model["trainer_args"]:
         lightning_logger = WandbLogger(project="macro_micro_coles")
 
         cfg = OmegaConf.merge(cfg_model, cfg_preprop)
         lightning_logger.experiment.config.update(OmegaConf.to_container(cfg))
+        
+        callbacks.append(LearningRateMonitor())
     else:
         lightning_logger = DummyLogger()
 
@@ -63,7 +67,7 @@ def train_autoencoder(
         devices=1,
         logger=lightning_logger,
         log_every_n_steps=10,
-        callbacks=[LearningRateMonitor()],
+        callbacks=callbacks,
         **cfg_model["trainer_args"],
     )
 

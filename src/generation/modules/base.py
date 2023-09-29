@@ -4,6 +4,7 @@ from hydra.utils import instantiate
 
 
 from pytorch_lightning import LightningModule
+from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
 
 
 import torch
@@ -146,3 +147,10 @@ class AbsAE(LightningModule):
                 cnf["lr_scheduler"] = scheduler(optimizer=cnf["optimizer"])
 
         return cnf
+    
+    # Overriding lr_scheduler_step to fool the exception (which doesn't appear in later versions of pytorch_lightning):
+    # pytorch_lightning.utilities.exceptions.MisconfigurationException: 
+    #   The provided lr scheduler `...` doesn't follow PyTorch's LRScheduler API. 
+    #   You should override the `LightningModule.lr_scheduler_step` hook with your own logic if you are using a custom LR scheduler.
+    def lr_scheduler_step(self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric) -> None:
+        return super().lr_scheduler_step(scheduler, optimizer_idx, metric)
