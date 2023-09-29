@@ -3,13 +3,11 @@ test_size: 0.8
 trainer_args:
   max_epochs: 500
 
-train_dl_args:
-  batch_size: 196
-  num_workers: 4
-
-val_dl_args:
-  batch_size: 8
-  num_workers: 4
+datamodule_args:
+  train_batch_size: 196
+  train_num_workers: 4
+  valid_batch_size: 8
+  valid_num_workers: 4
 
 dataset:
   min_len: 20
