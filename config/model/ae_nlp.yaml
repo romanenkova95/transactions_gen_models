@@ -4,9 +4,9 @@ trainer_args:
   max_epochs: 500
 
 datamodule_args:
-  train_batch_size: 196
+  train_batch_size: 256
   train_num_workers: 4
-  valid_batch_size: 8
+  valid_batch_size: 256
   valid_num_workers: 4
 
 dataset:
