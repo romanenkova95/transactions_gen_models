@@ -22,9 +22,6 @@ from src.utils.logging_utils import get_logger
 from src.utils.data_utils.prepare_dataset import prepare_dataset
 
 
-logger = get_logger(name=__name__)
-
-
 def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
@@ -35,6 +32,8 @@ def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig
     Returns:
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
+    logger = get_logger(name=__name__)
+    
     dataset = prepare_dataset(cfg_preprop, logger)
 
     # train val test split

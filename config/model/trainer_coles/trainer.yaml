@@ -18,6 +18,6 @@ logger:
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
-  devices: [1]
+  devices: [0]
   max_epochs: 60
   log_every_n_steps: 10

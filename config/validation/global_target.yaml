@@ -14,7 +14,7 @@ sequence_encoder:
   trainable_starter: static
   type: lstm
 
-path_to_state_dict: coles_churn.pth
+path_to_state_dict: saved_models/coles_churn.pth
 
 embed_data:
   batch_size: 64
