@@ -2,7 +2,7 @@ transforms:
  - 
     _target_: src.preprocessing.ToType
     type_mapping:
-      amount: float32
+         amount: float32
  - 
     _target_: src.preprocessing.DropRareMccs
     col_name_original: mcc_code
