@@ -20,7 +20,7 @@ embed_data:
   batch_size: 64
   device: cuda
 
-n_runs: 10
+n_runs: 1
 
 model:
   _target_: lightgbm.LGBMClassifier

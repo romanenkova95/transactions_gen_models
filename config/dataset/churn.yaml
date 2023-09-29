@@ -3,7 +3,7 @@ name: churn
 dir_path: data/preprocessed_new
 train_file_name: ${.name}.parquet
 
-ignore_existing_preproc: False
+ignore_existing_preproc: True
 
 coles:
   pandas_preprocessor:

@@ -41,44 +41,34 @@ def prepare_dataset(cfg_preprop: DictConfig, logger: logging.Logger) -> list[dic
         logger.info(
             "Preprocessor was not saved, so the fitting process will be provided"
         )
-
         if cfg_preprop["datetime_transformation"] is None:
-        # default datetime stransformation
-            event_time_transformation = (
-                "none" if dataset_name == "age" else "dt_to_timestamp"
-            )
+        # default datetime transformation
+            datetime_transformer = "timestamp" 
 
-            preprocessor = PandasDataPreprocessor(
-                col_id="user_id",
-                col_event_time="timestamp",
-                event_time_transformation=event_time_transformation,
-                cols_category=["mcc_code"],
-                cols_numerical=["amount"],
-                cols_first_item=[
-                    "global_target"
-                ],  # global target is duplicated, use 1st value
-                return_records=True,
-            )
-        
         elif cfg_preprop["datetime_transformation"] == "normalize":
-        # normalize times
+        # normalize times - for return time, e.g.
             min_timestamp = int(dataframe["timestamp"].min().timestamp())
-
             datetime_transformer = CustomDatetimeNormalization(
                 min_timestamp=min_timestamp, col_name_original="timestamp"
             )
-
-            preprocessor = PandasDataPreprocessor(
-                col_id="user_id",
-                col_event_time=datetime_transformer,
-                cols_category=["mcc_code"],
-                category_transformation="frequency",
-                cols_numerical=["amount"],
-                cols_first_item=["global_target"],
-                return_records=True,
-            )
         else:
             raise ValueError(f"Unknown datetime transformation {cfg_preprop['datetime_transformation']}.")
+        
+        event_time_transformation = (
+                "none" if dataset_name == "age" else "dt_to_timestamp"
+            )
+
+        preprocessor = PandasDataPreprocessor(
+            col_id="user_id",
+            col_event_time=datetime_transformer,
+            event_time_transformation=event_time_transformation,
+            cols_category=["mcc_code"],
+            cols_numerical=["amount"],
+            cols_first_item=[
+                "global_target"
+            ],  # global target is duplicated, use 1st value
+            return_records=True,
+        )
 
         dataset = preprocessor.fit_transform(dataframe)
 
