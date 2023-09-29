@@ -32,7 +32,7 @@ class SampleAll(AbsSplit):
         self.seq_len = seq_len
         self.stride = stride
 
-    def split(self, dates: np.array) -> List[np.array]:
+    def split(self, dates: np.ndarray) -> List[np.ndarray]:
         """Create list of subsequences indexes.
 
         Args:
