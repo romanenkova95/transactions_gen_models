@@ -1,3 +1,5 @@
+"""Autoencoder training script"""
+
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import random_split, DataLoader
@@ -30,6 +32,8 @@ def train_autoencoder(
      - train_dl_args: arguments to pass when constructing the train DataLoader
      - val_dl_args: arguments to pass when constructing the val DataLoader
      - dataset: dataset-specific args: min_len, random_min_seq_len, random_max_seq_len
+     
+    For preprocessing config specification, see preprocess.
      
     Args:
         cfg_preprop (DictConfig): the preprocessing config
