@@ -5,9 +5,11 @@ from pathlib import Path
 import pandas as pd
 from hydra.utils import instantiate
 from omegaconf import DictConfig
+
 from ptls.frames import PtlsDataModule
-from ptls.frames.coles import ColesDataset
-from ptls.preprocessing import PandasDataPreprocessor
+
+import torch
+
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -15,6 +17,8 @@ from sklearn.model_selection import train_test_split
 
 from src.coles import CustomCoLES
 from src.utils.logging_utils import get_logger
+from src.utils.data_utils.prepare_dataset import prepare_dataset
+
 
 logger = get_logger(name=__name__)
 
@@ -26,56 +30,25 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
         cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
         cfg_model (DictConfig): Model config (specified in the 'config/model')
     """
-    dataframe = pd.read_parquet(
-        Path(cfg_preprop["dir_path"]).joinpath(cfg_preprop["train_file_name"])
-    )
-    logger.info("dataframe initialized")
+    dataset = prepare_dataset(cfg_preprop, logger)
 
-    dataset_name = cfg_preprop["name"]
+    # train val test split
+    valid_size = cfg_preprop["coles"]["valid_size"]
+    test_size = cfg_preprop["coles"]["test_size"]
 
-    path_to_preprocessor = Path(cfg_preprop["coles"]["pandas_preprocessor"]["dir_path"])
-    if not path_to_preprocessor.exists():
-        logger.warning("Preprocessor directory does not exist. Creating")
-        path_to_preprocessor.mkdir(parents=True)
-    path_to_preprocessor = path_to_preprocessor.joinpath(
-        cfg_preprop["coles"]["pandas_preprocessor"]["name"]
+    train, val_test = train_test_split(
+        dataset,
+        test_size=valid_size + test_size,
+        random_state=cfg_preprop["coles"]["random_state"],
     )
 
-    if not path_to_preprocessor.exists():
-        logger.info(
-            "Preprocessor was not saved, so the fitting process will be provided"
-        )
-        event_time_transformation = (
-            "none" if dataset_name == "age" else "dt_to_timestamp"
-        )
-
-        cols_numerical = ["amount"]
-        if dataset_name != "age":
-            local_target = cfg_model["validation_dataset"]["local_target_col"]
-            cols_numerical += [local_target]
-
-        preprocessor = PandasDataPreprocessor(
-            col_id="user_id",
-            col_event_time="timestamp",
-            event_time_transformation=event_time_transformation,
-            cols_category=["mcc_code"],
-            cols_numerical=cols_numerical,
-            cols_first_item=[
-                "global_target"
-            ],  # global target is duplicated, use 1st value
-            return_records=True,
-        )
-        dataset = preprocessor.fit_transform(dataframe)
-        with path_to_preprocessor.open("wb") as file:
-            pickle.dump(preprocessor, file)
-    else:
-        with path_to_preprocessor.open("rb") as file:
-            preprocessor: PandasDataPreprocessor = pickle.load(file)
-        dataset = preprocessor.transform(dataframe)
+    val, _ = train_test_split(
+        val_test,
+        test_size=test_size / (valid_size + test_size),
+        random_state=cfg_preprop["coles"]["random_state"],
+    )
 
     logger.info("Preparing datasets and datamodule")
-    # train val splitting
-    train, val = train_test_split(dataset, test_size=cfg_preprop["coles"]["test_size"])
 
     # Define our ColesDataset wrapper from the config
     train_data: ColesDataset = instantiate(cfg_model["dataset"], data=train)
@@ -96,18 +69,32 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
         mode="max",
     )
 
-    early_stopping: EarlyStopping = instantiate(
-        cfg_model["trainer_coles"]["early_stopping"],
-        monitor=model.metric_name,
-        mode="max",
-    )
+    callbacks = [model_checkpoint]
+
+    if cfg_model["trainer_coles"]["enable_early_stopping"]:
+        early_stopping: EarlyStopping = instantiate(
+            cfg_model["trainer_coles"]["early_stopping"],
+            monitor=model.metric_name,
+            mode="max",
+        )
+
+        callbacks.append(early_stopping)
 
     coles_logger: TensorBoardLogger = instantiate(cfg_model["trainer_coles"]["logger"])
 
     trainer: Trainer = instantiate(
         cfg_model["trainer_coles"]["trainer"],
-        callbacks=[model_checkpoint, early_stopping],
+        callbacks=callbacks,
         logger=coles_logger,
     )
 
+    # Training the model
     trainer.fit(model, datamodule)
+
+    checkpoint = torch.load(model_checkpoint.best_model_path)
+
+    model.load_state_dict(checkpoint["state_dict"])
+
+    # Save the state_dict of the best sequence encoder
+    Path("saved_models").mkdir(exist_ok=True)
+    torch.save(model.get_seq_encoder_weights(), f'saved_models/{cfg_model["name"]}.pth')

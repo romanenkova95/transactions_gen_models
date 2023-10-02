@@ -54,16 +54,17 @@ class SampleAll(AbsSplit):
 
 class TimeCLSampler(AbsSplit):
     """
-        TimeCL sampler implementation, ptls-style.
-        For details, see Algorithm 1 from the paper:
-            http://mesl.ucsd.edu/pubs/Ranak_AAAI2023_PrimeNet.pdf
-        Args:
-            min_len (int): minimum subswequence length
-            max_len (int): maximum subsequence lentgh
-            llambda (float): lower bound for lambda valu
-            rlambda (float): upper bound for lambda value
-            split_count (int): number of generated subsequences
+    TimeCL sampler implementation, ptls-style.
+    For details, see Algorithm 1 from the paper:
+        http://mesl.ucsd.edu/pubs/Ranak_AAAI2023_PrimeNet.pdf
+    Args:
+        min_len (int): minimum subswequence length
+        max_len (int): maximum subsequence lentgh
+        llambda (float): lower bound for lambda valu
+        rlambda (float): upper bound for lambda value
+        split_count (int): number of generated subsequences
     """
+
     def __init__(
         self,
         min_len: int,
@@ -117,8 +118,16 @@ class TimeCLSampler(AbsSplit):
         n_sparse = np.ceil(lengths * (1 - lambdas)).astype(int)
 
         idxs = [
-            list(np.random.choice(dense_timestamps, size=min(n_d, l_dense), replace=False)) +
-            list(np.random.choice(sparse_timestamps, size=min(n_s, l_sparse), replace=False))
+            list(
+                np.random.choice(
+                    dense_timestamps, size=min(n_d, l_dense), replace=False
+                )
+            )
+            + list(
+                np.random.choice(
+                    sparse_timestamps, size=min(n_s, l_sparse), replace=False
+                )
+            )
             for (n_d, n_s) in list(zip(n_dense, n_sparse))
         ]
 
@@ -141,7 +150,7 @@ class CustomColesDataset(ColesDataset):
         col_time: str = "event_time",
         **kwargs
     ):
-        """Overrided initialize method, which is suitable for our tasks
+        """Overrided initialize method, which is suitable for our tasks.
 
         Args:
             data (list[dict]): transaction dataframe in the ptls format (list of dicts)
@@ -154,110 +163,6 @@ class CustomColesDataset(ColesDataset):
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),
             SampleSlices(split_count, random_min_seq_len, random_max_seq_len),
-            col_time,
-            *args,
-            **kwargs
-        )
-
-
-class CustomColesValidationDataset(ColesDataset):
-    """
-    Custom coles dataset for local validation pipeline. Items contain all subsequences for each client.
-    """
-
-    def __init__(
-        self,
-        data: List[Dict[str, torch.Tensor]],
-        min_len: int,
-        seq_len: int,
-        stride: int,
-        *args,
-        col_time: str = "event_time",
-        local_target_col: Optional[str] = None,
-        **kwargs
-    ) -> None:
-        """Overrided initialize method, which is suitable for local validation pipeline.
-
-        Args:
-            data (list[dict]): transaction dataframe in the ptls format (list of dicts)
-            min_len (int): minimal subsequence length
-            seq_len (int): desired subsequence length (i.e. sliding window size) (parameter of SampleAll sampler)
-            stride (int): margin between subsequent windows (parameter of SampleAll sampler)
-            col_time (str, optional): column name with event time. Defaults to 'event_time'
-            local_target_col (str, optional): if not None, indicates name of the with local targets for each transaction
-        """
-        super().__init__(
-            MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-            SampleAll(seq_len, stride),
-            col_time,
-            *args,
-            **kwargs
-        )
-        # keep name of the column with local targets
-        self.local_target_col = local_target_col
-
-    def collate_fn(self, batch: List[Dict]) -> Tuple[PaddedBatch, torch.Tensor]:
-        """Overwrite collate function to return batch of local targets for a batch of subsequences.
-        For each subsequence (i.e. window), which is embedded by CoLES to 1 vector, there is 1 local label.
-
-        Args:
-            batch (list[dict]) - batch of ptls format (list with feature dicts)
-
-        Returns:
-            if local_target_col is defined:
-                a Tuple of:
-                    - PaddedBatch object with feature dicts
-                    - torch.Tensor with local targets
-            else:
-                a Tuple of:
-                    - PaddedBatch object with feature dicts
-                    - torch.Tensor with class labels (client indexes)
-        """
-        batch = reduce(iadd, batch)
-        padded_batch = collate_feature_dict(batch)
-        if self.local_target_col is not None:
-            # as CoLES embeds every subsequence (window) to one feature vector,
-            # for every window of size 'seq_len', we take local label corresponding for the last time step in this window
-            local_targets = padded_batch.payload[self.local_target_col][:, -1]
-            return padded_batch, local_targets
-        else:
-            # repeat standard collate function for ColesDataset
-            class_labels = [
-                i for i, class_samples in enumerate(batch) for _ in class_samples
-            ]
-            return padded_batch, torch.LongTensor(class_labels)
-
-
-class ColesTimeCLDataset(ColesDataset):
-    """
-    CoLES dataset with the sampler from the paper 
-        http://mesl.ucsd.edu/pubs/Ranak_AAAI2023_PrimeNet.pdf
-    
-    Args:
-        data (list[dict]): transaction dataframe in the ptls format (list of dicts)
-        min_len (int): minimum subswequence length
-        max_len (int): maximum subsequence lentgh
-        llambda (float): lower bound for lambda valu
-        rlambda (float): upper bound for lambda value
-        split_count (int): number of generated subsequences
-        col_time (str, optional): column name with event time. Defaults to 'event_time'.
-    """
-
-    def __init__(
-        self,
-        data: List[Dict[str, torch.Tensor]],
-        min_len: int,
-        max_len: int,
-        llambda: float,
-        rlambda: float,
-        split_count: int,
-        *args,
-        col_time: str = "event_time",
-        **kwargs
-    ):
-        super().__init__(
-            MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-            TimeCLSampler(min_len, max_len, llambda, rlambda, split_count),
             col_time,
             *args,
             **kwargs
