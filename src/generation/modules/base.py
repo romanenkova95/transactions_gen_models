@@ -72,10 +72,10 @@ class AbsAE(LightningModule):
         self.ae_output_size = self.decoder.output_size
 
         if encoder_weights:
-            self.encoder.load_state_dict(torch.load(encoder_weights))
+            self.encoder.load_state_dict(torch.load(Path(encoder_weights)))
 
         if decoder_weights:
-            self.decoder.load_state_dict(torch.load(decoder_weights))
+            self.decoder.load_state_dict(torch.load(Path(decoder_weights)))
 
         if unfreeze_enc_after:
             logger.info("Freezing encoder weights")
