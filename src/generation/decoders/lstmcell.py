@@ -57,10 +57,12 @@ class LSTMCellDecoder(AbsDecoder):
 
         self.hidden_size = hidden_size
 
+    @property
+    def output_size(self) -> int:
         if isinstance(self.lstm, AbsDecoder):
-            self.output_size = self.lstm.output_size
+            return self.lstm.output_size
         else:
-            self.output_size = hidden_size
+            return self.hidden_size
 
     def forward(self, input: Tensor, L: int, hx: Optional[tuple[Tensor, Tensor]] = None) -> Tensor:
         """Runs the forward pass.

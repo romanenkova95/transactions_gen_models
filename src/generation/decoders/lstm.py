@@ -29,8 +29,15 @@ class LSTMDecoder(AbsDecoder):
             bidirectional=bidirectional,
             batch_first=True,
         )
+        
+        self.proj_size = proj_size
+        self.hidden_size = hidden_size
+        self.bidirectional = bidirectional
+        self.num_layers = num_layers
 
-        self.output_size = proj_size or hidden_size * (bidirectional + 1) * num_layers
+    @property
+    def output_size(self):
+        return self.proj_size or self.hidden_size * (self.bidirectional + 1) * self.num_layers
 
     def forward(self, x: Tensor, hx: tp.Optional[tuple[Tensor, Tensor]] = None):
         """Do the forward pass. Arguments same as in nn.LSTM.forward.
