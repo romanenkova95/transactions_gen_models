@@ -1,13 +1,5 @@
 name: coles_churn
 test_size: 0.2
-
-dataset:
-  _target_: src.coles.CustomColesDataset
-  min_len: 20
-  split_count: 5
-  random_min_seq_len: 20
-  random_max_seq_len: 60
-  col_time: event_time
   
 validation_dataset:
   _target_: src.coles.CustomColesValidationDataset

@@ -9,11 +9,6 @@ datamodule_args:
   valid_batch_size: 256
   valid_num_workers: 4
 
-dataset:
-  min_len: 20
-  random_min_seq_len: 20
-  random_max_seq_len: 60
-
 defaults:
  - encoder: rnn_seq2seq
  - decoder: lstm

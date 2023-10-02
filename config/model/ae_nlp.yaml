@@ -2,17 +2,13 @@ test_size: 0.2
 
 trainer_args:
   max_epochs: 500
+  fast_dev_run: True
 
 datamodule_args:
   train_batch_size: 256
   train_num_workers: 4
   valid_batch_size: 256
   valid_num_workers: 4
-
-dataset:
-  min_len: 20
-  random_min_seq_len: 20
-  random_max_seq_len: 60
 
 defaults:
  - encoder: rnn_reduced
