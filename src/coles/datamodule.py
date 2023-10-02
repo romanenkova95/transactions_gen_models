@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 
-from typing import Optional, List, Dict, Tuple
+from typing import Optional
 from functools import reduce
 from operator import iadd
 
@@ -32,7 +32,7 @@ class SampleAll(AbsSplit):
         self.seq_len = seq_len
         self.stride = stride
 
-    def split(self, dates: np.ndarray) -> List[np.ndarray]:
+    def split(self, dates: np.ndarray) -> list[np.ndarray]:
         """Create list of subsequences indexes.
 
         Args:
@@ -60,7 +60,7 @@ class CustomColesDataset(ColesDataset):
 
     def __init__(
         self,
-        data: List[Dict[str, torch.Tensor]],
+        data: list[dict[str, torch.Tensor]],
         min_len: int,
         split_count: int,
         random_min_seq_len: int,
@@ -95,7 +95,7 @@ class CustomColesValidationDataset(ColesDataset):
 
     def __init__(
         self,
-        data: List[Dict[str, torch.Tensor]],
+        data: list[dict[str, torch.Tensor]],
         min_len: int,
         seq_len: int,
         stride: int,
@@ -124,7 +124,7 @@ class CustomColesValidationDataset(ColesDataset):
         # keep name of the column with local targets
         self.local_target_col = local_target_col
 
-    def collate_fn(self, batch: List[Dict]) -> Tuple[PaddedBatch, torch.Tensor]:
+    def collate_fn(self, batch: list[dict]) -> tuple[PaddedBatch, torch.Tensor]:
         """Overwrite collate function to return batch of local targets for a batch of subsequences.
         For each subsequence (i.e. window), which is embedded by CoLES to 1 vector, there is 1 local label.
 
@@ -133,11 +133,11 @@ class CustomColesValidationDataset(ColesDataset):
 
         Returns:
             if local_target_col is defined:
-                a Tuple of:
+                a tuple of:
                     - PaddedBatch object with feature dicts
                     - torch.Tensor with local targets
             else:
-                a Tuple of:
+                a tuple of:
                     - PaddedBatch object with feature dicts
                     - torch.Tensor with class labels (client indexes)
         """

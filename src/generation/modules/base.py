@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Iterator, Optional, Union
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
@@ -84,36 +84,51 @@ class AbsAE(LightningModule):
             logger.info("Freezing decoder weights")
             self.decoder.requires_grad_(False)
 
-    def forward(self, x: PaddedBatch) -> Any:
+    def forward(
+        self, 
+        x: PaddedBatch, 
+        return_latent=False
+        ) -> Union[Tensor, tuple[Tensor, Union[PaddedBatch, Tensor]]]:
         """Run the forward pass, passing x through encoder and decoder.
 
         Args:
-            x (PaddedBatch): Input, presumably raw transactional data.
+            x (PaddedBatch): Input, raw transactional data.
+            return_latent (bool):  whether to return latent embeddings, decoder output.
 
         Raises:
             ValueError:
-            Unknown format of encoder output. The encoder should output one of the following:
+            Unknown format of encoder output. 
+
+        Returns:
+            Union[Tensor, tuple[Tensor, Tensor]]: 
+                output embeddings, of shape (batch_size, sequence_length, ae_output_size),
+                and, possibly, latent embeddings, outputted by the encoder.
+                
+        Notes:
+            The encoder should output one of the following:
                 - 3D Tensor of shape (B, L, C), sequence of embeddings.
                 - PaddedBatch of shape (B, L, C), sequence of embeddings.
                 - 2D Tensor of shape (B, C), a single encoded embedding for each batch element.
-
-        Returns:
-            torch.Tensor: output embeddings, of shape (batch_size, sequence_length, ae_output_size)
         """
-        embeddings: Union[PaddedBatch, Tensor] = self.encoder(x)
+        latent_embeddings: Union[PaddedBatch, Tensor] = self.encoder(x)
 
         # Determine kind of embeddings
-        if isinstance(embeddings, PaddedBatch):
+        if isinstance(latent_embeddings, PaddedBatch):
             # PaddedBatch embeddings, seq2seq task
-            return self.decoder(embeddings.payload)
-        elif embeddings.ndim == 3:
+            out_embeddings = self.decoder(latent_embeddings.payload)
+        elif latent_embeddings.ndim == 3:
             # Embeddings have shape (B, L, E), seq2seq task
-            return self.decoder(embeddings)
-        elif embeddings.ndim == 2:
+            out_embeddings = self.decoder(latent_embeddings)
+        elif latent_embeddings.ndim == 2:
             # Embeddings have shape (B, E), nlp generative task; pass sequence length as parameter
-            return self.decoder(embeddings, x.seq_feature_shape[1])
+            out_embeddings = self.decoder(latent_embeddings, x.seq_feature_shape[1])
         else:
             raise ValueError(f"Unsupported embeddings returned by encoder")
+        
+        if return_latent:
+            return out_embeddings, latent_embeddings
+        else:
+            return out_embeddings
 
     def on_train_epoch_start(self) -> None:
         if self.unfreeze_enc_after and self.current_epoch == self.unfreeze_enc_after:

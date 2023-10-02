@@ -32,12 +32,12 @@ class LSTMDecoder(AbsDecoder):
 
         self.output_size = proj_size or hidden_size * (bidirectional + 1) * num_layers
 
-    def forward(self, x: Tensor, hx: tp.Optional[tp.Tuple[Tensor, Tensor]] = None):
+    def forward(self, x: Tensor, hx: tp.Optional[tuple[Tensor, Tensor]] = None):
         """Do the forward pass. Arguments same as in nn.LSTM.forward.
 
         Args:
             x (Tensor): Input to the LSTM, of shape (batch_size, L, input_size)
-            hx (tp.Optional[tp.Tuple[Tensor, Tensor]], optional): Tuple of (hidden_state, cell_state). Defaults to None.
+            hx (tp.Optional[tuple[Tensor, Tensor]], optional): Tuple of (hidden_state, cell_state). Defaults to None.
 
         Returns:
             Tensor: LSTM output of shape (batch_size, L, output_size).

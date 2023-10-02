@@ -1,5 +1,5 @@
 """CoLES model"""
-from typing import Callable, Dict
+from typing import Callable
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.frames.coles import CoLESModule
@@ -32,7 +32,7 @@ class CustomCoLES(CoLESModule):
         )
         self.sequence_encoder_model = sequence_encoder
 
-    def get_seq_encoder_weights(self) -> Dict:
+    def get_seq_encoder_weights(self) -> dict:
         """Get weights of the sequnce encoder in torch format
 
         Returns:

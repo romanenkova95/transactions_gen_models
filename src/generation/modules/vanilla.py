@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal, Union
 from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 
@@ -46,20 +46,20 @@ class VanillaAE(AbsAE):
 
     def __init__(
         self,
-        loss_weights: Dict[Literal["amount", "mcc"], float],
+        loss_weights: dict[Literal["amount", "mcc"], float],
         optimizer_config: DictConfig,
         **kwargs,
     ) -> None:
         """Initialize VanillaAE internal state.
 
         Args:
-            loss_weights (Dict):
+            loss_weights (dict):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
-            optimizer_config (DictConfig): 
+            optimizer_config (DictConfig):
                 A dict config with an optimizer key and optionally an lr_scheduler key.
                 Both optimizer & scheduler are partially instantiated, and then initialized with
-                model parameters & optimizer respectfully. 
-                lr_scheduler may be either a torch lr_scheduler instance, 
+                model parameters & optimizer respectfully.
+                lr_scheduler may be either a torch lr_scheduler instance,
                 or a dict with lr_scheduler config (see configure_optimizers docs).
         """
         super().__init__(**kwargs)
@@ -81,7 +81,7 @@ class VanillaAE(AbsAE):
         self,
         batch: PaddedBatch,
     ) -> tuple[Tensor, Tensor]:
-        """Run the forward pass of the VanillaAE module. 
+        """Run the forward pass of the VanillaAE module.
         Pass the batch through BaseAE.forward, and afterwards pass it through out_mcc & out_amount
         to get the respective targets.
 
@@ -89,13 +89,13 @@ class VanillaAE(AbsAE):
             batch (PaddedBatch): Input batch of raw transactional data.
 
         Returns:
-            tuple[Tensor, Tensor]: 
-                Tuple of tensors:
+            tuple[Tensor, Tensor]:
+                tuple of tensors:
                     - Predicted mcc logits, shape (B, L, mcc_vocab_size + 1)
                     - predicted amounts, shape (B, L)
 
         Notes:
-            The padding elements, determined by the padding mask of the input PaddedBatch, 
+            The padding elements, determined by the padding mask of the input PaddedBatch,
             are zeroed out to prevent gradient flow.
 
         """
@@ -103,7 +103,7 @@ class VanillaAE(AbsAE):
 
         mcc_rec: Tensor = self.out_mcc(seqs_after_lstm)
         amount_rec: Tensor = self.out_amount(seqs_after_lstm).squeeze(dim=-1)
-    
+
         # zero-out padding to disable grad flow
         pad_mask = batch.seq_len_mask.bool().reshape(*(amount_rec.shape))
         mcc_rec[~pad_mask] = 0
@@ -119,7 +119,7 @@ class VanillaAE(AbsAE):
         mcc_orig: Tensor,
         amt_orig: Tensor,
         mask: Tensor,
-    ) -> Dict[str, Tensor]:
+    ) -> dict[str, Tensor]:
         """Calculate the metrics
 
         Args:
@@ -130,7 +130,7 @@ class VanillaAE(AbsAE):
             mask (Tensor): mask of non-padding elements
 
         Returns:
-            Dict[str, Tensor]: Dictionary of metrics, with keys mcc_auroc, mcc_f1, amt_r2
+            dict[str, Tensor]: Dictionary of metrics, with keys mcc_auroc, mcc_f1, amt_r2
         """
         with torch.no_grad():
             mcc_orig = mcc_orig[mask]
@@ -143,16 +143,10 @@ class VanillaAE(AbsAE):
 
             return {
                 "mcc_auroc": multiclass_auroc(
-                    mcc_preds,
-                    mcc_orig,
-                    average="macro",
-                    num_classes=num_classes
+                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes
                 ).cpu(),
                 "mcc_f1": multiclass_f1_score(
-                    mcc_preds,
-                    mcc_orig,
-                    average="macro",
-                    num_classes=num_classes
+                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes
                 ).cpu(),
                 "amt_r2": r2_score(
                     amt_value[mask],
@@ -166,7 +160,7 @@ class VanillaAE(AbsAE):
         amount_rec: Tensor,
         mcc_orig: Tensor,
         amount_orig: Tensor,
-    ) -> Dict[str, Tensor]:
+    ) -> dict[str, Tensor]:
         """Calculate the losses, weigh them with respective weights
 
         Args:
@@ -187,11 +181,7 @@ class VanillaAE(AbsAE):
             self.mcc_loss_weight * mcc_loss + self.amount_loss_weight * amount_loss
         )
 
-        return {
-            "loss": total_loss,
-            "loss_mcc": mcc_loss,
-            "loss_amt": amount_loss
-        }
+        return {"loss": total_loss, "loss_mcc": mcc_loss, "loss_amt": amount_loss}
 
     def _all_forward_step(self, batch: PaddedBatch):
         """Run the forward step, calculate the losses and the metrics
@@ -200,15 +190,13 @@ class VanillaAE(AbsAE):
             batch (PaddedBatch): Input
 
         Returns:
-            Tuple[Dict, Dict]: Dictionary of losses, dictionary of metrics.
+            tuple[dict, dict]: Dictionary of losses, dictionary of metrics.
         """
         mcc_rec, amount_rec = self(batch)  # (B * S, L, MCC_N), (B * S, L)
         mcc_orig = batch.payload["mcc_code"]
         amount_orig = batch.payload["amount"]
 
-        loss_dict = self._calculate_losses(
-            mcc_rec, amount_rec, mcc_orig, amount_orig
-        )
+        loss_dict = self._calculate_losses(mcc_rec, amount_rec, mcc_orig, amount_orig)
 
         metric_dict = self._calculate_metrics(
             mcc_rec, amount_rec, mcc_orig, amount_orig, batch.seq_len_mask.bool()
@@ -239,17 +227,17 @@ class VanillaAE(AbsAE):
         loss_dict, metric_dict = self._all_forward_step(batch)
 
         self.log_dict(
-            {f"{stage}_{k}": v for k, v in loss_dict.items()}, 
-            on_step=(stage == "train"), 
-            on_epoch=(stage != "train"), 
-            batch_size=batch.seq_feature_shape[0]
+            {f"{stage}_{k}": v for k, v in loss_dict.items()},
+            on_step=(stage == "train"),
+            on_epoch=(stage != "train"),
+            batch_size=batch.seq_feature_shape[0],
         )
-        
+
         self.log_dict(
-            {f"{stage}_{k}": v for k, v in metric_dict.items()}, 
-            on_step=False, 
-            on_epoch=True, 
-            batch_size=batch.seq_feature_shape[0]
+            {f"{stage}_{k}": v for k, v in metric_dict.items()},
+            on_step=False,
+            on_epoch=True,
+            batch_size=batch.seq_feature_shape[0],
         )
 
         if stage == "train":
@@ -266,7 +254,9 @@ class VanillaAE(AbsAE):
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
         return self._step("test", *args, **kwargs)
 
-    def predict_step(self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0) -> Tuple[List[Tensor], List[Tensor]]:
+    def predict_step(
+        self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
+    ) -> tuple[list[Tensor], list[Tensor]]:
         """Run the predict step: forward pass for the input batch, and trim padding in output.
 
         Args:
@@ -275,10 +265,10 @@ class VanillaAE(AbsAE):
             dataloader_idx (int, optional): ignored
 
         Returns:
-            Tuple[List[Tensor], List[Tensor]]: 
-                - List of predicted mcc logits, (B, L_i, mcc_vocab_size)
-                - List of predicted amounts, (B, L_i)
-                Note that L_i (i=0...B-1) is different for each element of the batch, 
+            tuple[list[Tensor], list[Tensor]]:
+                - list of predicted mcc logits, (B, L_i, mcc_vocab_size)
+                - list of predicted amounts, (B, L_i)
+                Note that L_i (i=0...B-1) is different for each element of the batch,
                 for this reason we return a list and not a tensor.
         """
         mcc_rec: Tensor  # (B, L, MCC_NUM)

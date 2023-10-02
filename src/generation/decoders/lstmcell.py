@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Optional
 import torch
 from torch import nn, Tensor
 from src.generation.decoders.base import AbsDecoder
@@ -62,7 +62,7 @@ class LSTMCellDecoder(AbsDecoder):
         else:
             self.output_size = hidden_size
 
-    def forward(self, input: Tensor, L: int, hx: Optional[Tuple[Tensor, Tensor]] = None) -> Tensor:
+    def forward(self, input: Tensor, L: int, hx: Optional[tuple[Tensor, Tensor]] = None) -> Tensor:
         """Runs the forward pass.
 
         Args:
@@ -70,7 +70,7 @@ class LSTMCellDecoder(AbsDecoder):
                 Input embedding, of size (batch_size, input_size).
             L (int): 
                 Length of desired sequence.
-            hx (Optional[Tuple[Tensor, Tensor]], optional): 
+            hx (Optional[tuple[Tensor, Tensor]], optional): 
                 Optionally, LSTMCell hidden & cell states. Defaults to None.
 
         Returns:
