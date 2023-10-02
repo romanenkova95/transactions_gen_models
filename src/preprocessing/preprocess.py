@@ -1,12 +1,13 @@
 from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
 
 from joblib import Memory
 import pandas as pd
 
 from ptls.preprocessing.base import ColTransformer
 
-@Memory("cache", verbose=5).cache
-def preprocess(cfg: dict) -> list[dict]:
+
+def preprocess(cfg: DictConfig) -> list[dict]:
     """Preprocess data according to given config. Caches function result using joblib to cache directory
 
     Args:
@@ -18,10 +19,17 @@ def preprocess(cfg: dict) -> list[dict]:
     Returns:
         list[dict]: FeatureDict, compatible with ptls
     """
-    dataframe: pd.DataFrame = pd.read_parquet(cfg["source"])
+    def _preprocess(cfg: dict):
+        dataframe: pd.DataFrame = pd.read_parquet(cfg["source"])
 
-    transform: ColTransformer
-    for transform in instantiate(cfg["transforms"]):
-        dataframe = transform.fit_transform(dataframe) # type: ignore
+        transform: ColTransformer
+        for transform in instantiate(cfg["transforms"]):
+            dataframe = transform.fit_transform(dataframe) # type: ignore
 
-    return dataframe.to_dict(orient='records')
+        return dataframe.to_dict(orient='records')
+    
+    if "cache_dir" in cfg:
+        memory = Memory("cache", verbose=5)
+        _preprocess = memory.cache(_preprocess) # type: ignore
+    
+    return _preprocess(OmegaConf.to_container(cfg)) # type: ignore

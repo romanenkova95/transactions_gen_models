@@ -36,7 +36,7 @@ def train_autoencoder(
                 - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
                 - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
     """
-    data = preprocess(OmegaConf.to_container(cfg_preprop))  # type: ignore
+    data = preprocess(cfg_preprop)
 
     train, valid = train_test_split(data, test_size=cfg_model["test_size"])
     ds_factory = instantiate(cfg_dataset, _partial_=True)

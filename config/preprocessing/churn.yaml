@@ -13,3 +13,4 @@ transforms:
     return_records: False
 
 source: data/preprocessed_new/churn.parquet
+cache_dir: cache

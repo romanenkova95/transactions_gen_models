@@ -26,7 +26,7 @@ def learn_coles(cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: Dic
         cfg_dataset (DictConfig): Dataset config (specified in 'config/dataset')
         cfg_model (DictConfig): Model config (specified in 'config/model')
     """
-    dataset = preprocess(OmegaConf.to_container(cfg_preprop)) # type: ignore
+    dataset = preprocess(cfg_preprop)
     logger.info("Preparing datasets and datamodule")
     # train val splitting
     train, val = train_test_split(dataset, test_size=cfg_model["test_size"])
