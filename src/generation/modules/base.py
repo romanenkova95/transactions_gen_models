@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Iterator, Optional, Union
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
@@ -33,10 +34,10 @@ class AbsAE(LightningModule):
         encoder_config: DictConfig,
         decoder_config: DictConfig,
         mcc_vocab_size: int,
-        encoder_weights: Optional[str] = "",
-        decoder_weights: Optional[str] = "",
-        unfreeze_enc_after: Optional[int] = 0,
-        unfreeze_dec_after: Optional[int] = 0,
+        encoder_weights: Optional[str] = None,
+        decoder_weights: Optional[str] = None,
+        unfreeze_enc_after: Optional[int] = None,
+        unfreeze_dec_after: Optional[int] = None,
     ) -> None:
         """Initialize AbsAE internal state
 
@@ -48,17 +49,17 @@ class AbsAE(LightningModule):
             mcc_vocab_size (int):
                 Total amount of mcc codes (except padding).
             encoder_weights (Optional[str], optional):
-                Path to encoder weights. Defaults to "", in which case no weights are loaded.
+                Path to encoder weights. If not specified, no weights are loaded by default.
             decoder_weights (Optional[str], optional):
-                Path to decoder weights. Defaults to "", in which case no weights are loaded.
+                Path to decoder weights. If not specified, no weights are loaded by default.
             unfreeze_enc_after (Optional[int], optional):
                 Number of epochs to wait before unfreezing encoder weights.
-                Defaults to 0, in which case the module isn't frozen.
-                A negative number would freeze the weights for the whole training duration.
+                The module doesn't get frozen by default.
+                A negative number would freeze the weights indefinetly.
             unfreeze_dec_after (Optional[int], optional):
                 Number of epochs to wait before unfreezing encoder weights.
-                Defaults to 0, in which case the module isn't frozen.
-                A negative number would freeze the weights for the whole training duration.
+                The module doesn't get frozen by default.
+                A negative number would freeze the weights indefinetly.
         """
         super().__init__()
 
