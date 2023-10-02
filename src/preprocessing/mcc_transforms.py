@@ -16,10 +16,6 @@ class DropRareMccs(FrequencyEncoder):
         super().__init__(col_name_original)
         self.col_name_original = col_name_original
         self.k = k
-
-    def fit(self, x: pd.DataFrame):
-        super().fit(x)
-        return self
     
     def transform(self, x: pd.DataFrame):
         x = super().transform(x)
