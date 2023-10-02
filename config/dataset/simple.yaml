@@ -1,4 +1,4 @@
 _target_: src.generation.datasets.SimpleTRXDataset
 min_len: 20
 random_min_seq_len: 20
-random_max_seq_len: 60
+random_max_seq_len: 40

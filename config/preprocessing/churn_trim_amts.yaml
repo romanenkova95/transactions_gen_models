@@ -1,0 +1,20 @@
+transforms:
+ - 
+    _target_: src.preprocessing.ToType
+    type_mapping:
+         amount: float32
+ - 
+    _target_: src.preprocessing.DropLargeAmounts
+    col_name_original: amount
+    q: 0.95
+ - 
+    _target_: ptls.preprocessing.PandasDataPreprocessor
+    col_id: user_id
+    col_event_time: timestamp
+    event_time_transformation: dt_to_timestamp
+    cols_category: [mcc_code]
+    cols_numerical: [amount]
+    return_records: False
+
+source: data/preprocessed_new/churn.parquet
+cache_dir: cache
