@@ -1,12 +1,11 @@
 """Main coles learning script"""
-import pickle
 from pathlib import Path
 
-import pandas as pd
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 from ptls.frames import PtlsDataModule
+from ptls.frames.coles import ColesDataset
 
 import torch
 

@@ -1,17 +1,12 @@
 """
 Custom coles datamodule
 """
-import random
-from functools import reduce
-from operator import iadd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import numpy as np
 import torch
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
-from ptls.data_load.padded_batch import PaddedBatch
-from ptls.data_load.utils import collate_feature_dict
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import AbsSplit, SampleSlices
 
@@ -143,9 +138,7 @@ class CustomColesDataset(ColesDataset):
         self,
         data: List[Dict[str, torch.Tensor]],
         min_len: int,
-        split_count: int,
-        random_min_seq_len: int,
-        random_max_seq_len: int,
+        splitter: AbsSplit,
         *args,
         col_time: str = "event_time",
         **kwargs
@@ -162,7 +155,7 @@ class CustomColesDataset(ColesDataset):
         """
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-            SampleSlices(split_count, random_min_seq_len, random_max_seq_len),
+            splitter,
             col_time,
             *args,
             **kwargs

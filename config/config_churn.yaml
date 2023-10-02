@@ -1,5 +1,5 @@
 defaults:
   - dataset: churn
-  - model: coles_churn
+  - model: coles_timecl_churn
   - validation: local_target
   - _self_
