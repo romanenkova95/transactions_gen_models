@@ -54,7 +54,7 @@ RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39
  && chmod +x ~/miniconda.sh \
  && ~/miniconda.sh -b -p ~/miniconda \
  && rm ~/miniconda.sh \
- && conda env update --file environment.yml \
+ && conda env create --file=environment.yml \
  && rm /app/environment.yml \
  && conda clean -ya
 
