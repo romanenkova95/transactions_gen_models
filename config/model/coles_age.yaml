@@ -1,13 +1,4 @@
 name: coles_age
-test_size: 0.2
-  
-validation_dataset:
-  _target_: src.coles.CustomColesValidationDataset
-  min_len: 20
-  seq_len: 40
-  stride: 10
-  local_target_col: fake_local_label
-  col_time: event_time
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule

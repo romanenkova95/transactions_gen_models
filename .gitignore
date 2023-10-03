@@ -194,6 +194,7 @@ data/
 preproc_data/
 outputs/
 multirun/
-docker_scripts/
-cache/
 sweeps/
+cache/
+docker_scripts/credentials
+saved_models/

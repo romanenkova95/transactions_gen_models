@@ -1,3 +1,3 @@
 """Init module. """
 
-from .local_validation_pipeline import LocalValidationModel
+from .local_validation_model import LocalValidationModel

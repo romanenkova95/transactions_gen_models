@@ -1,7 +1,6 @@
-test_size: 0.2
-
 trainer_args:
   max_epochs: 500
+  devices: [0]
 
 datamodule_args:
   train_batch_size: 256

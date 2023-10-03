@@ -2,16 +2,16 @@ import pandas as pd
 from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 
 
-class DropRareMccs(FrequencyEncoder):
-    """Encode mccs frequency-wise, and keep only top-k most frequent mccs. 
+class DropRare(FrequencyEncoder):
+    """Encode categories frequency-wise, and keep only top-k most frequent categories. 
     To be used after frequency encoder to drop the rarest mcc codes.
     """
     def __init__(self, col_name_original: str, k: int):
-        """Initialize DropRareMccs transform
+        """Initialize DropRare transform
 
         Args:
             col_name_original (str): original column name
-            k (int): amount of mccs to keep (excluding padding token)
+            k (int): amount of categories to keep (excluding padding token)
         """
         super().__init__(col_name_original)
         self.col_name_original = col_name_original

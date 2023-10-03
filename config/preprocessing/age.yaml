@@ -1,8 +1,8 @@
 transforms:
  - 
     _target_: src.preprocessing.ToType
-    type_mapping:
-        amount: float32
+    target_type: float32
+    col_name_original: amount
  - 
     _target_: ptls.preprocessing.PandasDataPreprocessor
     col_id: user_id
@@ -14,3 +14,6 @@ transforms:
 
 source: data/preprocessed_new/age.parquet
 cache_dir: cache
+val_size: .1
+test_size: .1
+random_state: 42

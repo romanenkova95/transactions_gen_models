@@ -1,10 +1,14 @@
 transforms:
  - 
     _target_: src.preprocessing.ToType
-    type_mapping:
-         amount: float32
+    target_type: float32
+    col_name_original: amount
  - 
-    _target_: src.preprocessing.DropRareMccs
+    _target_: src.preprocessing.DropLarge
+    col_name_original: amount
+    q: 0.95
+ - 
+    _target_: src.preprocessing.DropRare
     col_name_original: mcc_code
     k: 100
  - 
@@ -13,8 +17,12 @@ transforms:
     col_event_time: timestamp
     event_time_transformation: dt_to_timestamp
     cols_category: [mcc_code]
+    cols_first_item: [global_target]
     cols_numerical: [amount]
     return_records: False
 
 source: data/preprocessed_new/churn.parquet
 cache_dir: cache
+val_size: .1
+test_size: .1
+random_state: 42

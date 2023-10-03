@@ -3,11 +3,12 @@ from omegaconf import DictConfig, OmegaConf
 
 from joblib import Memory
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from ptls.preprocessing.base import ColTransformer
 
 
-def preprocess(cfg: DictConfig) -> list[dict]:
+def preprocess(cfg: DictConfig) -> tuple[list[dict], list[dict], list[dict]]:
     """Preprocess data according to given config. Caches function result using joblib to cache directory
 
     Args:
@@ -17,7 +18,8 @@ def preprocess(cfg: DictConfig) -> list[dict]:
         Other fields are allowed and ignored.
 
     Returns:
-        list[dict]: FeatureDict, compatible with ptls
+        tuple[list[dict], list[dict], list[dict]]: 
+            train/val/test FeatureDicts, compatible with ptls
     """
     def _preprocess(cfg: dict):
         dataframe: pd.DataFrame = pd.read_parquet(cfg["source"])
@@ -32,4 +34,8 @@ def preprocess(cfg: DictConfig) -> list[dict]:
         memory = Memory("cache", verbose=5)
         _preprocess = memory.cache(_preprocess) # type: ignore
     
-    return _preprocess(OmegaConf.to_container(cfg)) # type: ignore
+    data = _preprocess(OmegaConf.to_container(cfg)) # type: ignore
+    train, val_test = train_test_split(data, test_size=cfg["val_size"] + cfg["test_size"], random_state=cfg["random_state"])
+    val, test = train_test_split(val_test, test_size=cfg["test_size"], random_state=cfg["random_state"])
+    
+    return train, val, test

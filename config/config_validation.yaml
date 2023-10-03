@@ -1,6 +1,5 @@
 defaults:
   - preprocessing: churn
   - dataset: coles
-  - model: coles_emb_churn
-  - validation: local_target
+  - validation: global_target
   - _self_

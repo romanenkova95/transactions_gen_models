@@ -36,13 +36,13 @@ def train_autoencoder(
                 - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
                 - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
     """
-    data = preprocess(cfg_preprop)
+    train, val, test = preprocess(cfg_preprop)
 
-    train, valid = train_test_split(data, test_size=cfg_model["test_size"])
     ds_factory = instantiate(cfg_dataset, _partial_=True)
     datamodule = PtlsDataModule(
         train_data=ds_factory(train),
-        valid_data=ds_factory(valid),
+        valid_data=ds_factory(val),
+        test_data=ds_factory(test),
         **cfg_model.get("datamodule_args", {}),
     )
 

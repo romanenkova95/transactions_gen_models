@@ -1,8 +1,8 @@
 transforms:
  - 
     _target_: src.preprocessing.ToType
-    type_mapping:
-        amount: float32
+    target_type: float32
+    col_name_original: amount
  - 
     _target_: ptls.preprocessing.PandasDataPreprocessor
     col_id: user_id
@@ -10,7 +10,12 @@ transforms:
     event_time_transformation: dt_to_timestamp
     cols_category: [mcc_code]
     cols_numerical: [amount]
+    cols_first_item: [global_target]
     return_records: False
 
+# TODO: add normalize timestamp ability
 source: data/preprocessed_new/churn.parquet
 cache_dir: cache
+val_size: .1
+test_size: .1
+random_state: 42

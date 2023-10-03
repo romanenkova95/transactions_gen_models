@@ -6,7 +6,7 @@ import torch
 from torch import nn, Tensor
 import numpy as np
 
-from torcheval.metrics.functional import multiclass_auroc, multiclass_f1_score, r2_score
+from torchmetrics.functional import auroc, f1_score, r2_score
 
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
@@ -142,11 +142,11 @@ class VanillaAE(AbsAE):
             mcc_preds = mcc_preds[:, labels]
 
             return {
-                "mcc_auroc": multiclass_auroc(
-                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes
-                ).cpu(),
-                "mcc_f1": multiclass_f1_score(
-                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes
+                "mcc_auroc": auroc(
+                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes, task="multiclass"
+                ).cpu(), # type: ignore
+                "mcc_f1": f1_score(
+                    mcc_preds, mcc_orig, average="macro", num_classes=num_classes, task="multiclass"
                 ).cpu(),
                 "amt_r2": r2_score(
                     amt_value[mask],
