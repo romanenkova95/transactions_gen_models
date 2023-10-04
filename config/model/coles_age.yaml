@@ -3,10 +3,12 @@ name: coles_age
 dataset:
   _target_: src.coles.CustomColesDataset
   min_len: 20
-  split_count: 5
-  random_min_seq_len: 20
-  random_max_seq_len: 60
   col_time: event_time
+  splitter:
+    _target_: ptls.frames.coles.split_strategy.NoSplit
+    # split_count: 5
+    # cnt_min: 20
+    # cnt_max: 60
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule

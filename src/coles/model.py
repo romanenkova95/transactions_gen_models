@@ -39,3 +39,12 @@ class CustomCoLES(CoLESModule):
             dict: Encoder weights
         """
         return self.sequence_encoder_model.state_dict()
+
+    def shared_step(self, x, y):
+        print(x)
+        print(y)
+        print(y.device)
+        y_h = self(x)
+        if self._head is not None:
+            y_h = self._head(y_h)
+        return y_h, y

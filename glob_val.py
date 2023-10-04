@@ -15,12 +15,13 @@ logging.basicConfig(level=logging.INFO)
 def main(cfg: Optional[DictConfig] = None) -> None:
     if cfg["model"]["name"].startswith("coles"):
         # learn_coles(cfg["dataset"], cfg["model"])
-        # res = global_target_validation(cfg["dataset"], cfg["validation"])
-        res = local_target_validation(cfg["dataset"], cfg["validation"])
+        res = global_target_validation(cfg["dataset"], cfg["validation"])
+        # res = local_target_validation(cfg["dataset"], cfg["validation"])
     elif cfg["model"]["name"].startswith("cpc"):
         pass
 
     print(res)
+
 
 if __name__ == "__main__":
     main()

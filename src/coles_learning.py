@@ -96,4 +96,4 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
 
     # Save the state_dict of the best sequence encoder
     Path("saved_models").mkdir(exist_ok=True)
-    torch.save(model.get_seq_encoder_weights(), f'saved_models/{cfg_model["name"]}.pth')
+    torch.save(model.get_seq_encoder_weights(), f'saved_models/{cfg_model["name"]}_{cfg_model["dataset"]["splitter"]["min_len"]}_{cfg_model["dataset"]["splitter"]["max_len"]}.pth')

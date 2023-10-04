@@ -199,7 +199,7 @@ class LocalValidationModel(pl.LightningModule):
             # if MCC code > self.num_types than merge all these unpopular codes into 1 category
             target = torch.where(
                 target >= self.num_types - 1, self.num_types - 1, target
-            )
+            ).long()
 
         if self.backbone_embd_mode == "seq2vec":
             # crop targets, delete first seq_len transactions as there are not history windows for them

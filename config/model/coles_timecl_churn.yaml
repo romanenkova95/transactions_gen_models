@@ -6,7 +6,7 @@ dataset:
   col_time: event_time
   splitter:
     _target_: src.coles.datamodule.TimeCLSampler
-    min_len: 15
+    min_len: ${..min_len}
     max_len: 150
     llambda: 0.4
     rlambda: 0.6
