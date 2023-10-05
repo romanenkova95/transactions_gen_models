@@ -3,7 +3,6 @@ source credentials
 
 docker run \
  -d \
- -p ${CONTAINER_PORT}:8890 \
  --shm-size=8g \
  --memory=60g \
  --cpus=16 \

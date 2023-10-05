@@ -12,46 +12,30 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from sklearn.model_selection import train_test_split
-
 from src.coles import CustomCoLES, CustomColesDataset
+from src.preprocessing import preprocess
 from src.utils.logging_utils import get_logger
-from src.utils.data_utils.prepare_dataset import prepare_dataset
 
 
 logger = get_logger(name=__name__)
 
 
-def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
+def learn_coles(
+    cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: DictConfig
+) -> None:
     """Full pipeline for the coles model fitting.
 
     Args:
-        cfg_preprop (DictConfig): Dataset config (specified in the 'config/dataset')
-        cfg_model (DictConfig): Model config (specified in the 'config/model')
+        cfg_preprop (DictConfig): Preprocessing config (specified in 'config/preprocessing')
+        cfg_dataset (DictConfig): Dataset config (specified in 'config/dataset')
+        cfg_model (DictConfig): Model config (specified in 'config/model')
     """
-    dataset = prepare_dataset(cfg_preprop, logger)
-
-    # train val test split
-    valid_size = cfg_preprop["coles"]["valid_size"]
-    test_size = cfg_preprop["coles"]["test_size"]
-
-    train, val_test = train_test_split(
-        dataset,
-        test_size=valid_size+test_size,
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
-    val, _ = train_test_split(
-        val_test,
-        test_size=test_size/(valid_size+test_size),
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
+    train, val, test = preprocess(cfg_preprop)
 
     logger.info("Preparing datasets and datamodule")
-
     # Define our ColesDataset wrapper from the config
-    train_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=train)
-    val_data: CustomColesDataset = instantiate(cfg_model["dataset"], data=val)
+    train_data: CustomColesDataset = instantiate(cfg_dataset, data=train)
+    val_data: CustomColesDataset = instantiate(cfg_dataset, data=val)
 
     # Pytorch-lifestream datamodule for the model training and evaluation
     datamodule: PtlsDataModule = instantiate(
@@ -68,7 +52,7 @@ def learn_coles(cfg_preprop: DictConfig, cfg_model: DictConfig) -> None:
         mode="max",
     )
 
-    callbacks = [model_checkpoint]
+    callbacks: list = [model_checkpoint]
 
     if cfg_model["trainer_coles"]["enable_early_stopping"]:
         early_stopping: EarlyStopping = instantiate(

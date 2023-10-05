@@ -3,8 +3,6 @@ Custom coles datamodule
 """
 import torch
 
-from typing import List, Dict
-
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
@@ -17,7 +15,7 @@ class CustomColesDataset(ColesDataset):
 
     def __init__(
         self,
-        data: List[Dict[str, torch.Tensor]],
+        data: list[dict[str, torch.Tensor]],
         min_len: int,
         split_count: int,
         random_min_seq_len: int,

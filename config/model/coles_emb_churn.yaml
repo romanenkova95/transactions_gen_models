@@ -1,19 +1,11 @@
 name: coles_emb_churn
 
-dataset:
-  _target_: src.coles.CustomColesDataset
-  min_len: 15
-  split_count: 5
-  random_min_seq_len: 15
-  random_max_seq_len: 150
-  col_time: event_time
-
 datamodule:
   _target_: ptls.frames.PtlsDataModule
-  train_batch_size: 128
-  valid_batch_size: 128
-  train_num_workers: 8
-  valid_num_workers: 8
+  train_batch_size: 64
+  valid_batch_size: 64
+  train_num_workers: 4
+  valid_num_workers: 4
 
 model:
   _target_: src.coles.CustomCoLES
@@ -37,7 +29,7 @@ model:
         use_batch_norm_with_lens: True
         norm_embeddings: False
         embeddings_noise: 0.0003
-        embeddings: {mcc_code: {in: 344, out: 24}}
+        embeddings: {mcc_code: {in: 345, out: 24}}
         numeric_values: {amount: identity}
       hidden_size: 1024
       bidir: False

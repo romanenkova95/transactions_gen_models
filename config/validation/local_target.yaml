@@ -49,7 +49,7 @@ model:
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
-  devices: [0]
+  devices: [1]
   max_epochs: 5
   logger: 
     _target_: pytorch_lightning.loggers.TensorBoardLogger

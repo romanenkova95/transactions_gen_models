@@ -1,4 +1,4 @@
 defaults:
-  - dataset: age
+  - preprocessing: age
   - model: coles_age
   - _self_

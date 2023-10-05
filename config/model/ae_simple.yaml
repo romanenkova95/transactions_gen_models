@@ -1,0 +1,14 @@
+trainer_args:
+  max_epochs: 500
+  devices: [0]
+
+datamodule_args:
+  train_batch_size: 256
+  train_num_workers: 4
+  valid_batch_size: 256
+  valid_num_workers: 4
+
+defaults:
+ - encoder: rnn_seq2seq
+ - decoder: lstm
+ - module_ae: vanilla_pretrained
