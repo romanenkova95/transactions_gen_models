@@ -20,4 +20,4 @@ trainer:
   accelerator: gpu
   devices: [0]
   max_epochs: 60
-  log_every_n_steps
+  log_every_n_steps: 20
