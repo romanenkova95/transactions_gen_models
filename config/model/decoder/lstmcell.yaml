@@ -1,5 +1,5 @@
 _target_: src.generation.decoders.LSTMCellDecoder
 input_size: 1024
-hidden_size: 2048
+hidden_size: 4096
 num_layers: 2
 proj_size: 1024
