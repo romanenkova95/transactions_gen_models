@@ -8,6 +8,9 @@ transforms:
     col_name_original: amount
     q: 0.95
  - 
+    _target_: src.preprocessing.LogTransform
+    col_name_original: amount
+ - 
     _target_: src.preprocessing.DropRare
     col_name_original: mcc_code
     k: 100

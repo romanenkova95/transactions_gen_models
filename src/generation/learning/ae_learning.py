@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.base import DummyLogger
 
-from src.generation.modules.base import AbsAE
+from src.generation.modules import VanillaAE
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 
@@ -45,8 +45,10 @@ def train_autoencoder(
         **cfg_model.get("datamodule_args", {}),
     )
 
-    module: AbsAE = instantiate(cfg_model["module_ae"], _recursive_=False)(
-        encoder_config=cfg_model["encoder"], decoder_config=cfg_model["decoder"]
+    module: VanillaAE = instantiate(
+        cfg_model["module_ae"],
+        encoder=instantiate(cfg_model["encoder"]), 
+        decoder=instantiate(cfg_model["decoder"])
     )
 
     callbacks = []
@@ -72,7 +74,6 @@ def train_autoencoder(
     
     trainer = Trainer(
         accelerator="gpu",
-        devices=1,
         logger=lightning_logger,
         log_every_n_steps=10,
         callbacks=callbacks,

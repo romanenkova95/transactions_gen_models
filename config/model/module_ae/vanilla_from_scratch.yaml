@@ -3,8 +3,6 @@ loss_weights:
   mcc: 5
   amount: 1
 
-encoder_weights: coles_best_state_dict.pth
-
 mcc_head_factory:
   _partial_: true
   _target_: torchvision.ops.MLP

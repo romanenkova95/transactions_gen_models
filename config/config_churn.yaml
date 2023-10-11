@@ -1,5 +1,5 @@
 defaults:
-  - preprocessing: churn
+  - preprocessing: churn_ae
   - dataset: simple
   - model: ae_nlp
   - validation: local_target
