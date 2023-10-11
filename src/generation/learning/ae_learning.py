@@ -5,9 +5,8 @@ import pandas as pd
 from hydra.utils import instantiate, call
 from omegaconf import DictConfig, OmegaConf
 from ptls.frames import PtlsDataModule
-from sklearn.model_selection import train_test_split
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.base import DummyLogger
 
@@ -78,7 +77,12 @@ def train_autoencoder(
         callbacks.append(LearningRateMonitor())
     else:
         lightning_logger = DummyLogger()
-
+        
+    if "early_stopping" in cfg_model:
+        callbacks.append(
+            instantiate(cfg_model["early_stopping"])
+        )
+    
     trainer = Trainer(
         accelerator="gpu",
         devices=1,

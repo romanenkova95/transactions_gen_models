@@ -1,7 +1,7 @@
 _target_: src.generation.modules.VanillaAE
 _partial_: True
 loss_weights:
-  mcc: 1
+  mcc: 5
   amount: 1
 encoder_weights: coles_best_state_dict.pth
 mcc_vocab_size: 344
