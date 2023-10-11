@@ -1,0 +1,13 @@
+_target_: src.generation.modules.VanillaAE
+_partial_: True
+loss_weights:
+  mcc: 10
+  amount: 1
+encoder_weights: coles_best_state_dict.pth
+unfreeze_enc_after: -1
+mcc_vocab_size: 100
+
+optimizer_config: 
+  optimizer:
+    _target_: torch.optim.AdamW
+    lr: 0.001

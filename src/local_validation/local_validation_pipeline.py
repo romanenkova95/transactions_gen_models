@@ -1,5 +1,6 @@
 """Local targets validation script. """
 
+from typing import Optional
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -15,28 +16,37 @@ from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
 from ptls.frames import PtlsDataModule
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 from src.local_validation import LocalValidationModel
 
-def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
+def local_target_validation(
+    cfg_preprop: DictConfig, 
+    cfg_validation: DictConfig,
+    data_split: Optional[tuple[list[dict], list[dict], list[dict]]] = None,
+    sequence_encoder: Optional[SeqEncoderContainer] = None # type: ignore
+    ) -> pd.DataFrame:
     """Full pipeline for the sequence encoder local validation. 
 
     Args:
         cfg_preprop (DictConfig):    Dataset config (specified in the 'config/dataset')
         cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
+        data_split (Optional[tuple[list[dict], list[dict], list[dict]]]): optionally, pass the data directly
+        sequence_encoder (Optional[SeqEncoderContainer]): optionally, pass the encoder model directly
     
     Returns:
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
-    train, val, test = preprocess(cfg_preprop)
-
+    train, val, test = data_split or preprocess(cfg_preprop)
+        
     logger.info("Instantiating the sequence encoder")
-    # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    # load pretrained sequence encoder, if not passed directly
+    if not sequence_encoder:
+        sequence_encoder: SeqEncoderContainer = instantiate(cfg_validation["sequence_encoder"])
+        sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
 
     data_train = MemoryMapDataset(train, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
     data_val = MemoryMapDataset(val, [SeqLenFilter(cfg_validation["model"]["seq_len"])])

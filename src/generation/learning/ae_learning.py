@@ -1,6 +1,8 @@
 """Autoencoder training script"""
 
-from hydra.utils import instantiate
+from typing import Optional
+import pandas as pd
+from hydra.utils import instantiate, call
 from omegaconf import DictConfig, OmegaConf
 from ptls.frames import PtlsDataModule
 from sklearn.model_selection import train_test_split
@@ -12,13 +14,17 @@ from pytorch_lightning.loggers.base import DummyLogger
 from src.generation.modules.base import AbsAE
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
+from src.local_validation.local_validation_pipeline import local_target_validation
 
 logger = get_logger(name=__name__)
 
 
 def train_autoencoder(
-    cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: DictConfig
-) -> None:
+    cfg_preprop: DictConfig, 
+    cfg_dataset: DictConfig, 
+    cfg_model: DictConfig, 
+    cfg_validation: Optional[DictConfig] = None
+    ) -> None:
     """Train autoencoder, specified in the model config, on the data, specified by the preprocessing config.
 
     Args:
@@ -35,6 +41,8 @@ def train_autoencoder(
                 - trainer_args: arguments to pass to pl.Trainer
                 - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
                 - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
+        cfg_validation (DictConfig):
+            the validation config, for local validation
     """
     train, val, test = preprocess(cfg_preprop)
 
@@ -46,9 +54,14 @@ def train_autoencoder(
         **cfg_model.get("datamodule_args", {}),
     )
 
-    module: AbsAE = instantiate(cfg_model["module_ae"], _recursive_=False)(
-        encoder_config=cfg_model["encoder"], decoder_config=cfg_model["decoder"]
-    )
+    if cfg_model["module_ae"]["_target_"].endswith("load_from_checkpoint"):
+        logger.info("Loading module from checkpoint...")
+        module: AbsAE = call(cfg_model["module_ae"])
+    else:
+        logger.info("Instantiating module...")
+        module: AbsAE = instantiate(cfg_model["module_ae"], _recursive_=False)(
+            encoder_config=cfg_model["encoder"], decoder_config=cfg_model["decoder"]
+        )
 
     callbacks = []
 
@@ -76,3 +89,19 @@ def train_autoencoder(
     )
 
     trainer.fit(module, datamodule=datamodule)
+    trainer.test(module, datamodule=datamodule)[0]
+        
+    if cfg_validation and "fast_dev_run" not in cfg_model["trainer_args"]:
+        local_validation_res = local_target_validation(
+            cfg_preprop, 
+            cfg_validation,
+            (train, val, test), 
+            module.encoder
+        )
+        if isinstance(lightning_logger, WandbLogger):
+            lightning_logger.log_table(
+                dataframe=local_validation_res.describe(), 
+                key="local_validation"
+            )
+        else:
+            print(local_validation_res)

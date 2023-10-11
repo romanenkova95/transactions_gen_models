@@ -1,6 +1,5 @@
 trainer_args:
-  max_epochs: 500
-  devices: [0]
+  max_epochs: 0
 
 datamodule_args:
   train_batch_size: 256
@@ -11,4 +10,4 @@ datamodule_args:
 defaults:
  - encoder: rnn_reduced
  - decoder: lstmcell
- - module_ae: vanilla_pretrained
+ - module_ae: vanilla_pretrained_loaded

@@ -1,0 +1,12 @@
+_target_: src.generation.modules.ColesAEComboModule
+_partial_: True
+loss_weights:
+  mcc: 1
+  amount: 1
+encoder_weights: coles_best_state_dict.pth
+mcc_vocab_size: 344
+
+optimizer_config: 
+  optimizer:
+    _target_: torch.optim.AdamW
+    lr: 0.002
