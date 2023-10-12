@@ -21,7 +21,6 @@ def main(cfg: DictConfig) -> None:
         learn_coles(cfg["preprocessing"], cfg["dataset"], cfg["model"])
         # res = global_target_validation(cfg["dataset"], cfg["validation"])
         res = local_target_validation(cfg["preprocessing"], cfg["validation"])
-        print(res)
     elif model_name.startswith("cpc"):
         pass
     elif model_name.startswith("ae"):

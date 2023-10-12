@@ -14,6 +14,7 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.base import DummyLogger
+import torch
 
 from src.generation.modules import VanillaAE
 from src.utils.logging_utils import get_logger
@@ -112,6 +113,7 @@ def train_autoencoder(
     trainer.validate(module, datamodule=datamodule)
     trainer.test(module, datamodule=datamodule)
 
+    torch.save(module.encoder.state_dict(), "saved_models/coles_churn.pth")
     if cfg_validation:
         # Pass debug mode to validation
         with open_dict(cfg_validation):
@@ -119,7 +121,7 @@ def train_autoencoder(
 
         logger.info("Starting validation")
         local_validation_res = local_target_validation(
-            cfg_preprop, cfg_validation, (train, val, test), module.encoder
+            cfg_preprop, cfg_validation
         )
         if isinstance(lightning_logger, WandbLogger):
             lightning_logger.log_table(
