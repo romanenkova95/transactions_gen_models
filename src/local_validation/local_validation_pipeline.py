@@ -69,7 +69,8 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
         val_trainer.fit(valid_model, datamodule)
         torch.save(valid_model.state_dict(), f'saved_models/validation_head_{i}.pth')
 
-        metrics = val_trainer.test(valid_model, datamodule)
+        # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
+        metrics = val_trainer.test(valid_model, datamodule)[0]
         results.append(metrics)
 
     return pd.DataFrame(results)
