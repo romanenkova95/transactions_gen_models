@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Literal, Optional, Union, Iterable, Callable
+from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from pytorch_lightning import LightningModule
 
@@ -9,6 +10,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.nn import Parameter
 
+from hydra.utils import instantiate
 from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
 
 from ptls.data_load import PaddedBatch
@@ -54,12 +56,12 @@ class VanillaAE(LightningModule):
     def __init__(
         self,
         loss_weights: dict[Literal["amount", "mcc"], float],
-        encoder: SeqEncoderContainer,
-        decoder: AbsDecoder,
-        mcc_head_factory: Callable[[int], nn.Module],
-        amount_head_factory: Callable[[int], nn.Module],
-        optimizer_factory: Callable[[Iterable[Parameter]], Optimizer],
-        scheduler_factory: Optional[Callable[[Optimizer], LRScheduler]] = None,
+        encoder: DictConfig,
+        decoder: DictConfig,
+        mcc_head: DictConfig,
+        amount_head: DictConfig,
+        optimizer: DictConfig,
+        scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         encoder_weights: Optional[str] = None,
         decoder_weights: Optional[str] = None,
@@ -75,17 +77,18 @@ class VanillaAE(LightningModule):
                 SeqEncoderContainer to be used as an encoder.
             decoder (AbsDecoder):
                 AbsDecoder, to be used as the decoder.
-            mcc_head_factory (ptls.nn.Head):
-                Function, takes AE output dim, outputs head to predict mccs with.
-            amount_head_factory (ptls.nn.Head):
-                Function, takes AE output dim, outputs  head to predict amounts with.
-                Note, that for enforcing amounts to be positive, they are fed through nn.Softplus
-            optimizer_factory (callable):
-                A function which returns the optimizer when given model parameters.
-            scheduler_factory (Optional[callable]):
-                A function which returns the lr scheduler when given an optimizer
-            scheduler_dict (Optional[dict]):
-                An lr_scheduler config (see LightningModule.configure_optimizers docstring)
+            mcc_head (DictConfig):
+                DictConfig for mcc head, instantiated with in_channels keyword argument.
+            amount_head (DictConfig):
+                Partial dictconfig for amount head, instantiated with in_channels keyword argument.
+                Note, that for enforcing amounts to be positive, they are fed through nn.Softplus after head.
+            optimizer (DictConfig):
+                Optimizer dictconfig, instantiated with params kwarg.
+            scheduler (Optional[DictConfig]):
+                Optionally, an lr scheduler dictconfig, instantiated with optimizer kwarg
+            scheduler_config (Optional[dict]):
+                An lr_scheduler config for specifying scheduler-specific params, such as which metric to monitor
+                See LightningModule.configure_optimizers docstring for more details.
             encoder_weights (Optional[str], optional):
                 Path to encoder weights. If not specified, no weights are loaded by default.
             decoder_weights (Optional[str], optional):
@@ -100,9 +103,10 @@ class VanillaAE(LightningModule):
                 A negative number would freeze the weights indefinetly.
         """
         super().__init__()
+        self.save_hyperparameters()
 
-        self.encoder: SeqEncoderContainer = encoder
-        self.decoder: AbsDecoder = decoder
+        self.encoder: SeqEncoderContainer = instantiate(encoder)
+        self.decoder: AbsDecoder = instantiate(decoder)
 
         self.unfreeze_enc_after = unfreeze_enc_after
         self.unfreeze_dec_after = unfreeze_dec_after
@@ -123,14 +127,14 @@ class VanillaAE(LightningModule):
             self.decoder.requires_grad_(False)
 
         self.amount_head = nn.Sequential(
-            amount_head_factory(self.ae_output_size),
+            instantiate(amount_head, in_channels=self.ae_output_size),
             nn.Softplus()
         )
         
-        self.mcc_head = mcc_head_factory(self.ae_output_size)
+        self.mcc_head = instantiate(mcc_head, in_channels=self.ae_output_size)
 
-        self.optimizer_factory = optimizer_factory
-        self.scheduler_factory = scheduler_factory
+        self.optimizer_dictconfig = optimizer
+        self.scheduler_dictconfig = scheduler
         self.scheduler_config = scheduler_config or {}
         
         self.amount_loss_weight = loss_weights["amount"] / sum(loss_weights.values())
@@ -369,11 +373,18 @@ class VanillaAE(LightningModule):
         return mcc_rec_trim.split(lens), amount_rec_trim.split(lens)
 
     def configure_optimizers(self):
-        optimizer = self.optimizer_factory(self.parameters())
+        optimizer = instantiate(
+            self.optimizer_dictconfig, 
+            params=self.parameters()
+        )
         
-        if self.scheduler_factory:
+        if self.scheduler_dictconfig:
+            scheduler = instantiate(
+                self.scheduler_dictconfig,
+                optimizer=optimizer
+            )
             scheduler_config = {
-                "scheduler": self.scheduler_factory(optimizer),
+                "scheduler": scheduler,
                 **self.scheduler_config                
             }
             

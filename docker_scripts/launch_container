@@ -9,6 +9,6 @@ docker run \
  --user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
  --name ${CONTAINER_NAME} \
  --rm -it --init \
- -v /home/${USER}/${SRC}:/app \
- --gpus all \
+ -v /home/${USER}/ilya/${SRC}:/app \
+ --gpus "device=0" \
  ${DOCKER_NAME} bash

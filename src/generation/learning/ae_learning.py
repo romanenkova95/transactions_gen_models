@@ -1,22 +1,33 @@
 """Autoencoder training script"""
 
-from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+from pathlib import Path
+from typing import Optional
+import pandas as pd
+from hydra.utils import instantiate, call
+from omegaconf import DictConfig, OmegaConf, open_dict
 from ptls.frames import PtlsDataModule
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
+from pytorch_lightning.callbacks import (
+    LearningRateMonitor,
+    EarlyStopping,
+    ModelCheckpoint,
+)
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.base import DummyLogger
 
 from src.generation.modules import VanillaAE
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
+from src.local_validation.local_validation_pipeline import local_target_validation
 
 logger = get_logger(name=__name__)
 
 
 def train_autoencoder(
-    cfg_preprop: DictConfig, cfg_dataset: DictConfig, cfg_model: DictConfig
+    cfg_preprop: DictConfig,
+    cfg_dataset: DictConfig,
+    cfg_model: DictConfig,
+    cfg_validation: Optional[DictConfig] = None,
 ) -> None:
     """Train autoencoder, specified in the model config, on the data, specified by the preprocessing config.
 
@@ -34,7 +45,10 @@ def train_autoencoder(
                 - trainer_args: arguments to pass to pl.Trainer
                 - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
                 - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
+        cfg_validation (DictConfig):
+            the validation config, for local validation
     """
+    logger.info("Preparing data:")
     train, val, test = preprocess(cfg_preprop)
 
     ds_factory = instantiate(cfg_dataset, _partial_=True)
@@ -45,33 +59,44 @@ def train_autoencoder(
         **cfg_model.get("datamodule_args", {}),
     )
 
-    module: VanillaAE = instantiate(
-        cfg_model["module_ae"],
-        encoder=instantiate(cfg_model["encoder"]), 
-        decoder=instantiate(cfg_model["decoder"])
+    # Initialize module
+    from_checkpoint = cfg_model["module_ae"]["_target_"].endswith("load_from_checkpoint")
+    if from_checkpoint:
+        logger.info("Loading module from checkpoint...")   
+        module: VanillaAE = call(cfg_model["module_ae"])
+    else:
+        logger.info("Instantiating module...")
+        module: VanillaAE = instantiate(
+            cfg_model["module_ae"],
+            _recursive_=False,
+            encoder=cfg_model["encoder"],
+            decoder=cfg_model["decoder"],
+        )
+
+    # See if in debug mode
+    fast_dev_run = cfg_model["trainer_args"].get("fast_dev_run")
+
+    # Initialize callbacks
+    ckpt_callback = ModelCheckpoint(monitor=cfg_model["checkpoint_metric"])
+    lr_monitor_callback = LearningRateMonitor()
+    callbacks = [ckpt_callback, lr_monitor_callback]
+
+    if "early_stopping" in cfg_model:
+        callbacks.append(instantiate(cfg_model["early_stopping"]))
+
+    # Set up Wandb
+    lightning_logger = WandbLogger(
+        project="macro_micro_coles", offline=bool(fast_dev_run)
     )
 
-    callbacks = []
+    cfg_dict = {
+        "preprocessing": OmegaConf.to_container(cfg_preprop),
+        "dataset": OmegaConf.to_container(cfg_dataset),
+        "model": OmegaConf.to_container(cfg_model),
+    }
 
-    if "fast_dev_run" not in cfg_model["trainer_args"]:
-        lightning_logger = WandbLogger(project="macro_micro_coles")
+    lightning_logger.experiment.config.update(cfg_dict)
 
-        cfg_dict = {
-            "preprocessing": OmegaConf.to_container(cfg_preprop),
-            "dataset": OmegaConf.to_container(cfg_dataset),
-            "model": OmegaConf.to_container(cfg_model)
-        }
-
-        lightning_logger.experiment.config.update(cfg_dict)
-        callbacks.append(LearningRateMonitor())
-    else:
-        lightning_logger = DummyLogger()
-        
-    if "early_stopping" in cfg_model:
-        callbacks.append(
-            instantiate(cfg_model["early_stopping"])
-        )
-    
     trainer = Trainer(
         accelerator="gpu",
         logger=lightning_logger,
@@ -81,4 +106,24 @@ def train_autoencoder(
     )
 
     trainer.fit(module, datamodule=datamodule)
+    if Path(ckpt_callback.best_model_path).is_file():
+        module = VanillaAE.load_from_checkpoint(ckpt_callback.best_model_path)
+      
+    trainer.validate(module, datamodule=datamodule)
     trainer.test(module, datamodule=datamodule)
+
+    if cfg_validation:
+        # Pass debug mode to validation
+        with open_dict(cfg_validation):
+            cfg_validation["trainer"]["fast_dev_run"] = fast_dev_run
+
+        logger.info("Starting validation")
+        local_validation_res = local_target_validation(
+            cfg_preprop, cfg_validation, (train, val, test), module.encoder
+        )
+        if isinstance(lightning_logger, WandbLogger):
+            lightning_logger.log_table(
+                dataframe=local_validation_res.describe().reset_index(), key="local_validation"
+            )
+        else:
+            print(local_validation_res.describe())

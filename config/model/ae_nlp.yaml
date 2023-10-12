@@ -3,9 +3,9 @@
 #   monitor: val_loss
 #   mode: min
 #   divergence_threshold: 10
-
+checkpoint_metric: val_loss
 trainer_args:
-  max_epochs: 500
+  max_epochs: 0
   precision: 16
 
 datamodule_args:
@@ -17,4 +17,4 @@ datamodule_args:
 defaults:
  - encoder: rnn_reduced
  - decoder: lstmcell
- - module_ae: vanilla_pretrained
+ - module_ae: vanilla/frozen

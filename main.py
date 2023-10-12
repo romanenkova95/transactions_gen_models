@@ -25,7 +25,12 @@ def main(cfg: DictConfig) -> None:
     elif model_name.startswith("cpc"):
         pass
     elif model_name.startswith("ae"):
-        train_autoencoder(cfg["preprocessing"], cfg["dataset"], cfg["model"])
+        train_autoencoder(
+            cfg["preprocessing"], 
+            cfg["dataset"], 
+            cfg["model"],
+            cfg.get("validation")
+        )
     else:
         raise ValueError(f"Unsupported model type: {model_name=}")
 
