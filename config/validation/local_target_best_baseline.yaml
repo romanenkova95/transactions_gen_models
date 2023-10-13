@@ -1,0 +1,57 @@
+name: local_target
+
+sequence_encoder:
+  _target_: ptls.nn.RnnSeqEncoder
+  trx_encoder:
+    _target_: ptls.nn.TrxEncoder
+    use_batch_norm_with_lens: True
+    norm_embeddings: False
+    embeddings_noise: 0.0003
+    embeddings: {mcc_code: {in: 344, out: 16}}
+    numeric_values: {amount: identity}
+  hidden_size: 64
+  bidir: False
+  trainable_starter: static
+  type: gru
+
+path_to_state_dict: saved_models/best_supervised_seqenc_churn.pth
+
+dataset:
+ _target_: ptls.frames.coles.ColesDataset 
+ splitter: 
+  _target_: ptls.frames.coles.split_strategy.NoSplit
+ col_time: event_time
+
+datamodule:
+ _target_: ptls.frames.PtlsDataModule
+ train_batch_size: 4
+ valid_batch_size: 4
+ test_batch_size: 4 
+ train_num_workers: 2
+ valid_num_workers: 2
+ test_num_workers: 2
+
+n_runs: 3
+
+model:
+  _target_: src.local_validation.LocalValidationModel
+  backbone_embd_size: 64
+  hidden_size: 32
+  val_mode: downstream # 'downstream', 'return_time' or 'event_type'
+  num_types: 345
+  learning_rate: 0.001
+  backbone_output_type: tensor
+  backbone_embd_mode: seq2vec # 'seq2vec' or 'seq2seq'
+  seq_len: 32
+  mask_col: mcc_code
+  local_label_col: churn_target
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  accelerator: gpu
+  devices: [0]
+  max_epochs: 5
+  logger: 
+    _target_: pytorch_lightning.loggers.WandbLogger
+    project: macro_micro_coles
+  
