@@ -1,5 +1,5 @@
 defaults:
-  - dataset: churn
-  - model: coles_churn
+  - dataset: default
+  - model: coles_default
   - validation: global_target
   - _self_

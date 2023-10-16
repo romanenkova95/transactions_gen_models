@@ -1,0 +1,16 @@
+name: default
+
+dir_path: data/preprocessed_new
+train_file_name: ${.name}.parquet
+
+ignore_existing_preproc: True
+
+coles:
+  pandas_preprocessor:
+    dir_path: preproc_data/${dataset.name}
+    name: pandas_preprocessor.p
+  valid_size: .1
+  test_size: .1
+  random_state: 42
+
+datetime_transformation: null # if null, apply default dt_to_timestamp, elif 'normalize' normalize times

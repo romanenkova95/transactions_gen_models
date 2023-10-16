@@ -1,14 +1,14 @@
-name: coles_emb_churn_${.model.sequence_encoder.hidden_size}
+name: coles_default
 
 dataset:
   _target_: src.coles.CustomColesDataset
-  min_len: 15
+  min_len: 25
+  col_time: event_time
   splitter:
     _target_: ptls.frames.coles.split_strategy.SampleSlices
     split_count: 5
-    cnt_min: 15
+    cnt_min: 25
     cnt_max: 150
-  col_time: event_time
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
@@ -22,31 +22,25 @@ model:
   optimizer_partial:
     _partial_: True
     _target_: torch.optim.Adam
-    lr: .001
-    weight_decay: .00005
+    lr: 0.004
+    weight_decay: 0.0
   lr_scheduler_partial:
     _partial_: True
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-    factor: .5
+    factor: 0.9025
     patience: 2
   sequence_encoder:
     _target_: ptls.nn.RnnSeqEncoder
     trx_encoder:
-      _target_: src.nn.PretrainedRnnSeqEncoder
-      path_to_dict: saved_models/coles_churn.pth
-      trx_encoder:
-        _target_: ptls.nn.TrxEncoder
-        use_batch_norm_with_lens: True
-        norm_embeddings: False
-        embeddings_noise: 0.0003
-        embeddings: {mcc_code: {in: 345, out: 24}}
-        numeric_values: {amount: identity}
-      hidden_size: 1024
-      bidir: False
-      trainable_starter: static
-      type: lstm
-      is_reduce_sequence: False
-    hidden_size: 1024
+      _target_: ptls.nn.TrxEncoder
+      use_batch_norm_with_lens: True
+      norm_embeddings: False
+      embeddings_noise: 0.0003
+      embeddings: {mcc_code: {in: 345, out: 16}}
+      numeric_values: {amount: identity}
+    hidden_size: 512
+    bidir: False
+    trainable_starter: static
     type: lstm
 
 defaults:

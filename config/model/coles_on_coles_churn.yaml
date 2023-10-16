@@ -1,0 +1,57 @@
+name: coles_churn
+
+dataset:
+  _target_: src.coles.CustomColesDataset
+  min_len: 15
+  col_time: event_time
+  splitter:
+    _target_: ptls.frames.coles.split_strategy.NoSplit
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 128
+  valid_batch_size: 128
+  train_num_workers: 8
+  valid_num_workers: 8
+
+model:
+  _target_: src.coles.CoLESonCoLES
+  frozen_encoder:
+    _target_: src.nn.seq_encoder.PretrainedRnnSeqEncoder
+    path_to_dict: saved_models/coles_churn.pth
+    trx_encoder:
+      _target_: ptls.nn.TrxEncoder
+      use_batch_norm_with_lens: True
+      norm_embeddings: False
+      embeddings_noise: 0.0003
+      embeddings: {mcc_code: {in: 345, out: 24}}
+      numeric_values: {amount: identity}
+    hidden_size: 1024
+    bidir: False
+    trainable_starter: static
+    type: lstm
+  learning_encoder:
+    _target_: ptls.nn.seq_encoder.RnnEncoder
+    input_size: 1024
+    hidden_size: 512 # 64
+    is_reduce_sequence: True
+  optimizer_partial:
+    _partial_: True
+    _target_: torch.optim.Adam
+    lr: 0.004
+    weight_decay: 0.0
+  lr_scheduler_partial:
+    _partial_: True
+    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+    factor: 0.9025
+    patience: 2
+  training_splitter:
+    _target_: ptls.frames.coles.split_strategy.SampleSlices
+    split_count: 5
+    cnt_min: 15
+    cnt_max: 150
+  col_time: "event_time"
+  encoding_seq_len: 20
+
+defaults:
+  - trainer_coles: trainer 

@@ -53,7 +53,7 @@ class TimeCLSampler(AbsSplit):
     For details, see Algorithm 1 from the paper:
         http://mesl.ucsd.edu/pubs/Ranak_AAAI2023_PrimeNet.pdf
     Args:
-        min_len (int): minimum subswequence length
+        min_len (int): minimum subsequence length
         max_len (int): maximum subsequence lentgh
         llambda (float): lower bound for lambda valu
         rlambda (float): upper bound for lambda value
