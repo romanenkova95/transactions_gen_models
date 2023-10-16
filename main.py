@@ -47,7 +47,8 @@ def main(cfg: DictConfig) -> None:
             raise ValueError(f"Unsupported validation type: {val_name=}")
 
         if wandb.run is not None:
-            wandb.log({"local_validation": wandb.Table(dataframe=res)})
+            wandb.log({"local_target_table": wandb.Table(dataframe=res)})
+            wandb.log({"local_target_stats": wandb.Table(dataframe=res.describe())})
 
         print(res)
         print(res.describe())

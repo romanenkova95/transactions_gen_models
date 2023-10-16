@@ -18,10 +18,7 @@ optimizer:
   _target_: torch.optim.AdamW
   lr: 0.0005
 scheduler: 
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-  mode: min
-  factor: 0.5
-  patience: 50
-  min_lr: 0.0001
-scheduler_config:
-  monitor: val_loss
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 250
+  gamma: 0.5
+
