@@ -39,6 +39,7 @@ class LocalValidationModel(pl.LightningModule):
         backbone_output_type: str = "tensor",
         backbone_embd_mode: str = "seq2vec",
         seq_len: Optional[int] = None,
+        stride: Optional[int] = None,
         mask_col: str = "mcc_code",
         local_label_col: Optional[str] = None,
         mcc_padd_value: int = 0,
@@ -68,7 +69,9 @@ class LocalValidationModel(pl.LightningModule):
             "tensor",
             "padded_batch",
         ]:
-            raise NameError(f"Unknown output type of the backbone model {backbone_output_type}.")
+            raise NameError(
+                f"Unknown output type of the backbone model {backbone_output_type}."
+            )
 
         if backbone_embd_mode not in [
             "seq2vec",
@@ -77,10 +80,16 @@ class LocalValidationModel(pl.LightningModule):
             raise NameError(f"Unknown backbone embeddings mode {backbone_embd_mode}.")
 
         if backbone_embd_mode == "seq2vec":
-            if seq_len is  None:
-                raise ValueError("Specify subsequence length for sampling sliding windows.")
+            if seq_len is None:
+                raise ValueError(
+                    "Specify subsequence length for sampling sliding windows."
+                )
+
+            if stride is None:
+                stride = 1
 
             self.seq_len = seq_len
+            self.stride = stride
 
         if val_mode not in [
             "downstream",
@@ -99,12 +108,13 @@ class LocalValidationModel(pl.LightningModule):
             if local_label_col is None:
                 raise ValueError("Specify local_label_col for downstream validation.")
 
-            self.pred_head = nn.Sequential(
-                nn.Linear(backbone_embd_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, 1),
-                nn.Sigmoid(),
-            )
+            # self.pred_head = nn.Sequential(
+            #     nn.Linear(backbone_embd_size, hidden_size),
+            #     nn.ReLU(),
+            #     nn.Linear(hidden_size, 1),
+            #     nn.Sigmoid(),
+            # )
+            self.pred_head = nn.LSTM(backbone_embd_size, 1, batch_first=True)
             # BCE loss for seq2seq binary classification
             self.loss = nn.BCELoss()
 
@@ -118,11 +128,12 @@ class LocalValidationModel(pl.LightningModule):
             self.local_label_col = local_label_col
 
         elif val_mode == "return_time":
-            self.pred_head = nn.Sequential(
-                nn.Linear(backbone_embd_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, 1),
-            )
+            # self.pred_head = nn.Sequential(
+            #     nn.Linear(backbone_embd_size, hidden_size),
+            #     nn.ReLU(),
+            #     nn.Linear(hidden_size, 1),
+            # )
+            self.pred_head = nn.LSTM(backbone_embd_size, 1, batch_first=True)
             # Custom LogCosh loss for return-time prediction
             self.loss = LogCoshLoss("mean")
 
@@ -130,13 +141,16 @@ class LocalValidationModel(pl.LightningModule):
             self.metrics = {"MAE": MeanAbsoluteError(), "MSE": MeanSquaredError()}
         else:
             if num_types is None:
-                raise ValueError("Specify number of event types for next-event-type prediction.")
+                raise ValueError(
+                    "Specify number of event types for next-event-type prediction."
+                )
 
-            self.pred_head = nn.Sequential(
-                nn.Linear(backbone_embd_size, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, num_types),
-            )
+            # self.pred_head = nn.Sequential(
+            #     nn.Linear(backbone_embd_size, hidden_size),
+            #     nn.ReLU(),
+            #     nn.Linear(hidden_size, num_types),
+            # )
+            self.pred_head = nn.LSTM(backbone_embd_size, num_types, batch_first=True)
             # CrossEntropyLoss for next-event-type prediction
             self.loss = torch.nn.CrossEntropyLoss(
                 ignore_index=mcc_padd_value, reduction="mean"
@@ -203,7 +217,8 @@ class LocalValidationModel(pl.LightningModule):
 
         if self.backbone_embd_mode == "seq2vec":
             # crop targets, delete first seq_len transactions as there are not history windows for them
-            target = target[:, self.seq_len - 1:]
+            date_len = target.shape[1]
+            target = target[:, self.seq_len - 1 : date_len : self.stride]
         return target
 
     def _return_time_target_and_preds(
@@ -259,7 +274,9 @@ class LocalValidationModel(pl.LightningModule):
         bs = inputs.payload["event_time"].shape[0]
 
         if self.backbone_embd_mode == "seq2vec":
-            collated_batch = sliding_window_sampler(inputs, seq_len=self.seq_len)
+            collated_batch = sliding_window_sampler(
+                inputs, seq_len=self.seq_len, stride=self.stride
+            )
 
             out = self.backbone(collated_batch)
 
@@ -283,7 +300,8 @@ class LocalValidationModel(pl.LightningModule):
         if self.backbone_output_type == "padded_batch":
             out = out.payload
 
-        preds = self.pred_head(out)
+        preds, _ = self.pred_head(out)
+        # preds = self.pred_head(out)
 
         return preds, mask
 
@@ -301,8 +319,8 @@ class LocalValidationModel(pl.LightningModule):
             * mask (torch.Tensor) - binary mask indication non-padding transactions
         """
         inputs, _ = batch
-        target = self._get_validation_labels(inputs)
-        preds, mask = self.forward(inputs)
+        target = self._get_validation_labels(inputs)  # (B, L)
+        preds, mask = self.forward(inputs)  # (B, L)
 
         return preds, target, mask
 

@@ -12,7 +12,7 @@ def is_seq_feature(k: str, v: Any) -> bool:
     if k.startswith("target"):
         return False
     if type(v) in (np.ndarray, torch.Tensor):
-        return True 
+        return True
     return False
 
 
@@ -21,7 +21,7 @@ def sliding_window_sampler(
     seq_len: int,
     stride: int = 1,
     time_col: str = "event_time",
-) -> Dict[str, torch.Tensor]:
+) -> PaddedBatch:
     """Sample sliding windows from the raw dataset on-the-fly.
 
     Args:
@@ -50,9 +50,8 @@ def sliding_window_sampler(
         for k, v in padded_batch.payload.items()
         if is_seq_feature(k, v)
     }
-
     # convert into PaddedBatch format
     lengths = torch.ones(len(idxs_list) * bs, dtype=torch.int) * seq_len
-    collated_batch = PaddedBatch(splits, lengths)
+    collated_batch = PaddedBatch(splits, lengths.to(padded_batch.device))
 
     return collated_batch
