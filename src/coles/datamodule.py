@@ -2,8 +2,13 @@
 Custom coles datamodule
 """
 import torch
+import pandas as pd
 
 from typing import List, Dict
+
+from functools import reduce
+from operator import iadd
+from ptls.data_load.utils import collate_feature_dict
 
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
@@ -43,3 +48,34 @@ class CustomColesDataset(ColesDataset):
             *args,
             **kwargs
         )
+
+class CustomUserValidationColesDataset(ColesDataset):
+
+    def __init__(self,
+                 *args, 
+                 target_cols: List[str] = None,
+                 **kwargs, ):
+        super().__init__(*args, **kwargs) 
+
+        self.target_cols = target_cols
+
+    def __getitem__(self, idx):
+        feature_arrays = self.data[idx]
+        full_targets = {}
+        for target_col in self.target_cols:
+            full_targets[target_col] = feature_arrays[target_col]
+
+        return [self.get_splits(feature_arrays), full_targets]
+    
+    def collate_targets(self, targets: List[Dict]):
+        targets = pd.DataFrame(targets)
+        result = {}
+        for col in targets.columns:
+            result[col] = torch.Tensor(targets[col].values)
+        return result
+    
+    def collate_fn(self, batch):
+        batch = reduce(iadd, batch)
+        padded_batch = collate_feature_dict(reduce(iadd, batch[::2]))
+
+        return padded_batch, self.collate_targets(batch[1::2]) 
