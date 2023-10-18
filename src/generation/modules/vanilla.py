@@ -122,9 +122,7 @@ class VanillaAE(LightningModule):
             logger.info("Freezing decoder weights")
             self.decoder.requires_grad_(False)
 
-        self.amount_head = nn.Sequential(
-            instantiate(amount_head, in_channels=self.ae_output_size)
-        )
+        self.amount_head = instantiate(amount_head, in_channels=self.ae_output_size)
 
         self.mcc_head = instantiate(mcc_head, in_channels=self.ae_output_size)
 
