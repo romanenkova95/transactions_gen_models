@@ -153,7 +153,7 @@ class VanillaAE(LightningModule):
     def forward(
         self,
         batch: PaddedBatch,
-    ) -> tuple[Tensor, Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor]]:
         """Run the forward pass of the VanillaAE module.
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
         to get the respective targets.
@@ -184,7 +184,7 @@ class VanillaAE(LightningModule):
             )
         else:
             # Encoder returned PaddedBatch of embeddings
-            seqs_after_lstm = self.decoder(latent_embeddings.payload)
+            seqs_after_lstm = self.decoder(latent_embeddings.payload) # type: ignore
 
         mcc_pred: Tensor = self.mcc_head(seqs_after_lstm)
         amount_pred: Tensor = self.amount_head(seqs_after_lstm).squeeze(dim=-1)
@@ -365,7 +365,7 @@ class VanillaAE(LightningModule):
         mcc_pred_trim = mcc_pred[lens_mask]
         amount_pred_trim = amount_pred[lens_mask]
 
-        return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim.split(lens))
+        return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim.split(lens)) # type: ignore
 
     def configure_optimizers(self):
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
