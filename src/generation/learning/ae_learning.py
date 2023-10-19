@@ -1,7 +1,7 @@
 """Autoencoder training script"""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 import pandas as pd
 from hydra.utils import instantiate, call
 from omegaconf import DictConfig, OmegaConf, open_dict
@@ -12,11 +12,12 @@ from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
 )
+from pytorch_lightning import LightningModule
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.base import DummyLogger
 import torch
 
-from src.generation.modules import VanillaAE
+from src.generation.modules import VanillaAE, MLMModule
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 from src.local_validation.local_validation_pipeline import local_target_validation
@@ -64,14 +65,15 @@ def train_autoencoder(
     from_checkpoint = cfg_model["module_ae"]["_target_"].endswith("load_from_checkpoint")
     if from_checkpoint:
         logger.info("Loading module from checkpoint...")   
-        module: VanillaAE = call(cfg_model["module_ae"])
+        module: Union[VanillaAE, MLMModule] = call(cfg_model["module_ae"])
     else:
         logger.info("Instantiating module...")
-        module: VanillaAE = instantiate(
+        kwargs = {k: v for k in ["encoder", "decoder"] if (v := cfg_model.get(k))}
+        
+        module: Union[VanillaAE, MLMModule] = instantiate(
             cfg_model["module_ae"],
             _recursive_=False,
-            encoder=cfg_model["encoder"],
-            decoder=cfg_model["decoder"],
+            **kwargs
         )
 
     # See if in debug mode
@@ -107,8 +109,8 @@ def train_autoencoder(
     )
 
     trainer.fit(module, datamodule=datamodule)
-    if Path(ckpt_callback.best_model_path).is_file():
-        module = VanillaAE.load_from_checkpoint(ckpt_callback.best_model_path)
+    if (ckpt_path := Path(ckpt_callback.best_model_path)).is_file():
+        module.load_state_dict(torch.load(ckpt_path)["state_dict"])
       
     trainer.validate(module, datamodule=datamodule)
     trainer.test(module, datamodule=datamodule)

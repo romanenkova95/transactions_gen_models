@@ -1,0 +1,12 @@
+_target_: ptls.nn.TransformerSeqEncoder
+trx_encoder:
+  _target_: ptls.nn.TrxEncoder
+  use_batch_norm_with_lens: True
+  norm_embeddings: False
+  embeddings_noise: 0.0003
+  embeddings: 
+    mcc_code:   
+      in: 344
+      out: 24
+  linear_projection_size: 1024
+is_reduce_sequence: False

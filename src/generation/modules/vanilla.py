@@ -54,10 +54,10 @@ class VanillaAE(LightningModule):
         self,
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
-        decoder: DictConfig,
         mcc_head: DictConfig,
         amount_head: DictConfig,
         optimizer: DictConfig,
+        decoder: Optional[DictConfig] = None,
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         encoder_weights: Optional[str] = None,
@@ -72,14 +72,14 @@ class VanillaAE(LightningModule):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
                 SeqEncoderContainer to be used as an encoder.
-            decoder (AbsDecoder):
-                AbsDecoder, to be used as the decoder.
             mcc_head (DictConfig):
                 DictConfig for mcc head, instantiated with in_channels keyword argument.
             amount_head (DictConfig):
                 Partial dictconfig for amount head, instantiated with in_channels keyword argument.
             optimizer (DictConfig):
                 Optimizer dictconfig, instantiated with params kwarg.
+            decoder (AbsDecoder):
+                AbsDecoder, to be used as the decoder.
             scheduler (Optional[DictConfig]):
                 Optionally, an lr scheduler dictconfig, instantiated with optimizer kwarg
             scheduler_config (Optional[dict]):
@@ -102,7 +102,7 @@ class VanillaAE(LightningModule):
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
-        self.decoder: AbsDecoder = instantiate(decoder)
+        self.decoder: AbsDecoder = instantiate(decoder) if decoder else AbsDecoder(self.encoder.embedding_size)
 
         self.unfreeze_enc_after = unfreeze_enc_after
         self.unfreeze_dec_after = unfreeze_dec_after
@@ -280,7 +280,7 @@ class VanillaAE(LightningModule):
 
         return {"loss": total_loss, "loss_mcc": mcc_loss, "loss_amt": amount_loss}
 
-    def _step(
+    def shared_step(
         self,
         stage: str,
         batch: PaddedBatch,
@@ -331,13 +331,13 @@ class VanillaAE(LightningModule):
             return metric_dict
 
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
-        return self._step("train", *args, **kwargs)
+        return self.shared_step("train", *args, **kwargs)
 
     def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self._step("val", *args, **kwargs)
+        return self.shared_step("val", *args, **kwargs)
 
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self._step("test", *args, **kwargs)
+        return self.shared_step("test", *args, **kwargs)
 
     def predict_step(
         self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
