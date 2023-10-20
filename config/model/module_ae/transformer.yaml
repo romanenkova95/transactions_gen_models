@@ -5,11 +5,11 @@ loss_weights:
 
 mcc_head:
   _target_: torchvision.ops.MLP
-  hidden_channels: [4096, 100]
+  hidden_channels: [100]
 
 amount_head:
   _target_: torchvision.ops.MLP
-  hidden_channels: [4096, 1]
+  hidden_channels: [1]
 
 optimizer:
   _target_: torch.optim.AdamW

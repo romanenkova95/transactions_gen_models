@@ -153,7 +153,7 @@ class VanillaAE(LightningModule):
     def forward(
         self,
         batch: PaddedBatch,
-    ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor]]:
+    ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
         to get the respective targets.
@@ -168,6 +168,7 @@ class VanillaAE(LightningModule):
                     - Predicted mcc logits, shape (B, L, mcc_vocab_size + 1)
                     - predicted amounts, shape (B, L)
                     - Latent embeddings
+                    - Pad mask
 
         Notes:
             The padding elements, determined by the padding mask of the input PaddedBatch,
@@ -189,12 +190,9 @@ class VanillaAE(LightningModule):
         mcc_pred: Tensor = self.mcc_head(seqs_after_lstm)
         amount_pred: Tensor = self.amount_head(seqs_after_lstm).squeeze(dim=-1)
 
-        # zero-out padding to disable grad flow
-        pad_mask = batch.seq_len_mask.bool().reshape(*(amount_pred.shape))
-        mcc_pred[~pad_mask] = 0
-        amount_pred[~pad_mask] = 0
-
-        return mcc_pred, amount_pred, latent_embeddings
+        # mask to calculate losses & metrics on
+        nonpad_mask = batch.seq_len_mask.bool().reshape(*(amount_pred.shape))
+        return mcc_pred, amount_pred, latent_embeddings, nonpad_mask
 
     def _calculate_metrics(
         self,
@@ -259,6 +257,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor,
         mcc_target: Tensor,
         amount_target: Tensor,
+        mask: Tensor
     ) -> dict[str, Tensor]:
         """Calculate the losses, weigh them with respective weights
 
@@ -267,12 +266,13 @@ class VanillaAE(LightningModule):
             amount_pred (Tensor): Predicted amounts, (B, L).
             mcc_target (Tensor): target mcc codes.
             amount_target (Tensor): target amounts.
+            mask (Tensor): mask of non-padding elements
 
         Returns:
             Dictionary of losses, with keys loss, loss_mcc, loss_amt.
         """
-        mcc_loss = self.mcc_criterion(mcc_pred.transpose(2, 1), mcc_target)
-        amount_loss = self.amount_criterion(amount_pred, amount_target)
+        mcc_loss = self.mcc_criterion(mcc_pred[mask], mcc_target[mask])
+        amount_loss = self.amount_criterion(amount_pred[mask], amount_target[mask])
 
         total_loss = (
             self.mcc_loss_weight * mcc_loss + self.amount_loss_weight * amount_loss
@@ -299,16 +299,16 @@ class VanillaAE(LightningModule):
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
         """
-        mcc_pred, amount_pred, _ = self(batch)  # (B * S, L, MCC_N), (B * S, L)
+        mcc_pred, amount_pred, _, nonpad_mask = self(batch)  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
         amount_target = torch.log(batch.payload["amount"] + 1)  # Logarithmize targets
 
         loss_dict = self._calculate_losses(
-            mcc_pred, amount_pred, mcc_target, amount_target
+            mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
         )
 
         metric_dict = self._calculate_metrics(
-            mcc_pred, amount_pred, mcc_target, amount_target, batch.seq_len_mask.bool()
+            mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
         )
 
         self.log_dict(

@@ -68,7 +68,8 @@ class MLMModule(VanillaAE):
             batch (PaddedBatch): input batch
 
         Returns:
-            Tensor, Tensor, Union[Tensor, PaddedBatch]: same as VanillaAE
+            Tensor, Tensor, Union[Tensor, PaddedBatch], Tensor: 
+                Same as VanillaAE
         """
         mcc_codes_old = batch.payload["mcc_code"]
         nonpad_mask = batch.seq_len_mask.bool()
@@ -76,7 +77,13 @@ class MLMModule(VanillaAE):
         mcc_codes_new = mcc_codes_old.clone()
         mcc_codes_new[aug_mask] = self.get_aug_tokens(mcc_codes_old[aug_mask])
 
-        return super().forward(batch)
+        batch_new = PaddedBatch({
+            "mcc_code": mcc_codes_new,
+            "amount": batch.payload["amount"]
+        }, batch.seq_lens)
+        
+        mcc_preds, amount_preds, latent_embs, _ = super().forward(batch_new)        
+        return mcc_preds, amount_preds, latent_embs, aug_mask
 
     def get_aug_tokens(self, aug_tokens):
         shuffled_tokens = aug_tokens[torch.randperm(aug_tokens.shape[0])]

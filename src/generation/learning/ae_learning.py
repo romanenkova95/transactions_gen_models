@@ -105,6 +105,7 @@ def train_autoencoder(
         logger=lightning_logger,
         log_every_n_steps=10,
         callbacks=callbacks,
+        devices=1,
         **cfg_model["trainer_args"],
     )
 
