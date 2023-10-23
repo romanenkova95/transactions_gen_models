@@ -5,10 +5,10 @@ from ptls.preprocessing.base import ColTransformer
 from ptls.preprocessing.pandas.col_transformer import ColTransformerPandasMixin
 
 
-class DropLarge(ColTransformerPandasMixin, ColTransformer):
-    """Drop all values, larger than given quantile ``q``."""
+class DropQuantile(ColTransformerPandasMixin, ColTransformer):
+    """Drop all values, which don't fall between ``q_min`` and ``q_max``."""
 
-    def __init__(self, col_name_original: str, q: float):
+    def __init__(self, col_name_original: str, q_min: float, q_max: float):
         """Initialize DropLarge transform
 
         Args:
@@ -16,11 +16,14 @@ class DropLarge(ColTransformerPandasMixin, ColTransformer):
             q (float): drop all values larger than this quantile.
         """
         super().__init__(col_name_original)
-        self.q = q
+        self.q_min = q_min
+        self.q_max = q_max
 
     def transform(self, x: pd.DataFrame):
-        quantile = x[self.col_name_original].quantile(self.q)
-        return x[x[self.col_name_original] < quantile]
+        column = x[self.col_name_original]
+        q_min = column.quantile(self.q_min)
+        q_max = column.quantile(self.q_max)
+        return x[(q_min < column) | (column < q_max)]
 
 
 class ToType(ColTransformerPandasMixin, ColTransformer):
@@ -51,25 +54,6 @@ class ToType(ColTransformerPandasMixin, ColTransformer):
     def transform(self, x: pd.DataFrame):
         col: pd.Series = x[self.col_name_original]
         col = col.astype(self.target_type)  # type: ignore
-        col = col.rename(self.col_name_target)
-        x = self.attach_column(x, col)
-        return super().transform(x)
-
-
-class LogTransform(ColTransformerPandasMixin, ColTransformer):
-    """Logarithmize given numerical column"""
-
-    def __init__(
-        self,
-        col_name_original: str,
-        col_name_target: str = None,
-        is_drop_original_col: bool = True,
-    ):
-        super().__init__(col_name_original, col_name_target, is_drop_original_col)
-        
-    def transform(self, x: pd.DataFrame):
-        col: pd.Series = x[self.col_name_original]
-        col = np.log(col + 1)
         col = col.rename(self.col_name_target)
         x = self.attach_column(x, col)
         return super().transform(x)

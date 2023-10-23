@@ -107,7 +107,7 @@ class MLMModule(VanillaAE):
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             self.optimizer_dictconfig["lr"],
-            self.trainer.estimated_stepping_batches
+            self.trainer.max_steps or self.trainer.estimated_stepping_batches
         )
         
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]

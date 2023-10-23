@@ -5,7 +5,7 @@
 #   divergence_threshold: 10
 checkpoint_metric: val_loss
 trainer_args:
-  max_epochs: 500
+  max_steps: 8000
   precision: 16
 
 datamodule_args:

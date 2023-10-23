@@ -8,7 +8,7 @@ trx_encoder:
     mcc_code:   
       in: 344
       out: 24
-  numeric_values: {amount: identity}
+  numeric_values: {amount: log}
 hidden_size: 1024
 bidir: False
 trainable_starter: static

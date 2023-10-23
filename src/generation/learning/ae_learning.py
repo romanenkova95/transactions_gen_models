@@ -65,7 +65,10 @@ def train_autoencoder(
     from_checkpoint = cfg_model["module_ae"]["_target_"].endswith("load_from_checkpoint")
     if from_checkpoint:
         logger.info("Loading module from checkpoint...")   
-        module: Union[VanillaAE, MLMModule] = call(cfg_model["module_ae"])
+        module: Union[VanillaAE, MLMModule] = call(
+            cfg_model["module_ae"],
+            _recursive_=False
+        )
     else:
         logger.info("Instantiating module...")
         kwargs = {k: v for k in ["encoder", "decoder"] if (v := cfg_model.get(k))}
