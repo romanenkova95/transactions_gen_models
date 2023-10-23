@@ -9,9 +9,9 @@ trainer_args:
   precision: 16
 
 datamodule_args:
-  train_batch_size: 256
+  train_batch_size: 1024
   train_num_workers: 4
-  valid_batch_size: 256
+  valid_batch_size: 1024
   valid_num_workers: 4
 
 defaults:

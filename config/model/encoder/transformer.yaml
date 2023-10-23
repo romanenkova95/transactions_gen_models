@@ -6,7 +6,9 @@ trx_encoder:
   embeddings_noise: 0.0003
   embeddings: 
     mcc_code:   
-      in: 344
+      in: 101
       out: 24
+  numeric_values: {amount: identity}
   linear_projection_size: 1024
+dim_hidden: 1024
 is_reduce_sequence: False

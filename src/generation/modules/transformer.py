@@ -71,15 +71,18 @@ class MLMModule(VanillaAE):
             Tensor, Tensor, Union[Tensor, PaddedBatch], Tensor: 
                 Same as VanillaAE
         """
-        mcc_codes_old = batch.payload["mcc_code"]
         nonpad_mask = batch.seq_len_mask.bool()
         aug_mask = torch.bernoulli(nonpad_mask.float() * self.replace_proba).bool()
-        mcc_codes_new = mcc_codes_old.clone()
-        mcc_codes_new[aug_mask] = self.get_aug_tokens(mcc_codes_old[aug_mask])
+        
+        mcc_codes_new = batch.payload["mcc_code"].clone()
+        mcc_codes_new[aug_mask] = self.get_aug_tokens(mcc_codes_new[aug_mask])
+        
+        amount_new = batch.payload["amount"].clone()
+        amount_new[aug_mask] = 0
 
         batch_new = PaddedBatch({
             "mcc_code": mcc_codes_new,
-            "amount": batch.payload["amount"]
+            "amount": amount_new
         }, batch.seq_lens)
         
         mcc_preds, amount_preds, latent_embs, _ = super().forward(batch_new)        
@@ -98,3 +101,13 @@ class MLMModule(VanillaAE):
                 aug_tokens
             )
         )
+        
+    def configure_optimizers(self):
+        optimizer = super().configure_optimizers()
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            self.optimizer_dictconfig["lr"],
+            self.trainer.estimated_stepping_batches
+        )
+        
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
