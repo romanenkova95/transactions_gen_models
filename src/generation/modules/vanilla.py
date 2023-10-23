@@ -64,6 +64,7 @@ class VanillaAE(LightningModule):
         decoder_weights: Optional[str] = None,
         unfreeze_enc_after: Optional[int] = None,
         unfreeze_dec_after: Optional[int] = None,
+        reconstruction_len: Optional[int] = None
     ) -> None:
         """Initialize VanillaAE internal state.
 
@@ -97,6 +98,10 @@ class VanillaAE(LightningModule):
                 Number of epochs to wait before unfreezing encoder weights.
                 The module doesn't get frozen by default.
                 A negative number would freeze the weights indefinetly.
+            reconstruction_len (Optional[int]):
+                length of reconstructed batch in predict_step, optional. 
+                If None, determine length from batch.seq_lens.
+                If int, reconstruct that many tokens.
         """
         super().__init__()
         self.save_hyperparameters()
@@ -135,6 +140,8 @@ class VanillaAE(LightningModule):
 
         self.mcc_criterion = nn.CrossEntropyLoss(ignore_index=0)
         self.amount_criterion = nn.MSELoss()
+        
+        self.reconstruction_len = reconstruction_len
 
     def on_train_epoch_start(self) -> None:
         """Overrided method to unfreeze encoder/decoder weights"""
@@ -153,6 +160,7 @@ class VanillaAE(LightningModule):
     def forward(
         self,
         batch: PaddedBatch,
+        L: Optional[int] = None
     ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
@@ -160,7 +168,7 @@ class VanillaAE(LightningModule):
 
         Args:
             batch (PaddedBatch): Input batch of raw transactional data.
-            return_latent (bool): whether to return latent embeddings (the ones after encoder)
+            L (int): Optionally, specify length of decoded sequence
 
         Returns:
             tuple[Tensor, Tensor]:
@@ -177,11 +185,12 @@ class VanillaAE(LightningModule):
         """
         latent_embeddings: Union[PaddedBatch, Tensor] = self.encoder(batch)
 
+        L = L or batch.seq_feature_shape[1]
         if self.encoder.is_reduce_sequence:
             # Encoder returned batch of single-vector embeddings (one per input sequence),
             # need to pass shape for decoder to construct output sequence
             seqs_after_lstm = self.decoder(
-                latent_embeddings, batch.seq_feature_shape[1]
+                latent_embeddings, L
             )
         else:
             # Encoder returned PaddedBatch of embeddings
@@ -191,7 +200,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor = self.amount_head(seqs_after_lstm).squeeze(dim=-1)
 
         # mask to calculate losses & metrics on
-        nonpad_mask = batch.seq_len_mask.bool().reshape(*(amount_pred.shape))
+        nonpad_mask = batch.seq_len_mask.bool()
         return mcc_pred, amount_pred, latent_embeddings, nonpad_mask
 
     def _calculate_metrics(
@@ -222,24 +231,25 @@ class VanillaAE(LightningModule):
             num_classes = len(labels)
             mcc_target = torch.argwhere(mcc_target[:, None] == labels[None, :])[:, 1]
             mcc_preds = mcc_preds[:, labels]
+            mcc_probs = torch.softmax(mcc_preds, -1)
 
             return {
                 "mcc_auroc": auroc(
-                    mcc_preds,
+                    mcc_probs,
                     mcc_target,
                     average="macro",
                     num_classes=num_classes,
                     task="multiclass",
                 ).cpu(),  # type: ignore
                 "mcc_prauc": average_precision(
-                    mcc_preds,
+                    mcc_probs,
                     mcc_target,
                     average="macro",
                     num_classes=num_classes,
                     task="multiclass",
                 ),  # type: ignore
                 "mcc_f1": f1_score(
-                    mcc_preds,
+                    mcc_probs,
                     mcc_target,
                     average="macro",
                     num_classes=num_classes,
@@ -341,7 +351,7 @@ class VanillaAE(LightningModule):
 
     def predict_step(
         self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
-    ) -> tuple[list[Tensor], list[Tensor]]:
+    ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
         """Run the predict step: forward pass for the input batch, and trim padding in output.
 
         Args:
@@ -358,14 +368,17 @@ class VanillaAE(LightningModule):
         """
         mcc_pred: Tensor  # (B, L, MCC_NUM)
         amount_pred: Tensor  # (B, L)
-        mcc_pred, amount_pred = self(batch)
-        lens_mask = batch.seq_len_mask.bool()
-        lens = batch.seq_lens
+        mcc_pred, amount_pred, _, _ = self(batch, self.reconstruction_len)
+        if self.reconstruction_len:
+            return mcc_pred, torch.exp(amount_pred)
+        else:
+            lens_mask = batch.seq_len_mask.bool()
+            lens = batch.seq_lens.tolist()
 
-        mcc_pred_trim = mcc_pred[lens_mask]
-        amount_pred_trim = amount_pred[lens_mask]
+            mcc_pred_trim = mcc_pred[lens_mask]
+            amount_pred_trim = amount_pred[lens_mask]
 
-        return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim.split(lens)) # type: ignore
+            return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim).split(lens)
 
     def configure_optimizers(self):
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())

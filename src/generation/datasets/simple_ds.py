@@ -35,7 +35,7 @@ class SimpleTRXDataset(AugmentationDataset):
         if randomize:
             augmentations.append(RandomSlice(random_min_seq_len, random_max_seq_len))
         else:
-            augmentations.append(SeqLenLimit(min_len))
+            augmentations.append(SeqLenLimit(int((random_min_seq_len + random_max_seq_len) / 2), strategy="head"))
         
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),

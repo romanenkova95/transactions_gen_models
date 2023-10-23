@@ -87,6 +87,5 @@ class LSTMCellDecoder(AbsDecoder):
             outputs_list.append(hidden_state)
             input = self.projector(hidden_state)
 
-        outputs_list.reverse()
         lstmcell_outputs = torch.relu(torch.stack(outputs_list, dim=1))
         return self.lstm(lstmcell_outputs)
