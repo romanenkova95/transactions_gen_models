@@ -17,4 +17,4 @@ datamodule_args:
 defaults:
  - encoder: rnn_reduced
  - decoder: lstmcell
- - module_ae: vanilla/loaded/pretrained
+ - module_ae: vanilla/pretrained

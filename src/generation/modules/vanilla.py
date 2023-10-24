@@ -1,13 +1,25 @@
+from copy import deepcopy
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from pytorch_lightning import LightningModule
+from sklearn import multiclass
 
 import torch
 from torch import nn, Tensor
 
 from hydra.utils import instantiate
+from torchmetrics import (
+    AUROC,
+    Accuracy,
+    AveragePrecision,
+    F1Score,
+    Metric,
+    MetricCollection,
+    MultitaskWrapper,
+    R2Score,
+)
 from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
 
 from ptls.data_load import PaddedBatch
@@ -64,7 +76,7 @@ class VanillaAE(LightningModule):
         decoder_weights: Optional[str] = None,
         unfreeze_enc_after: Optional[int] = None,
         unfreeze_dec_after: Optional[int] = None,
-        reconstruction_len: Optional[int] = None
+        reconstruction_len: Optional[int] = None,
     ) -> None:
         """Initialize VanillaAE internal state.
 
@@ -99,7 +111,7 @@ class VanillaAE(LightningModule):
                 The module doesn't get frozen by default.
                 A negative number would freeze the weights indefinetly.
             reconstruction_len (Optional[int]):
-                length of reconstructed batch in predict_step, optional. 
+                length of reconstructed batch in predict_step, optional.
                 If None, determine length from batch.seq_lens.
                 If int, reconstruct that many tokens.
         """
@@ -107,7 +119,9 @@ class VanillaAE(LightningModule):
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
-        self.decoder: AbsDecoder = instantiate(decoder) if decoder else AbsDecoder(self.encoder.embedding_size)
+        self.decoder: AbsDecoder = (
+            instantiate(decoder) if decoder else AbsDecoder(self.encoder.embedding_size)
+        )
 
         self.unfreeze_enc_after = unfreeze_enc_after
         self.unfreeze_dec_after = unfreeze_dec_after
@@ -140,8 +154,32 @@ class VanillaAE(LightningModule):
 
         self.mcc_criterion = nn.CrossEntropyLoss(ignore_index=0)
         self.amount_criterion = nn.MSELoss()
-        
+
         self.reconstruction_len = reconstruction_len
+
+        multiclass_args: dict[str, Any] = dict(
+            task="multiclass",
+            num_classes=self.mcc_head[-2].out_features,
+            average="macro",
+            ignore_index=0,
+        )
+
+        MetricsType = dict[Literal["mcc", "amount"], MetricCollection]
+        def make_metrics(stage: str) -> MetricsType:
+            return nn.ModuleDict({
+                "mcc": MetricCollection(
+                    AUROC(**multiclass_args),
+                    F1Score(**multiclass_args),
+                    AveragePrecision(**multiclass_args),
+                    Accuracy(**multiclass_args),
+                    prefix=stage
+                ),
+                "amount": MetricCollection(R2Score(), prefix=stage),
+            }) # type: ignore
+
+        self.train_metrics: MetricsType = make_metrics("train")
+        self.val_metrics: MetricsType = make_metrics("val")
+        self.test_metrics: MetricsType = make_metrics("test")
 
     def on_train_epoch_start(self) -> None:
         """Overrided method to unfreeze encoder/decoder weights"""
@@ -158,9 +196,7 @@ class VanillaAE(LightningModule):
         return super().on_train_epoch_start()
 
     def forward(
-        self,
-        batch: PaddedBatch,
-        L: Optional[int] = None
+        self, batch: PaddedBatch, L: Optional[int] = None
     ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
@@ -189,12 +225,10 @@ class VanillaAE(LightningModule):
         if self.encoder.is_reduce_sequence:
             # Encoder returned batch of single-vector embeddings (one per input sequence),
             # need to pass shape for decoder to construct output sequence
-            seqs_after_lstm = self.decoder(
-                latent_embeddings, L
-            )
+            seqs_after_lstm = self.decoder(latent_embeddings, L)
         else:
             # Encoder returned PaddedBatch of embeddings
-            seqs_after_lstm = self.decoder(latent_embeddings.payload) # type: ignore
+            seqs_after_lstm = self.decoder(latent_embeddings.payload)  # type: ignore
 
         mcc_pred: Tensor = self.mcc_head(seqs_after_lstm)
         amount_pred: Tensor = self.amount_head(seqs_after_lstm).squeeze(dim=-1)
@@ -203,71 +237,13 @@ class VanillaAE(LightningModule):
         nonpad_mask = batch.seq_len_mask.bool()
         return mcc_pred, amount_pred, latent_embeddings, nonpad_mask
 
-    def _calculate_metrics(
-        self,
-        mcc_preds: Tensor,
-        amt_value: Tensor,
-        mcc_target: Tensor,
-        amt_target: Tensor,
-        mask: Tensor,
-    ) -> dict[str, Tensor]:
-        """Calculate the metrics
-
-        Args:
-            mcc_preds (Tensor): predicted mcc logits, (B, L, mcc_vocab_size)
-            amt_value (Tensor): predicted amounts, (B, L)
-            mcc_target (Tensor): target mccs, (B, L)
-            amt_target (Tensor): target amounts, (B, L)
-            mask (Tensor): mask of non-padding elements
-
-        Returns:
-            dict[str, Tensor]: Dictionary of metrics, with keys mcc_auroc, mcc_f1, amt_r2
-        """
-        with torch.no_grad():
-            mcc_target = mcc_target[mask]
-            mcc_preds = mcc_preds[mask].reshape((*mcc_target.shape, -1))
-
-            labels = mcc_target.unique()
-            num_classes = len(labels)
-            mcc_target = torch.argwhere(mcc_target[:, None] == labels[None, :])[:, 1]
-            mcc_preds = mcc_preds[:, labels]
-            mcc_probs = torch.softmax(mcc_preds, -1)
-
-            return {
-                "mcc_auroc": auroc(
-                    mcc_probs,
-                    mcc_target,
-                    average="macro",
-                    num_classes=num_classes,
-                    task="multiclass",
-                ).cpu(),  # type: ignore
-                "mcc_prauc": average_precision(
-                    mcc_probs,
-                    mcc_target,
-                    average="macro",
-                    num_classes=num_classes,
-                    task="multiclass",
-                ),  # type: ignore
-                "mcc_f1": f1_score(
-                    mcc_probs,
-                    mcc_target,
-                    average="macro",
-                    num_classes=num_classes,
-                    task="multiclass",
-                ).cpu(),
-                "amt_r2": r2_score(
-                    amt_value[mask],
-                    amt_target[mask],
-                ).cpu(),
-            }
-
     def _calculate_losses(
         self,
         mcc_pred: Tensor,
         amount_pred: Tensor,
         mcc_target: Tensor,
         amount_target: Tensor,
-        mask: Tensor
+        mask: Tensor,
     ) -> dict[str, Tensor]:
         """Calculate the losses, weigh them with respective weights
 
@@ -292,7 +268,7 @@ class VanillaAE(LightningModule):
 
     def shared_step(
         self,
-        stage: str,
+        stage: Literal["train", "val", "test"],
         batch: PaddedBatch,
         *args,
         **kwargs,
@@ -309,7 +285,9 @@ class VanillaAE(LightningModule):
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
         """
-        mcc_pred, amount_pred, _, nonpad_mask = self(batch)  # (B * S, L, MCC_N), (B * S, L)
+        mcc_pred, amount_pred, _, nonpad_mask = self(
+            batch
+        )  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
         amount_target = torch.log(batch.payload["amount"] + 1)  # Logarithmize targets
 
@@ -317,28 +295,31 @@ class VanillaAE(LightningModule):
             mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
         )
 
-        metric_dict = self._calculate_metrics(
-            mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
-        )
+        metrics = {
+            "train": self.train_metrics,
+            "val": self.val_metrics,
+            "test": self.test_metrics,
+        }[stage]
+
+        metrics["mcc"].update(mcc_pred[nonpad_mask], mcc_target[nonpad_mask])
+        metrics["amount"].update(amount_pred[nonpad_mask], amount_target[nonpad_mask])
 
         self.log_dict(
             {f"{stage}_{k}": v for k, v in loss_dict.items()},
-            on_step=(stage == "train"),
-            on_epoch=(stage != "train"),
-            batch_size=batch.seq_feature_shape[0],
-        )
-
-        self.log_dict(
-            {f"{stage}_{k}": v for k, v in metric_dict.items()},
             on_step=False,
             on_epoch=True,
             batch_size=batch.seq_feature_shape[0],
         )
+        
+        for metric in metrics.values():
+            self.log_dict(
+                metric, # type: ignore
+                on_step=False,
+                on_epoch=True,
+                batch_size=batch.seq_feature_shape[0],
+            )
 
-        if stage == "train":
-            return loss_dict["loss"]
-        else:
-            return metric_dict
+        return loss_dict["loss"]
 
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
         return self.shared_step("train", *args, **kwargs)

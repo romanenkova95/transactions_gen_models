@@ -103,11 +103,11 @@ class MLMModule(VanillaAE):
         )
         
     def configure_optimizers(self):
-        optimizer = super().configure_optimizers()
+        optimizer: torch.optim.Optimizer = super().configure_optimizers() # type: ignore
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             self.optimizer_dictconfig["lr"],
-            self.trainer.max_steps or self.trainer.estimated_stepping_batches
+            self.trainer.max_steps or self.trainer.estimated_stepping_batches # type: ignore
         )
         
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
