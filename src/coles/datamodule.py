@@ -136,7 +136,7 @@ class CustomColesDataset(ColesDataset):
 
     def __init__(
         self,
-        data: List[Dict[str, torch.Tensor]],
+        data: list[dict[str, torch.Tensor]],
         min_len: int,
         splitter: AbsSplit,
         *args,

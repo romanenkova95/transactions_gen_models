@@ -1,15 +1,5 @@
 name: coles_churn
 
-dataset:
-  _target_: src.coles.CustomColesDataset
-  min_len: 15
-  col_time: event_time
-  splitter:
-    _target_: ptls.frames.coles.split_strategy.SampleSlices
-    split_count: 5
-    cnt_min: 15
-    cnt_max: 150
-
 datamodule:
   _target_: ptls.frames.PtlsDataModule
   train_batch_size: 128

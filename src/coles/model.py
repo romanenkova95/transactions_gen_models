@@ -41,7 +41,7 @@ class CustomCoLES(CoLESModule):
         )
         self.sequence_encoder_model = sequence_encoder
 
-    def get_seq_encoder_weights(self) -> Dict:
+    def get_seq_encoder_weights(self) -> dict[str, Tensor]:
         """Get weights of the sequnce encoder in torch format
 
         Returns:

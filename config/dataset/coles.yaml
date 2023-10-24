@@ -1,0 +1,6 @@
+_target_: src.coles.CustomColesDataset
+min_len: 15
+split_count: 5
+random_min_seq_len: 15
+random_max_seq_len: 150
+col_time: event_time

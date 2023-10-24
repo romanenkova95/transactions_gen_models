@@ -37,7 +37,7 @@ model:
   _target_: src.local_validation.LocalValidationModel
   backbone_embd_size: 1024
   hidden_size: 32
-  val_mode: event_type # 'downstream', 'return_time' or 'event_type'
+  val_mode: downstream # 'downstream', 'return_time' or 'event_type'
   num_types: 345
   learning_rate: 0.001
   backbone_output_type: tensor

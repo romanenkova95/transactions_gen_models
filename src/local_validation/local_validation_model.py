@@ -332,7 +332,9 @@ class LocalValidationModel(pl.LightningModule):
 
         if self.val_mode == "downstream":
             train_loss = self.loss(preds[mask].squeeze(), target[mask].float())
-            metric = ((preds[mask] > 0.5).long() == target[mask]).float().mean()
+            metric = BinaryAccuracy().to(preds.device)(
+                preds[mask].squeeze(), target[mask]
+            )
             metric_name = "acc"
 
         elif self.val_mode == "return_time":
@@ -358,8 +360,8 @@ class LocalValidationModel(pl.LightningModule):
                 ignore_index=self.mcc_padd_value,
             ).to(preds.device)(preds, target)
 
-        self.log("train_loss", train_loss, prog_bar=True)
-        self.log("train_" + metric_name, metric, prog_bar=True)
+        self.log("train_loss", train_loss, prog_bar=True, on_epoch=True)
+        self.log("train_" + metric_name, metric, prog_bar=True, on_epoch=True)
 
         return {"loss": train_loss, metric_name: metric}
 
@@ -371,7 +373,9 @@ class LocalValidationModel(pl.LightningModule):
 
         if self.val_mode == "downstream":
             val_loss = self.loss(preds[mask].squeeze(), target[mask].float())
-            metric = ((preds[mask] > 0.5).long() == target[mask]).float().mean()
+            metric = BinaryAccuracy().to(preds.device)(
+                preds[mask].squeeze(), target[mask]
+            )
             metric_name = "acc"
 
         elif self.val_mode == "return_time":

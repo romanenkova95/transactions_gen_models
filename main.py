@@ -2,11 +2,13 @@ import logging
 from typing import Optional
 
 import hydra
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from src import learn_coles
 from src.local_validation.local_validation_pipeline import local_target_validation
 from src.global_validation.global_validation_pipeline import global_target_validation
+from src.generation.learning import train_autoencoder
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,8 +21,11 @@ def main(cfg: Optional[DictConfig] = None) -> None:
         res = local_target_validation(cfg["dataset"], cfg["validation"])
     elif cfg["model"]["name"].startswith("cpc"):
         pass
+    elif model_name.startswith("ae"):
+        train_autoencoder(cfg["preprocessing"], cfg["dataset"], cfg["model"])
+    else:
+        raise ValueError(f"Unsupported model type: {model_name=}")
 
-    print(res)
 
 if __name__ == "__main__":
     main()

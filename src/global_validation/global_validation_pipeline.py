@@ -7,8 +7,6 @@ import numpy as np
 
 import torch
 
-from sklearn.model_selection import train_test_split
-
 from ptls.data_load.utils import collate_feature_dict
 
 from torchmetrics.classification import (
@@ -19,14 +17,14 @@ from torchmetrics.classification import (
 )
 
 from src.utils.logging_utils import get_logger
-from src.utils.data_utils.prepare_dataset import prepare_dataset
+from src.preprocessing import preprocess
 
 
 def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
-        cfg_preprop (DictConfig):    Dataset config (specified in the 'config/dataset')
+        cfg_preprop (DictConfig):    Preprocessing config (specified in the 'config/preprocessing')
         cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
     
     Returns:
@@ -34,24 +32,7 @@ def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig
     """
     logger = get_logger(name=__name__)
     
-    dataset = prepare_dataset(cfg_preprop, logger)
-
-    # train val test split
-    valid_size = cfg_preprop["coles"]["valid_size"]
-    test_size = cfg_preprop["coles"]["test_size"]
-
-    train, val_test = train_test_split(
-        dataset,
-        test_size=valid_size+test_size,
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
-    val, test = train_test_split(
-        val_test,
-        test_size=test_size/(valid_size+test_size),
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
+    train, val, test = preprocess(cfg_preprop)
     logger.info("Instantiating the sequence encoder")
 
     # load pretrained sequence encoder
@@ -101,7 +82,7 @@ def embed_data(
         dataset:     list[dict],
         batch_size:  int = 64,
         device:      str = "cuda",
-    ) -> tuple[np.array, np.array]:
+    ) -> tuple[np.ndarray, np.ndarray]:
     """
     Returns embeddings of sequences and corresponding targets.
 

@@ -17,7 +17,7 @@ from ptls.frames.coles import ColesDataset
 from ptls.frames import PtlsDataModule
 
 from src.utils.logging_utils import get_logger
-from src.utils.data_utils.prepare_dataset import prepare_dataset
+from src.preprocessing import preprocess
 from src.local_validation import LocalValidationModel
 
 def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
@@ -31,24 +31,7 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
-
-    dataset = prepare_dataset(cfg_preprop, logger)
-
-    # train val test split
-    valid_size = cfg_preprop["coles"]["valid_size"]
-    test_size = cfg_preprop["coles"]["test_size"]
-
-    train, val_test = train_test_split(
-        dataset,
-        test_size=valid_size+test_size,
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
-    val, test = train_test_split(
-        val_test,
-        test_size=test_size/(valid_size+test_size),
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
+    train, val, test = preprocess(cfg_preprop)
 
     logger.info("Instantiating the sequence encoder")
     # load pretrained sequence encoder
@@ -86,7 +69,8 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
         val_trainer.fit(valid_model, datamodule)
         torch.save(valid_model.state_dict(), f'saved_models/validation_head_{i}.pth')
 
-        metrics = val_trainer.test(valid_model, datamodule)
+        # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
+        metrics = val_trainer.test(valid_model, datamodule)[0]
         results.append(metrics)
 
     return pd.DataFrame(results)
