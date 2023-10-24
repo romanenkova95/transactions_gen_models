@@ -23,7 +23,7 @@ model:
     _target_: ptls.nn.RnnSeqEncoder
     trx_encoder:
       _target_: src.nn.PretrainedRnnSeqEncoder
-      path_to_dict: saved_models/coles_churn.pth
+      path_to_dict: saved_models/coles_churn_yugay.pth
       trx_encoder:
         _target_: ptls.nn.TrxEncoder
         use_batch_norm_with_lens: True

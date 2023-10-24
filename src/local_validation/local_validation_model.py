@@ -3,8 +3,10 @@ from typing import Optional, Tuple, Dict
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pytorch_lightning as pl
 
+from torchmetrics import MetricCollection
 from torchmetrics.regression import MeanAbsoluteError, MeanSquaredError
 from torchmetrics.classification import (
     BinaryF1Score,
@@ -16,10 +18,15 @@ from torchmetrics.classification import (
     F1Score,
     AveragePrecision,
 )
+from torchmetrics.functional.classification import (
+    multiclass_auroc,
+    multiclass_average_precision,
+    multiclass_accuracy,
+)
 
 from ptls.data_load.padded_batch import PaddedBatch
 
-from .sampler import sliding_window_sampler
+from .sampler import sliding_window_sampler, is_seq_feature
 from .head_loss import LogCoshLoss
 
 
@@ -58,7 +65,7 @@ class LocalValidationModel(pl.LightningModule):
             backbone_embd_mode (str) - type of backbone embeddings:
                                        'seq2vec', if backbone transforms (bs, seq_len) -> (bs, embd_dim),
                                        'seq2seq', if backbone transforms (bs, seq_len) -> (bs, seq_len, embd_dim),
-            seq_len (int) - size of the sliding widwon
+            seq_len (int) - size of the sliding window
             mask_col (str) - name of columns containing zero-padded values for mask creation
             local_label_col (str) - name of the columns containing local targets for 'downstream' validation mode
             mcc_padd_value (int) - MCC-code corresponding to padding
@@ -108,78 +115,85 @@ class LocalValidationModel(pl.LightningModule):
             if local_label_col is None:
                 raise ValueError("Specify local_label_col for downstream validation.")
 
-            # self.pred_head = nn.Sequential(
-            #     nn.Linear(backbone_embd_size, hidden_size),
-            #     nn.ReLU(),
-            #     nn.Linear(hidden_size, 1),
-            #     nn.Sigmoid(),
-            # )
-            self.pred_head = nn.LSTM(backbone_embd_size, 1, batch_first=True)
+            self.pred_head = nn.Sequential(
+                nn.Linear(backbone_embd_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, 1),
+                nn.Sigmoid(),
+            )
+            # self.pred_head = nn.LSTM(backbone_embd_size, 1, batch_first=True)
             # BCE loss for seq2seq binary classification
             self.loss = nn.BCELoss()
 
             # metrics for binary classification
-            self.metrics = {
-                "AUROC": BinaryAUROC(),
-                "PR-AUC": BinaryAveragePrecision(),
-                "Accuracy": BinaryAccuracy(),
-                "F1Score": BinaryF1Score(),
-            }
+            metrics = MetricCollection(
+                BinaryAUROC(),
+                BinaryAveragePrecision(),
+                BinaryAccuracy(),
+                BinaryF1Score(),
+            )
             self.local_label_col = local_label_col
 
         elif val_mode == "return_time":
-            # self.pred_head = nn.Sequential(
-            #     nn.Linear(backbone_embd_size, hidden_size),
-            #     nn.ReLU(),
-            #     nn.Linear(hidden_size, 1),
-            # )
-            self.pred_head = nn.LSTM(backbone_embd_size, 1, batch_first=True)
+            self.pred_head = nn.Sequential(
+                nn.Linear(backbone_embd_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, 1),
+            )
             # Custom LogCosh loss for return-time prediction
             self.loss = LogCoshLoss("mean")
 
             # regression metrics
-            self.metrics = {"MAE": MeanAbsoluteError(), "MSE": MeanSquaredError()}
+
+            metrics = MetricCollection(MeanAbsoluteError(), MeanSquaredError())
         else:
             if num_types is None:
                 raise ValueError(
                     "Specify number of event types for next-event-type prediction."
                 )
 
-            # self.pred_head = nn.Sequential(
-            #     nn.Linear(backbone_embd_size, hidden_size),
-            #     nn.ReLU(),
-            #     nn.Linear(hidden_size, num_types),
-            # )
-            self.pred_head = nn.LSTM(backbone_embd_size, num_types, batch_first=True)
+            self.pred_head = nn.Sequential(
+                nn.Linear(backbone_embd_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, num_types),
+            )
             # CrossEntropyLoss for next-event-type prediction
             self.loss = torch.nn.CrossEntropyLoss(
                 ignore_index=mcc_padd_value, reduction="mean"
             )
 
-            self.metrics = {
-                "AUROC": AUROC(
+            metrics = MetricCollection(
+                AUROC(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
+                    average="macro",
                 ),
-                "PR-AUC": AveragePrecision(
+                AveragePrecision(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
+                    average="macro",
                 ),
-                "Accuracy": Accuracy(
+                Accuracy(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
+                    average="macro",
                 ),
-                "F1Score": F1Score(
+                F1Score(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
+                    average="macro",
                 ),
-            }
+            )
 
             self.num_types = num_types
+
+        self.train_metrics = metrics.clone(prefix="train_")
+        self.val_metrics = metrics.clone(prefix="val_")
+        self.test_metrics = metrics.clone(prefix="test_")
 
         self.lr = learning_rate
 
@@ -216,14 +230,19 @@ class LocalValidationModel(pl.LightningModule):
             ).long()
 
         if self.backbone_embd_mode == "seq2vec":
-            # crop targets, delete first seq_len transactions as there are not history windows for them
-            date_len = target.shape[1]
-            target = target[:, self.seq_len - 1 : date_len : self.stride]
+            if self.val_mode == "downstream":
+                # crop targets, delete first seq_len transactions as there are not history windows for them
+                date_len = target.shape[1]
+                target = target[:, self.seq_len - 1 : date_len : self.stride]
+            elif self.val_mode == "event_type":
+                target = target[:, -1]
+            else:
+                target = target[-1] - target[-2]
         return target
 
     def _return_time_target_and_preds(
         self, preds: torch.Tensor, target: torch.Tensor, mask: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Prepare targets for 'return_time' validation.
 
         Args:
@@ -244,7 +263,7 @@ class LocalValidationModel(pl.LightningModule):
 
     def _event_type_target_and_preds(
         self, preds: torch.Tensor, target: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare targets for 'event_type' validation.
 
         Args:
@@ -261,7 +280,7 @@ class LocalValidationModel(pl.LightningModule):
         preds = preds[:, :-1, :].transpose(1, 2)
         return preds, target
 
-    def forward(self, inputs: PaddedBatch) -> Tuple[torch.Tensor]:
+    def forward(self, inputs: PaddedBatch) -> Tuple[torch.Tensor, torch.Tensor]:
         """Do forward pass through the local validation model.
 
         Args:
@@ -274,22 +293,26 @@ class LocalValidationModel(pl.LightningModule):
         bs = inputs.payload["event_time"].shape[0]
 
         if self.backbone_embd_mode == "seq2vec":
-            collated_batch = sliding_window_sampler(
-                inputs, seq_len=self.seq_len, stride=self.stride
-            )
+            if self.val_mode == "downstream":
+                collated_batch = sliding_window_sampler(
+                    inputs, seq_len=self.seq_len, stride=self.stride
+                )
+                out = self.backbone(collated_batch)
+                embd_size = out.shape[-1]
+                out = out.reshape(bs, -1, embd_size)
 
-            out = self.backbone(collated_batch)
+                # shape of mask is (batch_size, max_seq_len - seq_len), zeros correspond to windows with padding
+                mask = (
+                    collated_batch.payload[self.mask_col]
+                    .reshape(bs, -1, self.seq_len)
+                    .ne(0)
+                    .all(dim=2)
+                )
+                mask = inputs.payload[self.mask_col].ne(0).any(1)
+            else:
+                out = self.backbone(inputs)
+                mask = torch.ones_like(out).bool()
 
-            embd_size = out.shape[-1]
-            out = out.reshape(bs, -1, embd_size)
-
-            # shape of mask is (batch_size, max_seq_len - seq_len), zeros correspond to windows with padding
-            mask = (
-                collated_batch.payload[self.mask_col]
-                .reshape(bs, -1, self.seq_len)
-                .ne(0)
-                .all(dim=2)
-            )
         else:
             # shape is (batch_size, max_seq_len, embd_dim)
             out = self.backbone(inputs)
@@ -300,14 +323,13 @@ class LocalValidationModel(pl.LightningModule):
         if self.backbone_output_type == "padded_batch":
             out = out.payload
 
-        preds, _ = self.pred_head(out)
-        # preds = self.pred_head(out)
+        preds = self.pred_head(out)
 
         return preds, mask
 
     def shared_step(
-        self, batch: Tuple[PaddedBatch, torch.Tensor], batch_idx: int
-    ) -> Tuple[torch.Tensor]:
+        self, batch: Tuple[PaddedBatch, torch.Tensor], _
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Shared step for training, valiation and testing.
 
         Args:
@@ -318,9 +340,20 @@ class LocalValidationModel(pl.LightningModule):
             * target (torch.Tensor) - true target values
             * mask (torch.Tensor) - binary mask indication non-padding transactions
         """
-        inputs, _ = batch
+        inputs, lengths = batch
+        bs, seq_len = inputs.payload["event_time"].shape
         target = self._get_validation_labels(inputs)  # (B, L)
-        preds, mask = self.forward(inputs)  # (B, L)
+
+        if self.val_mode == "downstream":
+            preds, mask = self.forward(inputs)
+        else:
+            splits = {
+                k: v[:, :-1] for k, v in inputs.payload.items() if is_seq_feature(k, v)
+            }
+            # convert into PaddedBatch format
+            lengths = torch.ones(bs).long() * (seq_len - 1)
+            collated_batch = PaddedBatch(splits, lengths)
+            preds, mask = self.forward(collated_batch)
 
         return preds, target, mask
 
@@ -328,42 +361,26 @@ class LocalValidationModel(pl.LightningModule):
         self, batch: Tuple[PaddedBatch, torch.Tensor], batch_idx: int
     ) -> Dict[str, float]:
         """Training step of the LocalValidationModel."""
+        if self.backbone.training:
+            self.backbone.eval()
         preds, target, mask = self.shared_step(batch, batch_idx)
 
         if self.val_mode == "downstream":
             train_loss = self.loss(preds[mask].squeeze(), target[mask].float())
-            metric = BinaryAccuracy().to(preds.device)(
-                preds[mask].squeeze(), target[mask]
-            )
-            metric_name = "acc"
 
         elif self.val_mode == "return_time":
-            preds, target, mask = self._return_time_target_and_preds(
-                preds, target, mask
-            )
+            train_loss = self.loss(target, preds)
 
-            train_loss = self.loss(target[mask], preds[mask])
-
-            metric_name = "mae"
-            metric = MeanAbsoluteError().to(preds.device)(
-                preds[mask].squeeze(), target[mask]
-            )
         else:
-            preds, target = self._event_type_target_and_preds(preds, target)
-
             train_loss = self.loss(preds, target).mean()
+            preds = F.softmax(preds, dim=-1)
 
-            metric_name = "acc"
-            metric = Accuracy(
-                task="multiclass",
-                num_classes=self.num_types,
-                ignore_index=self.mcc_padd_value,
-            ).to(preds.device)(preds, target)
+        # batch_metrics = self.train_metrics(preds, target)
+        # # self.log("f_auroc", f_auroc)
+        # self.log_dict(batch_metrics)
+        self.log("train_loss", train_loss, prog_bar=True)
 
-        self.log("train_loss", train_loss, prog_bar=True, on_epoch=True)
-        self.log("train_" + metric_name, metric, prog_bar=True, on_epoch=True)
-
-        return {"loss": train_loss, metric_name: metric}
+        return {"loss": train_loss}
 
     def validation_step(
         self, batch: Tuple[PaddedBatch, torch.Tensor], batch_idx: int
@@ -373,75 +390,51 @@ class LocalValidationModel(pl.LightningModule):
 
         if self.val_mode == "downstream":
             val_loss = self.loss(preds[mask].squeeze(), target[mask].float())
-            metric = BinaryAccuracy().to(preds.device)(
-                preds[mask].squeeze(), target[mask]
-            )
-            metric_name = "acc"
 
         elif self.val_mode == "return_time":
-            preds, target, mask = self._return_time_target_and_preds(
-                preds, target, mask
-            )
-
-            val_loss = self.loss(target[mask], preds[mask])
-
-            metric_name = "mae"
-            metric = MeanAbsoluteError().to(preds.device)(
-                preds[mask].squeeze(), target[mask]
-            )
+            val_loss = self.loss(target, preds)
         else:
-            preds, target = self._event_type_target_and_preds(preds, target)
-
             val_loss = self.loss(preds, target).mean()
 
-            metric_name = "acc"
-            metric = Accuracy(
-                task="multiclass",
-                num_classes=self.num_types,
-                ignore_index=self.mcc_padd_value,
-            ).to(preds.device)(preds, target)
-
+        self.val_metrics.update(preds, target)
         self.log("val_loss", val_loss, prog_bar=True)
-        self.log("val_" + metric_name, metric, prog_bar=True)
 
-        return {"loss": val_loss, metric_name: metric}
+        return {"loss": val_loss}
+
+    def on_validation_epoch_end(self) -> None:
+        output = self.val_metrics.compute()
+        self.log_dict(output)
+        self.val_metrics.reset()
 
     def test_step(
         self, batch: Tuple[PaddedBatch, torch.Tensor], batch_idx: int
-    ) -> Dict[str, float]:
+    ) -> None:
         """Test step of the LocalValidationModel."""
         preds, target, mask = self.shared_step(batch, batch_idx)
 
         if self.val_mode == "downstream":
             preds = preds[mask].squeeze()
             target = target[mask]
-        elif self.val_mode == "return_time":
-            preds, target, mask = self._return_time_target_and_preds(
-                preds, target, mask
-            )
-            preds = preds[mask]
-            target = target[mask]
-        else:
-            preds, target = self._event_type_target_and_preds(preds, target)
+        elif self.val_mode == "event_type":
+            preds = F.softmax(preds, dim=-1)
 
-        dict_out = {"preds": preds, "labels": target}
-
-        for name, metric in self.metrics.items():
-            metric.to(preds.device)
-            metric.update(preds, target)
-            dict_out[name] = metric.compute().item()
-
-        return dict_out
+        self.test_metrics.update(preds, target)
 
     def on_test_epoch_end(self) -> Dict[str, float]:
         """Collect test_step outputs and compute test metrics for the whole test dataset."""
-        results = {}
-        for name, metric in self.metrics.items():
-            results[name] = metric.compute()
-            self.log(name, metric.compute())
-        return results
+        output = self.test_metrics.compute()
+        self.log_dict(output)
+        self.test_metrics.reset()
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
+        return output
+
+    def configure_optimizers(self):
         """Initialize optimizer for the LocalValidationModel."""
-        opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
-        return opt
+        opt = torch.optim.Adam(
+            self.pred_head.parameters(), lr=self.lr, weight_decay=1e-3
+        )
+        scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=200, gamma=0.5)
+        return [opt], [{"scheduler": scheduler, "interval": "epoch"}]
+
+    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
+        scheduler.step()

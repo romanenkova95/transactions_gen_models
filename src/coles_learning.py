@@ -40,7 +40,7 @@ def learn_coles(
 
     # Pytorch-lifestream datamodule for the model training and evaluation
     datamodule: PtlsDataModule = instantiate(
-        cfg_model["datamodule"], train_data=train_data, valid_data=val_data
+        cfg_model["datamodule"], train_data=train_data, valid_data=train_data  #
     )
 
     # Define our CoLES wrapper from the config

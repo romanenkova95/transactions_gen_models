@@ -1,4 +1,4 @@
-name: coles_churn
+name: coles_on_coles_churn_${.model.learning_encoder.hidden_size}
 
 dataset:
   _target_: src.coles.CustomColesDataset
@@ -18,7 +18,7 @@ model:
   _target_: src.coles.CoLESonCoLES
   frozen_encoder:
     _target_: src.nn.seq_encoder.PretrainedRnnSeqEncoder
-    path_to_dict: saved_models/coles_churn.pth
+    path_to_dict: saved_models/coles_churn_yugay.pth
     trx_encoder:
       _target_: ptls.nn.TrxEncoder
       use_batch_norm_with_lens: True
@@ -33,7 +33,7 @@ model:
   learning_encoder:
     _target_: ptls.nn.seq_encoder.RnnEncoder
     input_size: 1024
-    hidden_size: 512 # 64
+    hidden_size: 1024 # 64
     is_reduce_sequence: True
   optimizer_partial:
     _partial_: True

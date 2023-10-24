@@ -1,20 +1,81 @@
 name: global_target
 
-sequence_encoder:
-  _target_: ptls.nn.RnnSeqEncoder
-  trx_encoder:
-    _target_: ptls.nn.TrxEncoder
-    use_batch_norm_with_lens: True
-    norm_embeddings: False
-    embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 345, out: 24}}
-    numeric_values: {amount: identity}
-  hidden_size: 1024
-  bidir: False
-  trainable_starter: static
-  type: lstm
+# sequence_encoder:
+#   _target_: ptls.nn.RnnSeqEncoder
+#   trx_encoder:
+#     _target_: ptls.nn.TrxEncoder
+#     use_batch_norm_with_lens: True
+#     norm_embeddings: False
+#     embeddings_noise: 0.0003
+#     embeddings: {mcc_code: {in: 345, out: 16}}
+#     numeric_values: {amount: identity}
+#   hidden_size: 512
+#   bidir: False
+#   trainable_starter: static
+#   type: lstm
 
-path_to_state_dict: saved_models/coles_churn.pth
+sequence_encoder:
+  _target_: src.coles.CoLESonCoLES
+  frozen_encoder:
+    _target_: src.nn.seq_encoder.PretrainedRnnSeqEncoder
+    path_to_dict: saved_models/coles_churn_yugay.pth
+    trx_encoder:
+      _target_: ptls.nn.TrxEncoder
+      use_batch_norm_with_lens: True
+      norm_embeddings: False
+      embeddings_noise: 0.0003
+      embeddings: {mcc_code: {in: 345, out: 24}}
+      numeric_values: {amount: identity}
+    hidden_size: 1024
+    bidir: False
+    trainable_starter: static
+    type: lstm
+  learning_encoder:
+    _target_: ptls.nn.seq_encoder.RnnEncoder
+    input_size: 1024
+    hidden_size: 1024
+    is_reduce_sequence: True
+  optimizer_partial:
+    _partial_: True
+    _target_: torch.optim.Adam
+    lr: 0.004
+    weight_decay: 0.0
+  lr_scheduler_partial:
+    _partial_: True
+    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+    factor: 0.9025
+    patience: 2
+  training_splitter:
+    _target_: ptls.frames.coles.split_strategy.SampleSlices
+    split_count: 5
+    cnt_min: 15
+    cnt_max: 150
+  col_time: "event_time"
+  encoding_seq_len: 20
+  training_mode: False
+
+# sequence_encoder:
+#   _target_: ptls.nn.RnnSeqEncoder
+#   trx_encoder:
+#     _target_: src.nn.PretrainedRnnSeqEncoder
+#     path_to_dict: saved_models/coles_churn.pth
+#     trx_encoder:
+#       _target_: ptls.nn.TrxEncoder
+#       use_batch_norm_with_lens: True
+#       norm_embeddings: False
+#       embeddings_noise: 0.0003
+#       embeddings: {mcc_code: {in: 345, out: 24}}
+#       numeric_values: {amount: identity}
+#     hidden_size: 1024
+#     bidir: False
+#     trainable_starter: static
+#     type: lstm
+#     is_reduce_sequence: False
+#   hidden_size: 1024
+#   type: lstm
+
+# path_to_state_dict: saved_models/coles_churn.pth
+path_to_state_dict: saved_models/coles_on_coles_${.sequence_encoder.learning_encoder.hidden_size}.pth
 
 embed_data:
   batch_size: 64

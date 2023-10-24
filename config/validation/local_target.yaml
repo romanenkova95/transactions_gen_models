@@ -1,5 +1,8 @@
 name: local_target
 
+defaults:
+  - val_mode: event_type
+
 sequence_encoder:
   _target_: ptls.nn.RnnSeqEncoder
   trx_encoder:
@@ -14,13 +17,7 @@ sequence_encoder:
   trainable_starter: static
   type: lstm
 
-path_to_state_dict: saved_models/coles_churn.pth
-
-dataset:
- _target_: ptls.frames.coles.ColesDataset 
- splitter: 
-  _target_: ptls.frames.coles.split_strategy.NoSplit
- col_time: event_time
+path_to_state_dict: saved_models/coles_churn_yugay.pth
 
 datamodule:
  _target_: ptls.frames.PtlsDataModule
@@ -31,27 +28,16 @@ datamodule:
  valid_num_workers: 2
  test_num_workers: 2
 
-n_runs: 3
-
-model:
-  _target_: src.local_validation.LocalValidationModel
-  backbone_embd_size: 1024
-  hidden_size: 32
-  val_mode: downstream # 'downstream', 'return_time' or 'event_type'
-  num_types: 345
-  learning_rate: 0.001
-  backbone_output_type: tensor
-  backbone_embd_mode: seq2vec # 'seq2vec' or 'seq2seq'
-  seq_len: 32
-  mask_col: mcc_code
-  local_label_col: churn_target
+n_runs: 1
 
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
   devices: [0]
-  max_epochs: 5
+  max_epochs: 1500
+  log_every_n_steps: 10
   logger: 
     _target_: pytorch_lightning.loggers.TensorBoardLogger
     save_dir: logs/local_validation/tensorboard
+    # log_every_n_steps: 10
   
