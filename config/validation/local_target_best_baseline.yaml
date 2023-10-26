@@ -7,14 +7,14 @@ sequence_encoder:
     use_batch_norm_with_lens: True
     norm_embeddings: False
     embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 344, out: 24}}
+    embeddings: {mcc_code: {in: 344, out: 16}}
     numeric_values: {amount: identity}
-  hidden_size: 1024
+  hidden_size: 64
   bidir: False
   trainable_starter: static
-  type: lstm
+  type: gru
 
-path_to_state_dict: saved_models/coles_churn.pth
+path_to_state_dict: saved_models/best_supervised_seqenc_churn.pth
 
 dataset:
  _target_: ptls.frames.coles.ColesDataset 
@@ -35,7 +35,7 @@ n_runs: 3
 
 model:
   _target_: src.local_validation.LocalValidationModel
-  backbone_embd_size: 1024
+  backbone_embd_size: 64
   hidden_size: 32
   val_mode: downstream # 'downstream', 'return_time' or 'event_type'
   num_types: 345
@@ -52,6 +52,6 @@ trainer:
   devices: [0]
   max_epochs: 5
   logger: 
-    _target_: pytorch_lightning.loggers.TensorBoardLogger
-    save_dir: logs/local_validation/tensorboard
+    _target_: pytorch_lightning.loggers.WandbLogger
+    project: macro_micro_coles
   

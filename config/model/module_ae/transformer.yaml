@@ -1,0 +1,16 @@
+_target_: src.generation.modules.MLMModule
+loss_weights:
+  mcc: 5
+  amount: 1
+
+mcc_head:
+  _target_: torchvision.ops.MLP
+  hidden_channels: [100]
+
+amount_head:
+  _target_: torchvision.ops.MLP
+  hidden_channels: [1]
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.0005

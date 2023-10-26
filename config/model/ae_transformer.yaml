@@ -15,6 +15,5 @@ datamodule_args:
   valid_num_workers: 4
 
 defaults:
- - encoder: rnn_reduced
- - decoder: lstmcell
- - module_ae: vanilla/pretrained
+ - encoder: transformer
+ - module_ae: transformer

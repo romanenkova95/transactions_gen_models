@@ -16,7 +16,6 @@ transforms:
     cols_numerical: [amount]
     return_records: False
 
-# TODO: test normalize timestamp ability
 source: data/preprocessed_new/churn.parquet
 cache_dir: cache
 val_size: .1

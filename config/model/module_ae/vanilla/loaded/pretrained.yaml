@@ -1,0 +1,2 @@
+_target_: src.generation.modules.VanillaAE.load_from_checkpoint
+checkpoint_path: /app/macro_micro_coles/u7vyooxq/checkpoints/epoch=493-step=6422.ckpt

@@ -1,0 +1,22 @@
+_target_: src.generation.modules.VanillaAE
+loss_weights:
+  mcc: 5
+  amount: 1
+
+encoder_weights: coles_best_state_dict.pth
+
+mcc_head:
+  _target_: torchvision.ops.MLP
+  hidden_channels: [100]
+
+amount_head:
+  _target_: torchvision.ops.MLP
+  hidden_channels: [1]
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.0005
+scheduler: 
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 800
+  gamma: 0.5
