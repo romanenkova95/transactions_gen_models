@@ -13,7 +13,6 @@ transforms:
     cols_first_item: [global_target]
     return_records: False
 
-# TODO: add normalize timestamp ability
 source: data/preprocessed_new/churn.parquet
 cache_dir: cache
 val_size: .1

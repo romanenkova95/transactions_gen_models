@@ -16,5 +16,5 @@ optimizer:
   lr: 0.0005
 scheduler: 
   _target_: torch.optim.lr_scheduler.StepLR
-  step_size: 250
+  step_size: 800
   gamma: 0.5
