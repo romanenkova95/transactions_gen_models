@@ -29,7 +29,6 @@ def train_autoencoder(
     cfg_preprop: DictConfig,
     cfg_dataset: DictConfig,
     cfg_model: DictConfig,
-    cfg_validation: Optional[DictConfig] = None,
 ) -> None:
     """Train autoencoder, specified in the model config, on the data, specified by the preprocessing config.
 
@@ -47,8 +46,6 @@ def train_autoencoder(
                 - trainer_args: arguments to pass to pl.Trainer
                 - datamodule_args: arguments to pass when constructing the ptls datamodule. Optional, defaults to {}
                 - split_seed: randomness seed to use when splitting records. Optional, defaults to 42
-        cfg_validation (DictConfig):
-            the validation config, for local validation
     """
     logger.info("Preparing data:")
     train, val, test = preprocess(cfg_preprop)
@@ -62,21 +59,20 @@ def train_autoencoder(
     )
 
     # Initialize module
-    from_checkpoint = cfg_model["module_ae"]["_target_"].endswith("load_from_checkpoint")
+    from_checkpoint = cfg_model["module_ae"]["_target_"].endswith(
+        "load_from_checkpoint"
+    )
     if from_checkpoint:
-        logger.info("Loading module from checkpoint...")   
+        logger.info("Loading module from checkpoint...")
         module: Union[VanillaAE, MLMModule] = call(
-            cfg_model["module_ae"],
-            _recursive_=False
+            cfg_model["module_ae"], _recursive_=False
         )
     else:
         logger.info("Instantiating module...")
         kwargs = {k: v for k in ["encoder", "decoder"] if (v := cfg_model.get(k))}
-        
+
         module: Union[VanillaAE, MLMModule] = instantiate(
-            cfg_model["module_ae"],
-            _recursive_=False,
-            **kwargs
+            cfg_model["module_ae"], _recursive_=False, **kwargs
         )
 
     # See if in debug mode
@@ -115,23 +111,8 @@ def train_autoencoder(
     trainer.fit(module, datamodule=datamodule)
     if (ckpt_path := Path(ckpt_callback.best_model_path)).is_file():
         module.load_state_dict(torch.load(ckpt_path)["state_dict"])
-      
+
     trainer.validate(module, datamodule=datamodule)
     trainer.test(module, datamodule=datamodule)
 
-    torch.save(module.encoder.state_dict(), "saved_models/coles_churn.pth")
-    if cfg_validation:
-        # Pass debug mode to validation
-        with open_dict(cfg_validation):
-            cfg_validation["trainer"]["fast_dev_run"] = fast_dev_run
-
-        logger.info("Starting validation")
-        local_validation_res = local_target_validation(
-            cfg_preprop, cfg_validation
-        )
-        if isinstance(lightning_logger, WandbLogger):
-            lightning_logger.log_table(
-                dataframe=local_validation_res.describe().reset_index(), key="local_validation"
-            )
-        else:
-            print(local_validation_res.describe())
+    torch.save(module.encoder.state_dict(), cfg_model["save_path"])

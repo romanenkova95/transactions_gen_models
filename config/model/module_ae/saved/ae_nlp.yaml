@@ -1,0 +1,2 @@
+_target_: src.generation.modules.VanillaAE.load_from_checkpoint
+checkpoint_path: /app/macro_micro_coles/ta2serma/checkpoints/epoch=1984-step=7940.ckpt

@@ -31,7 +31,6 @@ def main(cfg: DictConfig) -> None:
                 cfg["preprocessing"],
                 cfg["dataset"],
                 cfg["model"],
-                cfg.get("validation"),
             )
         else:
             raise ValueError(f"Unsupported model type: {model_name=}")
@@ -48,7 +47,7 @@ def main(cfg: DictConfig) -> None:
 
         if wandb.run is not None:
             wandb.log({"local_target_table": wandb.Table(dataframe=res)})
-            wandb.log({"local_target_stats": wandb.Table(dataframe=res.describe())})
+            wandb.log({"local_target_stats": wandb.Table(dataframe=res.describe().reset_index())})
 
         print(res)
         print(res.describe())

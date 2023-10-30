@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from ptls.data_load.datasets.memory_dataset import MemoryMapDataset
 from ptls.data_load.datasets.augmentation_dataset import AugmentationDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
@@ -13,7 +13,8 @@ class SimpleTRXDataset(AugmentationDataset):
         min_len: int, 
         random_min_seq_len: int, 
         random_max_seq_len: int,
-        randomize: bool = True
+        randomize: bool = True,
+        post_slice_augmentations: Optional[list] = None
     ):
         """Initialize dataset
 
@@ -37,6 +38,7 @@ class SimpleTRXDataset(AugmentationDataset):
         else:
             augmentations.append(SeqLenLimit(int((random_min_seq_len + random_max_seq_len) / 2), strategy="head"))
         
+        augmentations.extend(post_slice_augmentations or [])
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),
             augmentations

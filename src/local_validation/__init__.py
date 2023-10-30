@@ -1,3 +1,3 @@
 """Init module. """
 
-from .local_validation_model import LocalValidationModel
+from .event_type import EventTypeLocalVal

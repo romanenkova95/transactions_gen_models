@@ -4,9 +4,11 @@
 #   mode: min
 #   divergence_threshold: 10
 checkpoint_metric: val_loss
+save_path: saved_models/ae_nlp_churn.pth
 trainer_args:
-  max_steps: 8000
+  max_steps: 0
   precision: 16
+  fast_dev_run: true
 
 datamodule_args:
   train_batch_size: 1024

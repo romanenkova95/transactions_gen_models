@@ -8,7 +8,6 @@ from torch import Tensor
 from ptls.data_load import PaddedBatch
 from ptls.frames.coles import CoLESModule
 
-from src.generation.modules.base import AbsAE
 from src.generation.modules import VanillaAE
 
 
@@ -55,7 +54,7 @@ class ColesAEComboModule(VanillaAE):
 
         return {"coles": coles_loss, "ae": ae_loss}
 
-    def _step(self, stage: str, batch: tuple[PaddedBatch, Tensor], *args, **kwargs):
+    def shared_step(self, stage: str, batch: tuple[PaddedBatch, Tensor], *args, **kwargs):
         trx_batch, target_batch = batch
         mcc_pred, amount_pred, latent_embeddings = self(trx_batch)
 
@@ -84,7 +83,7 @@ class ColesAEComboModule(VanillaAE):
     def training_step(self, batch: tuple[PaddedBatch, Tensor], *args, **kwargs):
         coles_opt, ae_opt = self.optimizers()  # type: ignore
 
-        loss_dict = self._step("train", batch)["loss"]
+        loss_dict = self.shared_step("train", batch)["loss"]
 
         coles_opt.zero_grad()  # type: ignore
         self.manual_backward(loss_dict["coles"])
@@ -97,10 +96,10 @@ class ColesAEComboModule(VanillaAE):
         return loss_dict
     
     def validation_step(self, *args, **kwargs) -> STEP_OUTPUT:
-        return self._step("val", *args, **kwargs)
+        return self.shared_step("val", *args, **kwargs)
     
     def test_step(self, *args, **kwargs) -> STEP_OUTPUT:
-        return self._step("test", *args, **kwargs)
+        return self.shared_step("test", *args, **kwargs)
 
     def configure_optimizers(self):
         coles_opt = self._parse_optimizer_config(

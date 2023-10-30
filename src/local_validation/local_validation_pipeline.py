@@ -13,12 +13,12 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
-from ptls.frames.coles import ColesDataset
 from ptls.frames import PtlsDataModule
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
-from src.local_validation import LocalValidationModel
+from .local_validation_model import LocalValidationModelBase
 
 def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
     """Full pipeline for the sequence encoder local validation. 
@@ -35,16 +35,13 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
 
     logger.info("Instantiating the sequence encoder")
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder: SeqEncoderContainer = instantiate(cfg_validation["sequence_encoder"])
+    if "path_to_state_dict" in cfg_validation:
+        sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
 
-    data_train = MemoryMapDataset(train, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-    data_val = MemoryMapDataset(val, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-    data_test = MemoryMapDataset(test, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-
-    train_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_train)
-    val_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_val)
-    test_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_test)
+    train_dataset = instantiate(cfg_validation["dataset"], data=train)
+    val_dataset = instantiate(cfg_validation["dataset"], data=val)
+    test_dataset = instantiate(cfg_validation["dataset"], data=test)
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],
@@ -59,7 +56,7 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
 
         seed_everything(i)
 
-        valid_model: LocalValidationModel = instantiate(
+        valid_model: LocalValidationModelBase = instantiate(
             cfg_validation["model"],
             backbone=sequence_encoder 
         )

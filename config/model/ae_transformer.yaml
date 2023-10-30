@@ -4,8 +4,9 @@
 #   mode: min
 #   divergence_threshold: 10
 checkpoint_metric: val_loss
+save_path: saved_models/transformer_churn.pth
 trainer_args:
-  max_steps: 8000
+  max_steps: 0
   precision: 16
 
 datamodule_args:
@@ -16,4 +17,4 @@ datamodule_args:
 
 defaults:
  - encoder: transformer
- - module_ae: transformer
+ - module_ae: saved/transformer
