@@ -1,4 +1,6 @@
 defaults:
   - preprocessing: churn_ae
-  - validation: local_target_mcc/random
+    #  - dataset: simple
+    #  - model: ae_nlp
+  - validation: local_target_mcc/ae_nlp
   - _self_

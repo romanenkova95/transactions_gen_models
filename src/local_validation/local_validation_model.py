@@ -77,8 +77,8 @@ class LocalValidationModelBase(pl.LightningModule):
         train_loss = self.loss(preds, target)
         self.train_metrics(preds, target)
 
-        self.log("train_loss", train_loss, on_epoch=True)
-        self.log_dict(self.train_metrics, on_epoch=True) # type: ignore
+        self.log("train_loss", train_loss, on_step=False, on_epoch=True)
+        self.log_dict(self.train_metrics, on_step=False, on_epoch=True) # type: ignore
 
         return train_loss
 
@@ -90,8 +90,8 @@ class LocalValidationModelBase(pl.LightningModule):
         val_loss = self.loss(preds, target)
         self.val_metrics(preds, target)
 
-        self.log("val_loss", val_loss)
-        self.log_dict(self.val_metrics) # type: ignore
+        self.log("val_loss", val_loss, on_step=False, on_epoch=True)
+        self.log_dict(self.val_metrics, on_step=False, on_epoch=True) # type: ignore
 
     def test_step(
         self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int

@@ -6,7 +6,7 @@
 checkpoint_metric: val_loss
 save_path: saved_models/transformer_churn.pth
 trainer_args:
-  max_steps: 0
+  max_steps: 8000
   precision: 16
 
 datamodule_args:

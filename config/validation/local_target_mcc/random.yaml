@@ -13,11 +13,14 @@ sequence_encoder:
   type: lstm
 
 dataset:
-  _target_: src.datasets.NextTokenPredictionDataset
+  _target_: src.datasets.create_next_token_dataset
   min_len: 20
   random_min_seq_len: 20
   random_max_seq_len: 40
   target_seq_col: mcc_code
+  window_size: 32
+  window_step: 16
+
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule

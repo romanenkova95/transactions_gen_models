@@ -1,6 +1,6 @@
 """Local targets validation script. """
 
-from hydra.utils import instantiate
+from hydra.utils import instantiate, call
 from omegaconf import DictConfig
 
 import pandas as pd
@@ -39,9 +39,9 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
     if "path_to_state_dict" in cfg_validation:
         sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
 
-    train_dataset = instantiate(cfg_validation["dataset"], data=train)
-    val_dataset = instantiate(cfg_validation["dataset"], data=val)
-    test_dataset = instantiate(cfg_validation["dataset"], data=test)
+    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=False)
+    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=True)
+    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=True)
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],

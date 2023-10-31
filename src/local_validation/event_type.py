@@ -42,7 +42,7 @@ class EventTypeLocalVal(LocalValidationModelBase):
             mcc_padd_value (int) - MCC-code corresponding to padding
         """
         pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, num_types), nn.Softmax(-1)
+            nn.Linear(backbone_embd_size, num_types), nn.Softmax(1)
         )
 
         def loss(probs, target):
@@ -56,25 +56,25 @@ class EventTypeLocalVal(LocalValidationModelBase):
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
-                    average="macro"
+                    average="weighted"
                 ),
                 "PR-AUC": AveragePrecision(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
-                    average="macro"
+                    average="weighted"
                 ),
                 "Accuracy": Accuracy(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
-                    average="macro"
+                    average="micro"
                 ),
                 "F1Score": F1Score(
                     task="multiclass",
                     num_classes=num_types,
                     ignore_index=mcc_padd_value,
-                    average="macro"
+                    average="micro"
                 ),
             }
         )

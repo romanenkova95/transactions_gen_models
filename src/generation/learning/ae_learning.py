@@ -50,11 +50,11 @@ def train_autoencoder(
     logger.info("Preparing data:")
     train, val, test = preprocess(cfg_preprop)
 
-    ds_factory = instantiate(cfg_dataset, _partial_=True)
+    ds_factory = call(cfg_dataset, _partial_=True)
     datamodule = PtlsDataModule(
-        train_data=ds_factory(train),
-        valid_data=ds_factory(val),
-        test_data=ds_factory(test),
+        train_data=ds_factory(data=train, deterministic=False),
+        valid_data=ds_factory(data=val, deterministic=True),
+        test_data=ds_factory(data=test, deterministic=True),
         **cfg_model.get("datamodule_args", {}),
     )
 
