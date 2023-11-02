@@ -1,0 +1,15 @@
+defaults:
+ - preprocessing: churn
+ - dataset: coles
+ - encoder: coles_on_coles
+ - module: coles_churn
+ - trainer: coles
+ - validation: event_type
+ - _self_
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 64
+  valid_batch_size: 64
+  train_num_workers: 4
+  valid_num_workers: 4

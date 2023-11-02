@@ -6,7 +6,7 @@ import torch
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
-from ptls.frames.coles.split_strategy import SampleSlices
+from ptls.frames.coles.split_strategy import SampleSlices, SampleUniform
 
 class CustomColesDataset(ColesDataset):
     """
@@ -20,6 +20,7 @@ class CustomColesDataset(ColesDataset):
         split_count: int,
         random_min_seq_len: int,
         random_max_seq_len: int,
+        deterministic: bool,
         *args,
         col_time: str = "event_time",
         **kwargs
@@ -34,9 +35,13 @@ class CustomColesDataset(ColesDataset):
             random_max_seq_len (int): Maximum length of the randomly sampled subsequence
             col_time (str, optional): column name with event time. Defaults to 'event_time'.
         """
+        if deterministic:
+            splitter = SampleUniform(split_count, (random_min_seq_len + random_max_seq_len) // 2)
+        else:
+            splitter = SampleSlices(split_count, random_min_seq_len, random_max_seq_len)
         super().__init__(
             MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-            SampleSlices(split_count, random_min_seq_len, random_max_seq_len),
+            splitter,
             col_time,
             *args,
             **kwargs

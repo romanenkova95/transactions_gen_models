@@ -1,16 +1,8 @@
-sequence_encoder:
-  _target_: ptls.nn.RnnSeqEncoder
-  trx_encoder:
-    _target_: ptls.nn.TrxEncoder
-    use_batch_norm_with_lens: True
-    norm_embeddings: False
-    embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 345, out: 24}}
-    numeric_values: {amount: identity}
-  hidden_size: 1024
-  bidir: False
-  trainable_starter: static
-  type: lstm
+module:
+  _target_: src.local_validation.EventTypeLocalVal
+  backbone_embd_size: 1024
+  num_types: 100
+  learning_rate: 0.001
 
 dataset:
   _target_: src.datasets.create_next_token_dataset
@@ -20,7 +12,6 @@ dataset:
   target_seq_col: mcc_code
   window_size: 32
   window_step: 16
-
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
@@ -32,18 +23,16 @@ datamodule:
   test_num_workers: 8
 
 n_runs: 3
-
-model:
-  _target_: src.local_validation.EventTypeLocalVal
-  backbone_embd_size: 1024
-  num_types: 100
-  learning_rate: 0.001
+is_reduce_sequence: true
 
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
   devices: [0]
   max_epochs: 100
-  logger: 
+  fast_dev_run: ${oc.decode:${oc.env:FAST_DEV_RUN,null}}
+  logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: macro_micro_coles
+    tags: [validation]
+    offline: ${oc.decode:${oc.env:FAST_DEV_RUN,null}}

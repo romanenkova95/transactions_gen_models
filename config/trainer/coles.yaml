@@ -1,9 +1,9 @@
+enable_early_stopping: False
+
 checkpoint_callback:
   _target_: pytorch_lightning.callbacks.ModelCheckpoint
   dirpath: logs/checkpoints/coles
   filename: coles_model
-
-enable_early_stopping: False
 
 early_stopping:
   _target_: pytorch_lightning.callbacks.EarlyStopping
@@ -11,13 +11,13 @@ early_stopping:
   patience: 5
   verbose: True
 
-logger:
-  _target_: pytorch_lightning.loggers.TensorBoardLogger
-  save_dir: logs/tensorboard
-
 trainer:
   _target_: pytorch_lightning.Trainer
   accelerator: gpu
   devices: [0]
   max_epochs: 60
   log_every_n_steps: 10
+  fast_dev_run: ${oc.decode:${oc.env:FAST_DEV_RUN,null}}
+  logger:
+    _target_: pytorch_lightning.loggers.TensorBoardLogger
+    save_dir: logs/tensorboard

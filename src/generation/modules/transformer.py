@@ -17,38 +17,19 @@ from ptls.data_load.padded_batch import PaddedBatch
 from .vanilla import VanillaAE
 
 class MLMModule(VanillaAE):
-    """Masked Language Model (MLM) from [ROBERTA](https://arxiv.org/abs/1907.11692)
-
-    Original sequence are encoded by `TrxEncoder`.
-    Randomly sampled trx representations are replaced by MASK embedding.
-    Transformer `seq_encoder` reconstruct masked embeddings.
-    The loss function tends to make closer trx embedding and his predict.
-    Negative samples are used to avoid trivial solution.
+    """Masked Language Model (MLM) from [ROBERTA](https://arxiv.org/abs/1907.11692).
+    Out of replace_proba tokens:
+     - Mask 80% with token=num_tokens - 1;
+     - replace 10% with random tokens;
+     - keep 10% as-is.
+    Loss is reconstruction loss on the replace_proba tokens
 
     Parameters
     ----------
-    encoder:
-        SeqEncoderContainer, probably TransformerSeqEncoder
-    hidden_size:
-        Size of trx_encoder output.
-    loss_temperature:
-         temperature parameter of `QuerySoftmaxLoss`
-    total_steps:
-        total_steps expected in OneCycle lr scheduler
-    max_lr:
-        max_lr of OneCycle lr scheduler
-    weight_decay:
-        weight_decay of Adam optimizer
-    pct_start:
-        % of total_steps when lr increase
-    norm_predict:
-        use l2 norm for transformer output or not
-    replace_proba:
-        probability of masking transaction embedding
-    neg_count:
-        negative count for `QuerySoftmaxLoss`
-    log_logits:
-        if true than logits histogram will be logged. May be useful for `loss_temperature` tuning
+    replace_proba (float):
+        Fraction of tokens to calculate loss on
+    *args, **kwargs:
+        passed to VanillaAE
     """
 
     def __init__(

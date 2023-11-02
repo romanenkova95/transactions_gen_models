@@ -181,6 +181,10 @@ class VanillaAE(LightningModule):
         self.val_metrics: MetricsType = make_metrics("val")
         self.test_metrics: MetricsType = make_metrics("test")
 
+    @property
+    def metric_name(self):
+        return "val_loss"
+
     def on_train_epoch_start(self) -> None:
         """Overrided method to unfreeze encoder/decoder weights"""
         if self.unfreeze_enc_after and self.current_epoch == self.unfreeze_enc_after:

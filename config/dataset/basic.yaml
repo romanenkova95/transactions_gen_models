@@ -1,0 +1,6 @@
+_target_: src.datasets.create_basic_dataset
+min_len: 20
+random_min_seq_len: 20
+random_max_seq_len: 40
+window_size: 32
+window_step: 16

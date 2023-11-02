@@ -34,4 +34,4 @@ model:
     type: lstm
 
 defaults:
-  - trainer_coles: trainer 
+  - trainer: coles 

@@ -2,13 +2,16 @@
 source credentials
 
 docker run \
- -d \
- --shm-size=8g \
- --memory=60g \
- --cpus=16 \
- --user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
- --name ${CONTAINER_NAME} \
- --rm -it --init \
- -v /home/${USER}/ilya/${SRC}:/app \
- --gpus "device=0" \
- ${DOCKER_NAME} bash
+	-d \
+	--shm-size=8g \
+	--memory=60g \
+	--cpus=16 \
+	--user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
+	--name ${CONTAINER_NAME} \
+	--rm -it --init \
+	--gpus all \
+	-p 8123:8123 \
+	-v /home/${USER}/${SRC}:/app \
+	-v /mnt/data2/macro_micro_coles/macro_micro_coles:/app/macro_micro_coles \
+	--gpus all \
+	${DOCKER_NAME} bash

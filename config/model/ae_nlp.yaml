@@ -4,10 +4,7 @@
 #   mode: min
 #   divergence_threshold: 10
 checkpoint_metric: val_loss
-save_path: saved_models/ae_nlp_churn.pth
-trainer_args:
-  max_steps: 8000
-  precision: 16
+save_path: saved_models/encoders/ae_nlp_churn.pth
 
 datamodule_args:
   train_batch_size: 1024
@@ -16,6 +13,6 @@ datamodule_args:
   valid_num_workers: 4
 
 defaults:
- - encoder: rnn_reduced
+ - encoder: ae_nlp_rnn
  - decoder: lstmcell
- - module_ae: vanilla/from_scratch
+ - module: vanilla/from_scratch

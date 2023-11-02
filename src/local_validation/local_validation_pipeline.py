@@ -1,18 +1,18 @@
 """Local targets validation script. """
 
+from pathlib import Path
+import warnings
 from hydra.utils import instantiate, call
 from omegaconf import DictConfig
 
 import pandas as pd
+import pytorch_lightning
 
 import torch
 
-from sklearn.model_selection import train_test_split
 from pytorch_lightning import seed_everything, Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 
-from ptls.data_load.datasets import MemoryMapDataset
-from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
@@ -20,7 +20,7 @@ from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 from .local_validation_model import LocalValidationModelBase
 
-def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
+def local_target_validation(cfg: DictConfig, encoder_name: str, val_name) -> pd.DataFrame:
     """Full pipeline for the sequence encoder local validation. 
 
     Args:
@@ -31,40 +31,50 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
-    train, val, test = preprocess(cfg_preprop)
+    train, val, test = preprocess(cfg["preprocessing"])
 
     logger.info("Instantiating the sequence encoder")
     # load pretrained sequence encoder
-    sequence_encoder: SeqEncoderContainer = instantiate(cfg_validation["sequence_encoder"])
-    if "path_to_state_dict" in cfg_validation:
-        sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder: SeqEncoderContainer = instantiate(
+        cfg["encoder"], 
+        is_reduce_sequence=cfg["validation"]["is_reduce_sequence"]
+    )
+    encoder_state_dict_path = Path(f"saved_models/{encoder_name}.pth")
+    if encoder_state_dict_path.exists():
+        sequence_encoder.load_state_dict(torch.load(encoder_state_dict_path))
+    else:
+        warnings.warn("No encoder state dict found! Validating without pre-loading state-dict...")
 
-    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=False)
-    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=True)
-    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=True)
+    train_dataset = call(cfg["validation"]["dataset"], data=train, deterministic=False)
+    val_dataset = call(cfg["validation"]["dataset"], data=val, deterministic=True)
+    test_dataset = call(cfg["validation"]["dataset"], data=test, deterministic=True)
 
     datamodule: PtlsDataModule = instantiate(
-        cfg_validation["datamodule"],
+        cfg["validation"]["datamodule"],
         train_data=train_dataset,
         valid_data=val_dataset,
         test_data=test_dataset,
     )
 
     results = []
-    for i in range(cfg_validation["n_runs"]):
-        logger.info(f'Training LocalValidationModel. Run {i+1}/{cfg_validation["n_runs"]}')
+    for i in range(cfg["validation"]["n_runs"]):
+        logger.info(f'Training LocalValidationModel. Run {i+1}/{cfg["validation"]["n_runs"]}')
 
         seed_everything(i)
 
         valid_model: LocalValidationModelBase = instantiate(
-            cfg_validation["model"],
+            cfg["validation"]["module"],
             backbone=sequence_encoder 
         )
 
-        val_trainer: Trainer = instantiate(cfg_validation["trainer"])
+        val_trainer: Trainer = instantiate(cfg["validation"]["trainer"])
+        
+        # Make wandb log runs to different metric graphs
+        if isinstance(val_trainer.logger, WandbLogger):
+            val_trainer.logger._prefix = f"{val_name}{i}"
 
         val_trainer.fit(valid_model, datamodule)
-        torch.save(valid_model.state_dict(), f'saved_models/validation_head_{i}.pth')
+        torch.save(valid_model.state_dict(), f'saved_models/{val_name}_validation_head_{i}.pth')
 
         # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
         metrics = val_trainer.test(valid_model, datamodule)[0]

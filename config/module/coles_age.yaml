@@ -1,0 +1,12 @@
+_target_: src.coles.CustomCoLES
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.Adam
+  lr: .001
+  weight_decay: .00005
+lr_scheduler_partial:
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  factor: .5
+  patience: 2
+  

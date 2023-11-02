@@ -1,4 +1,0 @@
-defaults:
-  - preprocessing: age
-  - model: coles_age
-  - _self_

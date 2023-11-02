@@ -20,7 +20,7 @@ from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 
 
-def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
+def global_target_validation(cfg: DictConfig, encoder_name: str) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
@@ -32,17 +32,17 @@ def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig
     """
     logger = get_logger(name=__name__)
     
-    train, val, test = preprocess(cfg_preprop)
+    train, val, test = preprocess(cfg["preprocessing"])
     logger.info("Instantiating the sequence encoder")
 
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder = instantiate(cfg["encoder"])
+    sequence_encoder.load_state_dict(torch.load(f"saved_models/{encoder_name}.pth"))
 
     logger.info("Processing train sequences")
 
     # get representations of sequences from train + val part
-    embeddings, targets = embed_data(sequence_encoder, train + val, **cfg_validation["embed_data"])
+    embeddings, targets = embed_data(sequence_encoder, train + val, **cfg["validation"]["embed_data"])
     N = len(embeddings)
     indices = np.arange(N)
 
@@ -52,12 +52,12 @@ def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig
     embeddings_test, targets_test = embed_data(
         sequence_encoder,
         test,
-        **cfg_validation["embed_data"]
+        **cfg["validation"]["embed_data"]
     )
 
     results = []
-    for i in range(cfg_validation["n_runs"]):
-        logger.info(f'Training classifier. Run {i+1}/{cfg_validation["n_runs"]}')
+    for i in range(cfg["validation"]["n_runs"]):
+        logger.info(f'Training classifier. Run {i+1}/{cfg["validation"]["n_runs"]}')
 
         # bootstrap sample
         bootstrap_inds = np.random.choice(indices, size=N, replace=True)
@@ -69,7 +69,7 @@ def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig
             targets_train,
             embeddings_test,
             targets_test,
-            cfg_validation["model"]
+            cfg["validation"]["model"]
         )
 
         results.append(metrics)

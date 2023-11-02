@@ -1,21 +1,3 @@
-name: global_target
-
-sequence_encoder:
-  _target_: ptls.nn.RnnSeqEncoder
-  trx_encoder:
-    _target_: ptls.nn.TrxEncoder
-    use_batch_norm_with_lens: True
-    norm_embeddings: False
-    embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 345, out: 24}}
-    numeric_values: {amount: identity}
-  hidden_size: 1024
-  bidir: False
-  trainable_starter: static
-  type: lstm
-
-path_to_state_dict: saved_models/coles_churn.pth
-
 embed_data:
   batch_size: 64
   device: cuda

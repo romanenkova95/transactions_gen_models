@@ -1,9 +1,8 @@
-from ctypes import ArgumentError
-from typing import Any, Optional
+from typing import Optional
 from torch import nn
 
 
-class AbsDecoder(nn.Identity):
+class AbsDecoder(nn.Module):
     """Abstract decoder class. Only requirement is to specify the output_size
     Properties:
         output_size (int): size of the channel dimension of the decoder output.
@@ -20,3 +19,5 @@ class AbsDecoder(nn.Identity):
         else:
             raise NotImplementedError("Output size wasn't provided on init, and wasn't implemented in child")
 
+    def forward(self, x, *args, **kwargs):
+        return x
