@@ -1,17 +1,6 @@
-from typing import Any, Optional, Union
-from omegaconf import DictConfig
-from hydra.utils import instantiate
 from ptls.data_load import PaddedBatch
-import pytorch_lightning as pl
-from pytorch_lightning.utilities.types import STEP_OUTPUT, LRSchedulerTypeUnion
 import torch
-from torch import Tensor
-from torchmetrics import AUROC, AveragePrecision, F1Score, MeanMetric, MetricCollection
 
-from ptls.nn.seq_encoder.abs_seq_encoder import AbsSeqEncoder
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-from ptls.nn import TrxEncoder
-from ptls.nn import PBL2Norm
 from ptls.data_load.padded_batch import PaddedBatch
 
 from .vanilla import VanillaAE

@@ -1,6 +1,6 @@
 from torch import nn, Tensor
 import typing as tp
-from src.generation.decoders.base import AbsDecoder
+from .base import AbsDecoder
 
 
 class LSTMDecoder(AbsDecoder):

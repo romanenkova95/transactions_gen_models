@@ -1,4 +1,4 @@
-_target_: src.coles.CustomCoLES
+_target_: src.modules.CustomCoLES
 optimizer_partial:
   _partial_: True
   _target_: torch.optim.Adam

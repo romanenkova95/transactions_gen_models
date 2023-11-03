@@ -10,5 +10,5 @@ Run a specific config from config/*yaml:
 Run in debug-mode (single epoch, single batch, single run, turn off wandb):
 ```FAST_DEV_RUN=1 python main.py --config-name <CONFIG_NAME>```
 
-Run tests, ~10m (v=print running test, f=exit on first error, b=show stdout&stderr only on error):
-```python -m unittest -vfb```
+Run tests, ~10m (v=print running test, b=show stdout&stderr only on error):
+```python -m unittest -vb```

@@ -1,4 +1,4 @@
-_target_: src.generation.modules.VanillaAE
+_target_: src.modules.VanillaAE
 loss_weights:
   mcc: 5
   amount: 1

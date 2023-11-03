@@ -1,4 +1,4 @@
-_target_: src.coles.CustomColesDataset
+_target_: src.datasets.CustomColesDataset
 min_len: 15
 split_count: 5
 random_min_seq_len: 15

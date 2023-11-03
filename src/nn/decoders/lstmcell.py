@@ -1,8 +1,8 @@
 from typing import Optional
 import torch
 from torch import nn, Tensor
-from src.generation.decoders.base import AbsDecoder
-from src.generation.decoders import LSTMDecoder
+from .base import AbsDecoder
+from .lstm import LSTMDecoder
 
 
 class LSTMCellDecoder(AbsDecoder):

@@ -1,5 +1,4 @@
 """Main coles learning script"""
-import os
 from pathlib import Path
 from typing import Union
 
@@ -8,23 +7,19 @@ from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import Dataset
 
 from ptls.frames import PtlsDataModule
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 import torch
 
-from pytorch_lightning import LightningModule, Trainer, seed_everything
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     EarlyStopping,
     LearningRateMonitor,
 )
 from pytorch_lightning.utilities.model_helpers import is_overridden
-from pytorch_lightning.loggers import TensorBoardLogger
 import wandb
 
-from src.coles import CustomCoLES, CustomColesDataset
-from src.generation.modules.vanilla import VanillaAE
-from src.preprocessing import preprocess
+from src.modules import CustomCoLES, VanillaAE
 from src.utils.logging_utils import get_logger
 
 
@@ -54,7 +49,7 @@ def learn(
                 Config with
     """
     train, val, test = data
-    
+
     logger.info("Preparing datasets and datamodule")
     # Define our ColesDataset wrapper from the config
     train_data: Dataset = instantiate(cfg["dataset"], data=train, deterministic=False)

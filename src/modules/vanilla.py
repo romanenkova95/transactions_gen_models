@@ -26,7 +26,7 @@ from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
-from src.generation.decoders.base import AbsDecoder
+from src.nn.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
 
 logger = get_logger(name=__name__)

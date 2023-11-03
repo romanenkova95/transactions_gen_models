@@ -1,4 +1,4 @@
-_target_: src.generation.modules.MLMModule
+_target_: src.modules.MLMModule
 loss_weights:
   mcc: 5
   amount: 1
