@@ -4,7 +4,7 @@ defaults:
  - encoder: coles_on_coles
  - module: coles_churn
  - trainer: coles
- - validation: event_type
+ - validation: [event_type, event_time, local_target, global_target]
  - _self_
 
 datamodule:

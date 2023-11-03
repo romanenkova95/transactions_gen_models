@@ -1,19 +1,17 @@
-event_type:
+event_time:
   module:
-    _target_: src.local_validation.CategoricalLocalVal
+    _target_: src.local_validation.NumericLocalVal
     backbone_embd_size: 1024
-    num_types: 344
     learning_rate: 0.001
 
   dataset:
-    _target_: src.datasets.create_last_token_dataset
+    _target_: src.datasets.create_time_diff_dataset
     min_len: 20
     random_min_seq_len: 20
     random_max_seq_len: 40
     window_size: 32
     window_step: 16
-    target_seq_col: mcc_code
-    drop_last: true
+    time_col: event_time
 
   datamodule:
     _target_: ptls.frames.PtlsDataModule

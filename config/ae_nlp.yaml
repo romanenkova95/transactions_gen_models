@@ -5,7 +5,7 @@ defaults:
  - encoder: ae_nlp
  - decoder: lstmcell
  - module: autoencoder/pretrained
- - validation: event_type_100
+ - validation: [event_type_100, event_time, local_target, global_target]
  - _self_
 
 datamodule:

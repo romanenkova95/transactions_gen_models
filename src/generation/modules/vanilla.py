@@ -160,7 +160,6 @@ class VanillaAE(LightningModule):
         multiclass_args: dict[str, Any] = dict(
             task="multiclass",
             num_classes=self.mcc_head[-2].out_features,
-            average="macro",
             ignore_index=0,
         )
 
@@ -168,10 +167,10 @@ class VanillaAE(LightningModule):
         def make_metrics(stage: str) -> MetricsType:
             return nn.ModuleDict({
                 "mcc": MetricCollection(
-                    AUROC(**multiclass_args),
-                    F1Score(**multiclass_args),
-                    AveragePrecision(**multiclass_args),
-                    Accuracy(**multiclass_args),
+                    AUROC(**multiclass_args, average="weighted"),
+                    F1Score(**multiclass_args, average="micro"),
+                    AveragePrecision(**multiclass_args, average="weighted"),
+                    Accuracy(**multiclass_args, average="micro"),
                     prefix=stage
                 ),
                 "amount": MetricCollection(R2Score(), prefix=stage),

@@ -1,8 +1,7 @@
-event_type:
+local_target:
   module:
-    _target_: src.local_validation.CategoricalLocalVal
+    _target_: src.local_validation.BinaryLocalVal
     backbone_embd_size: 1024
-    num_types: 344
     learning_rate: 0.001
 
   dataset:
@@ -12,8 +11,8 @@ event_type:
     random_max_seq_len: 40
     window_size: 32
     window_step: 16
-    target_seq_col: mcc_code
-    drop_last: true
+    target_seq_col: local_target
+    drop_last: false
 
   datamodule:
     _target_: ptls.frames.PtlsDataModule

@@ -1,4 +1,6 @@
 """Global target validation script"""
+from pathlib import Path
+import warnings
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -20,29 +22,42 @@ from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 
 
-def global_target_validation(cfg: DictConfig, encoder_name: str) -> pd.DataFrame:
+def global_target_validation(
+    data: tuple[list[dict], list[dict], list[dict]], 
+    cfg_encoder: DictConfig,
+    cfg_validation: DictConfig,
+    encoder_name: str
+    ) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
-        cfg_preprop (DictConfig):    Preprocessing config (specified in the 'config/preprocessing')
-        cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
+        data (tuple[list[dict], list[dict], list[dict]]):
+            train, val & test sets
+        cfg_encoder (DictConfig):
+            encoder config (specified in 'config/encoder')
+        cfg_validation (DictConfig): 
+            Validation config (specified in 'config/validation')
     
     Returns:
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
     
-    train, val, test = preprocess(cfg["preprocessing"])
+    train, val, test = data
     logger.info("Instantiating the sequence encoder")
 
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg["encoder"])
-    sequence_encoder.load_state_dict(torch.load(f"saved_models/{encoder_name}.pth"))
+    sequence_encoder = instantiate(cfg_encoder, is_reduce_sequence=True)
+    encoder_state_dict_path = Path(f"saved_models/{encoder_name}.pth")
+    if encoder_state_dict_path.exists():
+        sequence_encoder.load_state_dict(torch.load(encoder_state_dict_path))
+    else:
+        warnings.warn("No encoder state dict found! Validating with random weights...")
 
     logger.info("Processing train sequences")
 
     # get representations of sequences from train + val part
-    embeddings, targets = embed_data(sequence_encoder, train + val, **cfg["validation"]["embed_data"])
+    embeddings, targets = embed_data(sequence_encoder, train + val, **cfg_validation["embed_data"])
     N = len(embeddings)
     indices = np.arange(N)
 
@@ -52,12 +67,12 @@ def global_target_validation(cfg: DictConfig, encoder_name: str) -> pd.DataFrame
     embeddings_test, targets_test = embed_data(
         sequence_encoder,
         test,
-        **cfg["validation"]["embed_data"]
+        **cfg_validation["embed_data"]
     )
 
     results = []
-    for i in range(cfg["validation"]["n_runs"]):
-        logger.info(f'Training classifier. Run {i+1}/{cfg["validation"]["n_runs"]}')
+    for i in range(cfg_validation["n_runs"]):
+        logger.info(f'Training classifier. Run {i+1}/{cfg_validation["n_runs"]}')
 
         # bootstrap sample
         bootstrap_inds = np.random.choice(indices, size=N, replace=True)
@@ -69,7 +84,7 @@ def global_target_validation(cfg: DictConfig, encoder_name: str) -> pd.DataFrame
             targets_train,
             embeddings_test,
             targets_test,
-            cfg["validation"]["model"]
+            cfg_validation["model"]
         )
 
         results.append(metrics)

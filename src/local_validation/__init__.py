@@ -1,3 +1,5 @@
 """Init module. """
 
-from .event_type import EventTypeLocalVal
+from .categorical import CategoricalLocalVal
+from .numeric import NumericLocalVal
+from .binary import BinaryLocalVal

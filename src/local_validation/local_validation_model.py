@@ -8,6 +8,7 @@ from torchmetrics import Metric, MetricCollection
 
 from ptls.data_load.padded_batch import PaddedBatch
 
+
 class LocalValidationModelBase(pl.LightningModule):
     """
     PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions representations.
@@ -41,7 +42,7 @@ class LocalValidationModelBase(pl.LightningModule):
                 if isinstance(m, nn.BatchNorm1d):
                     m.track_running_stats = False
                     m.eval()
-    
+
             for param in self.backbone.parameters():
                 param.requires_grad = False
 
@@ -65,42 +66,50 @@ class LocalValidationModelBase(pl.LightningModule):
         out = self.backbone(inputs)
         preds = self.pred_head(out)
         return preds
-    
-    def shared_step(self, batch, batch_idx) -> tuple[torch.Tensor, torch.Tensor]:
-        raise NotImplementedError()
 
-    def training_step(
+    def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
-    ):
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Generalized shared_step for model-learning with targets. Overload if neccessary
+
+        Args:
+            batch (tuple[PaddedBatch, torch.Tensor]):
+                Tuple of PaddedBatch (passed to forward) & targets
+            batch_idx (int): ignored
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: preds, target
+        """
+        inputs, target = batch
+        preds = self(inputs)
+        return preds, target
+
+    def training_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
         """Training step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         train_loss = self.loss(preds, target)
         self.train_metrics(preds, target)
 
         self.log("train_loss", train_loss, on_step=False, on_epoch=True)
-        self.log_dict(self.train_metrics, on_step=False, on_epoch=True) # type: ignore
+        self.log_dict(self.train_metrics, on_step=False, on_epoch=True)  # type: ignore
 
         return train_loss
 
-    def validation_step(
-        self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
-    ):
+    def validation_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
         """Validation step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         val_loss = self.loss(preds, target)
         self.val_metrics(preds, target)
 
         self.log("val_loss", val_loss, on_step=False, on_epoch=True)
-        self.log_dict(self.val_metrics, on_step=False, on_epoch=True) # type: ignore
+        self.log_dict(self.val_metrics, on_step=False, on_epoch=True)  # type: ignore
 
-    def test_step(
-        self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
-    ):
+    def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
         """Test step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
 
         self.test_metrics(preds, target)
-        self.log_dict(self.test_metrics, on_step=False, on_epoch=True) # type: ignore
+        self.log_dict(self.test_metrics, on_step=False, on_epoch=True)  # type: ignore
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         """Initialize optimizer for the LocalValidationModel."""

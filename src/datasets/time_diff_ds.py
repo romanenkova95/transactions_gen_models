@@ -1,30 +1,19 @@
-"""Next token prediction dataset"""
-from typing import Any
-
-import torch
-
-from ptls.data_load.utils import collate_feature_dict
-
+from typing import Any, Callable, Optional
 from .basic_ds import create_basic_dataset
-from .transforms import LastTokenTarget
+from .target_utils import collate_fn_with_targets, TimeDiffTarget
 
 
-def collate_fn_with_targets(batch):
-    x, y = zip(*batch)
-    return collate_feature_dict(x), torch.stack(y)
-
-
-def create_next_token_dataset(
+def create_time_diff_dataset(
     data: Any,
     deterministic: bool,
-    min_len: int, 
-    random_min_seq_len: int, 
-    random_max_seq_len: int, 
-    target_seq_col: str,
+    min_len: int,
+    random_min_seq_len: int,
+    random_max_seq_len: int,
     window_size: int,
     window_step: int,
-    ):
-    """Initialize dataset
+    time_col: str = "event_time",
+):
+    """Initialize dataset, which returns tuple of batch & time until next transaction.
 
     Args:
         data (Any):
@@ -38,18 +27,22 @@ def create_next_token_dataset(
             minimum len of sampled subsequence
         random_max_seq_len (int):
             maximum len of sampled subsequence
-        target_seq_col (str):
-            Name of target sequence column.
+        window_size (int):
+            size of eval window
+        window_step (int):
+            step of eval window
+        time_col (str):
+            Name of column with timestamps
     """
-    augmentations = [LastTokenTarget(target_seq_col)]
+    f_augmentations = [TimeDiffTarget(time_col)]
     return create_basic_dataset(
-        data=data, 
+        data=data,
         deterministic=deterministic,
         min_len=min_len,
         random_min_seq_len=random_min_seq_len,
         random_max_seq_len=random_max_seq_len,
         window_size=window_size,
         window_step=window_step,
-        f_augmentations=augmentations,
-        collate_fn=collate_fn_with_targets
+        f_augmentations=f_augmentations,
+        collate_fn=collate_fn_with_targets,
     )

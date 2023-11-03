@@ -4,7 +4,7 @@ defaults:
   - encoder: transformer
   - module: transformer
   - trainer: transformer
-  - validation: event_type_100
+  - validation: [event_type_100, event_time, local_target, global_target]
   - _self_
 
 datamodule:
