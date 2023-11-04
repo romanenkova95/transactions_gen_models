@@ -27,7 +27,7 @@ def run(cfg: DictConfig):
     data = preprocess(cfg["preprocessing"])
     
     # Disable WandB logging in fast_dev_run mode
-    if os.environ["FAST_DEV_RUN"]:
+    if os.environ.get("FAST_DEV_RUN"):
         os.environ["WANDB_MODE"] = "disabled"
     
     hydra_cfg = HydraConfig.get()
