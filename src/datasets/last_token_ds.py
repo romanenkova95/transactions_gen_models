@@ -27,7 +27,7 @@ def create_last_token_dataset(
             Whether to sample randomly from the dataset (train behaviour),
             or to use a deterministic sliding-window strategy (evaluation behaviour).
         min_len (int):
-            minimum sequence length (anything longer than this is filtered out)
+            anything longer than this is filtered out
         random_min_seq_len (int):
             minimum len of sampled subsequence
         random_max_seq_len (int):

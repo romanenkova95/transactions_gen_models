@@ -7,15 +7,21 @@ from main import run
 from hydra import initialize, compose
 from hydra.core.hydra_config import HydraConfig
 
-class TestConfigs(unittest.TestCase):
+class TestBackbones(unittest.TestCase):
     def setUp(self):
         os.environ["FAST_DEV_RUN"] = "True"
         os.environ["WANDB_MODE"] = "disabled"
         logging.disable(logging.CRITICAL)
     
-    def run_with_config(self, config_name):
+    def run_with_config(self, backbone_name):
         with self.subTest("train"), initialize("../config", version_base=None):
-            cfg = compose(config_name, return_hydra_config=True)
+            cfg = compose(
+                "master.yaml", 
+                overrides=[
+                    f"backbone={backbone_name}",
+                ],
+                return_hydra_config=True
+            )
             instance = HydraConfig.instance()
             instance.set_config(cfg)
             run(cfg)

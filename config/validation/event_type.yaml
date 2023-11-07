@@ -29,13 +29,4 @@ event_type:
   is_reduce_sequence: true
 
   trainer:
-    _target_: pytorch_lightning.Trainer
-    accelerator: gpu
-    devices: [0]
     max_epochs: 10
-    fast_dev_run: ${oc.decode:${oc.env:FAST_DEV_RUN,null}}
-    logger:
-      _target_: pytorch_lightning.loggers.WandbLogger
-      project: macro_micro_coles
-      tags: [validation]
-      offline: ${oc.decode:${oc.env:FAST_DEV_RUN,null}}

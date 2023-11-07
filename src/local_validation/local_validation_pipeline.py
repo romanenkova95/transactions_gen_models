@@ -14,6 +14,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from src.utils.create_trainer import create_trainer
 
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
@@ -22,11 +23,12 @@ from .local_validation_model import LocalValidationModelBase
 
 def local_target_validation(
     data: tuple[list[dict], list[dict], list[dict]],
-    cfg_encoder: DictConfig, 
+    cfg_encoder: DictConfig,
     cfg_validation: DictConfig,
-    encoder_name: str, 
-    val_name: str
-) -> pd.DataFrame:
+    cfg_logger: DictConfig,
+    encoder_name: str,
+    val_name: str,
+) -> dict[str, float]:
     """Full pipeline for the sequence encoder local validation.
 
     Args:
@@ -42,7 +44,8 @@ def local_target_validation(
             Name of validation (for logging & saving)
 
     Returns:
-        results (pd.DataFrame):      Dataframe with test metrics for each run
+        results (dict[str]):
+            Metrics on test set.
     """
     logger = get_logger(name=__name__)
     train, val, test = data
@@ -71,31 +74,32 @@ def local_target_validation(
         test_data=test_dataset,
     )
 
-    results = []
-    for i in range(cfg_validation["n_runs"]):
-        logger.info(
-            f'Training LocalValidationModel. Run {i+1}/{cfg_validation["n_runs"]}'
-        )
+    logger.info(f"Training LocalValidationModel")
 
-        seed_everything(i)
+    seed_everything()
+    valid_model: LocalValidationModelBase = instantiate(
+        cfg_validation["module"], backbone=sequence_encoder
+    )
 
-        valid_model: LocalValidationModelBase = instantiate(
-            cfg_validation["module"], backbone=sequence_encoder
-        )
+    val_trainer: Trainer = create_trainer(
+        logger=cfg_logger,
+        metric_name=valid_model.metric_name,
+        **cfg_validation["trainer"],
+    )
 
-        val_trainer: Trainer = instantiate(cfg_validation["trainer"])
+    # Make wandb log runs to different metric graphs
+    if isinstance(val_trainer.logger, WandbLogger):
+        val_trainer.logger._prefix = f"{val_name}"
 
-        # Make wandb log runs to different metric graphs
-        if isinstance(val_trainer.logger, WandbLogger):
-            val_trainer.logger._prefix = f"{val_name}{i}"
+    val_trainer.fit(valid_model, datamodule)
+    if val_trainer.checkpoint_callback:
+        state_dict = torch.load(val_trainer.checkpoint_callback.best_model_path)[
+            "state_dict"
+        ]
+        valid_model.load_state_dict(state_dict)
 
-        val_trainer.fit(valid_model, datamodule)
-        torch.save(
-            valid_model.state_dict(), f"saved_models/{val_name}_validation_head_{i}.pth"
-        )
+    torch.save(valid_model.state_dict(), f"saved_models/{val_name}_validation_head.pth")
+    # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
+    metrics = val_trainer.test(valid_model, datamodule)[0]
 
-        # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
-        metrics = val_trainer.test(valid_model, datamodule)[0]
-        results.append(metrics)
-
-    return pd.DataFrame(results)
+    return metrics

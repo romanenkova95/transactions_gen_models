@@ -10,3 +10,4 @@ hidden_size: 1024
 bidir: False
 trainable_starter: static
 type: lstm
+is_reduce_sequence: True

@@ -10,8 +10,7 @@ docker run \
 	--name ${CONTAINER_NAME} \
 	--rm -it --init \
 	--gpus all \
-	-p 8123:8123 \
+	-p ${PORT}:${PORT} \
 	-v /home/${USER}/${SRC}:/app \
-	-v /mnt/data2/macro_micro_coles/macro_micro_coles:/app/macro_micro_coles \
 	--gpus all \
 	${DOCKER_NAME} bash

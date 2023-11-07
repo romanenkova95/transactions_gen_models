@@ -16,56 +16,51 @@ logging.basicConfig(level=logging.INFO)
 logger = get_logger(name=__name__)
 
 
-@hydra.main(version_base=None, config_path="config")
+@hydra.main(version_base=None, config_path="config", config_name="master.yaml")
 def main(cfg: DictConfig) -> None:
     run(cfg)
 
+
 def run(cfg: DictConfig):
     if not cfg:
-        raise ValueError("Empty or no config! Please run with --config-name argument with valid config name")
-    
+        raise ValueError(
+            "Empty or no config! Please run with --config-name argument with valid config name"
+        )
+
     data = preprocess(cfg["preprocessing"])
-    
-    # Disable WandB logging in fast_dev_run mode
-    if os.environ.get("FAST_DEV_RUN"):
-        os.environ["WANDB_MODE"] = "disabled"
-    
+
     hydra_cfg = HydraConfig.get()
-    encoder_name: str = hydra_cfg.runtime.choices["encoder"]
-    if "module" in cfg:
-        module_name: str = hydra_cfg.runtime.choices["module"]
+    experiment_name: str = hydra_cfg.runtime.choices["backbone"]
+    module_name: str = hydra_cfg.runtime.choices["module"]
+    if cfg["pretrain"]:
         logger.info(f"Fitting {module_name}...")
-        learn(data, cfg, encoder_name)
-    
-    if "validation" in cfg:
-        for val_name, cfg_validation in cfg["validation"].items():
-            logger.info(f"{val_name} validation for {encoder_name}")
-            if val_name.startswith("global_target"):
-                res = global_target_validation(
-                    data,
-                    cfg["encoder"], 
-                    cfg_validation,
-                    encoder_name
-                )
-            else:
-                res = local_target_validation(
-                    data,
-                    cfg["encoder"], 
-                    cfg_validation,
-                    encoder_name,
-                    val_name
-                )
+        learn(
+            data=data,
+            backbone_cfg=cfg["backbone"],
+            logger_cfg=cfg["logger"],
+            encoder_save_name=experiment_name,
+        )
 
-            if wandb.run is not None:
-                wandb.log({f"{val_name}_local_target_table": wandb.Table(dataframe=res)})
-                wandb.log({f"{val_name}_local_target_stats": wandb.Table(dataframe=res.describe().reset_index())})
-                
+    for val_name, cfg_validation in cfg.get("validation", {}).items():
+        logger.info(f"{val_name} validation for {experiment_name}")
+        if val_name.startswith("global_target"):
+            res = global_target_validation(
+                data, cfg["backbone"]["encoder"], cfg_validation, experiment_name
+            )
+        else:
+            res = local_target_validation(
+                data=data,
+                cfg_encoder=cfg["backbone"]["encoder"],
+                cfg_validation=cfg_validation,
+                cfg_logger=cfg["logger"],
+                encoder_name=experiment_name,
+                val_name=val_name,
+            )
 
-            print(res)
-            print(res.describe())
-    
+        print(res)
+
     wandb.finish()
-        
+
 
 if __name__ == "__main__":
     main()

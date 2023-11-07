@@ -1,6 +1,0 @@
-defaults:
-  - preprocessing: churn
-  - dataset: coles
-  - encoder: coles_churn
-  - validation: [global_target]
-  - _self_

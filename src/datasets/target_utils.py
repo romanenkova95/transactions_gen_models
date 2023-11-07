@@ -31,5 +31,5 @@ class TimeDiffTarget(LastTokenTarget):
 
     def __call__(self, x: dict) -> Any:
         x, next_timestamp = super().__call__(x)
-        time_diff = next_timestamp - x["event_time"][-1]
+        time_diff = next_timestamp - x[self.target_seq_col][-1]
         return x, time_diff

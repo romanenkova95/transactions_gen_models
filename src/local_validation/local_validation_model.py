@@ -1,5 +1,5 @@
 """Module containtaining LocalValidationModel class."""
-from typing import Callable, Literal, Optional, Union
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -52,6 +52,7 @@ class LocalValidationModelBase(pl.LightningModule):
         self.train_metrics = metrics.clone("Train")
         self.val_metrics = metrics.clone("Val")
         self.test_metrics = metrics.clone("Test")
+        self.metric_name = "val_loss"
 
     def forward(self, inputs: PaddedBatch) -> tuple[torch.Tensor]:
         """Do forward pass through the local validation model.

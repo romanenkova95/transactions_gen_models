@@ -185,7 +185,7 @@ fabric.properties
 
 .vscode/
 
-*wandb*
+wandb/
 *hparams*
 *.ckpt
 *events.out*

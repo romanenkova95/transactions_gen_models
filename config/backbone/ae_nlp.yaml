@@ -1,11 +1,8 @@
 defaults:
- - preprocessing: churn_100
  - dataset: basic
- - trainer: autoencoder
  - encoder: ae_nlp
  - decoder: lstmcell
  - module: autoencoder/pretrained
- - validation: [event_type_100, event_time, local_target, global_target]
  - _self_
 
 datamodule:
@@ -14,3 +11,6 @@ datamodule:
   train_num_workers: 4
   valid_batch_size: 1024
   valid_num_workers: 4
+
+trainer:
+  max_steps: 8000
