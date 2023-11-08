@@ -114,5 +114,5 @@ class LocalValidationModelBase(pl.LightningModule):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         """Initialize optimizer for the LocalValidationModel."""
-        opt = torch.optim.Adam(self.pred_head.parameters(), lr=self.lr)
+        opt = torch.optim.Adam(self.parameters(), lr=self.lr)
         return opt
