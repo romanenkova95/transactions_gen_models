@@ -90,9 +90,6 @@ def learn(
         **backbone_cfg["trainer"],
     )
 
-    if wandb.run is not None:
-        wandb.config.update(OmegaConf.to_container(backbone_cfg))
-
     # Training the model
     seed_everything()
     trainer.fit(module, datamodule)

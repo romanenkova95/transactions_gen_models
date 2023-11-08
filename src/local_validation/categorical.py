@@ -39,13 +39,8 @@ class CategoricalLocalVal(LocalValidationModelBase):
             learning_rate (float) - learning rate for prediction head training
         """
         pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, num_types), nn.Softmax(1)
+            nn.Linear(backbone_embd_size, num_types)
         )
-
-        def loss(probs, target):
-            return nn.functional.nll_loss(
-                torch.log(probs), target, ignore_index=pad_value
-            )
 
         metrics = MetricCollection(
             {
@@ -75,10 +70,11 @@ class CategoricalLocalVal(LocalValidationModelBase):
         super().__init__(
             backbone=backbone,
             pred_head=pred_head,
-            loss=loss,
+            loss=nn.CrossEntropyLoss(),
             metrics=metrics,
             freeze_backbone=freeze_backbone,
             learning_rate=learning_rate,
+            postproc=nn.Softmax(1)
         )
 
         self.num_types = num_types

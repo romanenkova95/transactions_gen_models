@@ -24,8 +24,6 @@ event_type_100:
     valid_num_workers: 8
     test_num_workers: 8
 
-  # FAST_DEV_RUN runs if FAST_DEV_RUN env variable is set (for debugging), else 3 runs
-  n_runs: ${oc.decode:${oc.env:FAST_DEV_RUN,3}}
   is_reduce_sequence: true
 
   trainer:
