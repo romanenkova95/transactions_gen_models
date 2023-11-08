@@ -14,9 +14,11 @@ class LogCoshLoss(torch.nn.Module):
     @staticmethod
     def _log_cosh(x: torch.Tensor) -> torch.Tensor:
         """Compute LogCosh function."""
-        out = x + torch.nn.functional.softplus(-2.0 * x) - math.log(2.0)
-        out[torch.abs(x) > 10] = torch.abs(x[torch.abs(x) > 10])
-        return out
+        return torch.where(
+            torch.abs(x) > 10,
+            torch.abs(x),
+            x + torch.nn.functional.softplus(-2.0 * x) - math.log(2.0)
+        )
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute loss."""

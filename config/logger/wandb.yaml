@@ -1,2 +1,2 @@
+# All setup is done in main.py
 _target_: pytorch_lightning.loggers.WandbLogger
-project: macro_micro_coles

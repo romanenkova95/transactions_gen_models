@@ -92,11 +92,9 @@ def local_target_validation(
         val_trainer.logger._prefix = f"{val_name}"
 
     val_trainer.fit(valid_model, datamodule)
-    if val_trainer.checkpoint_callback:
-        state_dict = torch.load(val_trainer.checkpoint_callback.best_model_path)[
-            "state_dict"
-        ]
-        valid_model.load_state_dict(state_dict)
+    if not val_trainer.fast_dev_run and val_trainer.checkpoint_callback:
+        checkpoint = torch.load(val_trainer.checkpoint_callback.best_model_path)
+        valid_model.load_state_dict(checkpoint["state_dict"])
 
     torch.save(valid_model.state_dict(), f"saved_models/{val_name}_validation_head.pth")
     # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader

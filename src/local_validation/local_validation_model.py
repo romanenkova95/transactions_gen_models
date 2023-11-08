@@ -1,5 +1,5 @@
 """Module containtaining LocalValidationModel class."""
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -22,16 +22,18 @@ class LocalValidationModelBase(pl.LightningModule):
         metrics: MetricCollection,
         freeze_backbone: bool = True,
         learning_rate: float = 1e-3,
+        postproc: Optional[Callable[[torch.Tensor], torch.Tensor]]=None
     ) -> None:
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 
         Args:
-            backbone (nn.Module) - backbone model for transactions representations
-            pred_head (nn.Module) - prediction head for target prediction
-            loss (Callable) - the loss to optimize while training. Called with (preds, targets)
-            metrics (MetricCollection) - collection of metrics to track in train, val, test steps
-            freeze_backbone (bool) - whether to freeze backbone weights while training
-            learning_rate (float) - learning rate for prediction head training
+            backbone (nn.Module) - backbone model for transactions representations.
+            pred_head (nn.Module) - prediction head for target prediction.
+            loss (Callable) - the loss to optimize while training. Called with (preds, targets).
+            metrics (MetricCollection) - collection of metrics to track in train, val, test steps.
+            freeze_backbone (bool) - whether to freeze backbone weights while training.
+            learning_rate (float) - learning rate for prediction head training.
+            postproc (Callable) - postprocessing function to apply to predictions before metric calculation.
         """
         super().__init__()
         self.backbone = backbone
@@ -53,6 +55,7 @@ class LocalValidationModelBase(pl.LightningModule):
         self.val_metrics = metrics.clone("Val")
         self.test_metrics = metrics.clone("Test")
         self.metric_name = "val_loss"
+        self.postproc = postproc or nn.Identity()
 
     def forward(self, inputs: PaddedBatch) -> tuple[torch.Tensor]:
         """Do forward pass through the local validation model.
@@ -89,7 +92,7 @@ class LocalValidationModelBase(pl.LightningModule):
         """Training step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         train_loss = self.loss(preds, target)
-        self.train_metrics(preds, target)
+        self.train_metrics(self.postproc(preds), target)
 
         self.log("train_loss", train_loss, on_step=False, on_epoch=True)
         self.log_dict(self.train_metrics, on_step=False, on_epoch=True)  # type: ignore
@@ -100,7 +103,7 @@ class LocalValidationModelBase(pl.LightningModule):
         """Validation step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         val_loss = self.loss(preds, target)
-        self.val_metrics(preds, target)
+        self.val_metrics(self.postproc(preds), target)
 
         self.log("val_loss", val_loss, on_step=False, on_epoch=True)
         self.log_dict(self.val_metrics, on_step=False, on_epoch=True)  # type: ignore
@@ -109,10 +112,9 @@ class LocalValidationModelBase(pl.LightningModule):
         """Test step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
 
-        self.test_metrics(preds, target)
+        self.test_metrics(self.postproc(preds), target)
         self.log_dict(self.test_metrics, on_step=False, on_epoch=True)  # type: ignore
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         """Initialize optimizer for the LocalValidationModel."""
-        opt = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return opt
+        return torch.optim.Adam(self.parameters(), lr=self.lr)

@@ -1,5 +1,6 @@
 """BinaryLocalVal class: local validation with binary targets."""
 
+from torch import Tensor
 import torch.nn as nn
 from torchmetrics import MetricCollection
 
@@ -11,7 +12,6 @@ from torchmetrics.classification import (
 )
 
 from .local_validation_model import LocalValidationModelBase
-
 
 class BinaryLocalVal(LocalValidationModelBase):
     """
@@ -34,11 +34,8 @@ class BinaryLocalVal(LocalValidationModelBase):
             learning_rate (float) - learning rate for prediction head training
         """
         pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, 1), nn.Flatten(0, -1), nn.Sigmoid()
+            nn.Linear(backbone_embd_size, 1), nn.Flatten(0, -1)
         )
-
-        def loss(preds, target):
-            return nn.functional.binary_cross_entropy(preds, target.float())
         
         metrics = MetricCollection(
             {
@@ -48,6 +45,10 @@ class BinaryLocalVal(LocalValidationModelBase):
                 "F1Score": BinaryF1Score(),
             }
         )
+        
+        # cast targets to float (long targets don't work with nn.BCEWithLogitsLoss)
+        def loss(preds: Tensor, target: Tensor):
+            return nn.functional.binary_cross_entropy_with_logits(preds, target.float())
 
         super().__init__(
             backbone=backbone,
@@ -56,4 +57,5 @@ class BinaryLocalVal(LocalValidationModelBase):
             metrics=metrics,
             freeze_backbone=freeze_backbone,
             learning_rate=learning_rate,
+            postproc=nn.Sigmoid()
         )

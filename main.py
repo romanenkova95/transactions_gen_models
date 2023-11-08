@@ -3,7 +3,7 @@ import os
 
 import hydra
 from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import wandb
 
 from src import learn
@@ -27,25 +27,34 @@ def run(cfg: DictConfig):
             "Empty or no config! Please run with --config-name argument with valid config name"
         )
 
-    data = preprocess(cfg["preprocessing"])
-
+    # Setup names & log config
     hydra_cfg = HydraConfig.get()
-    experiment_name: str = hydra_cfg.runtime.choices["backbone"]
-    module_name: str = hydra_cfg.runtime.choices["module"]
+    preproc_name: str = hydra_cfg.runtime.choices["preprocessing"]
+    backbone_name: str = hydra_cfg.runtime.choices["backbone"]
+    val_names: list[str] = cfg.get("validation", {}).keys()
+    if "wandb" in hydra_cfg.runtime.choices["logger"]:
+        wandb.init(
+            project="macro_micro_coles", 
+            config=OmegaConf.to_container(cfg),
+            tags=[preproc_name, backbone_name, *val_names]
+        )
+        
+    data = preprocess(cfg["preprocessing"])
+    
     if cfg["pretrain"]:
-        logger.info(f"Fitting {module_name}...")
+        logger.info(f"Fitting {backbone_name}...")
         learn(
             data=data,
             backbone_cfg=cfg["backbone"],
             logger_cfg=cfg["logger"],
-            encoder_save_name=experiment_name,
+            encoder_save_name=backbone_name,
         )
 
     for val_name, cfg_validation in cfg.get("validation", {}).items():
-        logger.info(f"{val_name} validation for {experiment_name}")
+        logger.info(f"{val_name} validation for {backbone_name}")
         if val_name.startswith("global_target"):
             res = global_target_validation(
-                data, cfg["backbone"]["encoder"], cfg_validation, experiment_name
+                data, cfg["backbone"]["encoder"], cfg_validation, backbone_name
             )
         else:
             res = local_target_validation(
@@ -53,7 +62,7 @@ def run(cfg: DictConfig):
                 cfg_encoder=cfg["backbone"]["encoder"],
                 cfg_validation=cfg_validation,
                 cfg_logger=cfg["logger"],
-                encoder_name=experiment_name,
+                encoder_name=backbone_name,
                 val_name=val_name,
             )
 
