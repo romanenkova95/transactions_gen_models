@@ -1,0 +1,32 @@
+event_type:
+  module:
+    _target_: src.local_validation.CategoricalLocalVal
+    backbone_embd_size: 1024
+    num_types: 344
+    learning_rate: 0.001
+
+  dataset:
+    _target_: src.datasets.create_last_token_dataset
+    min_len: 20
+    random_min_seq_len: 20
+    random_max_seq_len: 40
+    window_size: 32
+    window_step: 16
+    target_seq_col: mcc_code
+    drop_last: true
+
+  datamodule:
+    _target_: ptls.frames.PtlsDataModule
+    train_batch_size: 512
+    valid_batch_size: 512
+    test_batch_size: 512 
+    train_num_workers: 8
+    valid_num_workers: 8
+    test_num_workers: 8
+
+  # FAST_DEV_RUN runs if FAST_DEV_RUN env variable is set (for debugging), else 3 runs
+  n_runs: ${oc.decode:${oc.env:FAST_DEV_RUN,3}}
+  is_reduce_sequence: true
+
+  trainer:
+    max_epochs: 10

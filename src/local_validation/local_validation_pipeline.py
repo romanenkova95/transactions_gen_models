@@ -1,50 +1,71 @@
 """Local targets validation script. """
 
-from hydra.utils import instantiate
+from pathlib import Path
+import warnings
+from hydra.utils import instantiate, call
 from omegaconf import DictConfig
 
 import pandas as pd
 
 import torch
 
-from sklearn.model_selection import train_test_split
 from pytorch_lightning import seed_everything, Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 
-from ptls.data_load.datasets import MemoryMapDataset
-from ptls.data_load.iterable_processing import SeqLenFilter
-from ptls.frames.coles import ColesDataset
 from ptls.frames import PtlsDataModule
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from src.utils.create_trainer import create_trainer
 
 from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
-from src.local_validation import LocalValidationModel
+from .local_validation_model import LocalValidationModelBase
 
-def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
-    """Full pipeline for the sequence encoder local validation. 
+
+def local_target_validation(
+    data: tuple[list[dict], list[dict], list[dict]],
+    cfg_encoder: DictConfig,
+    cfg_validation: DictConfig,
+    cfg_logger: DictConfig,
+    encoder_name: str,
+    val_name: str,
+) -> dict[str, float]:
+    """Full pipeline for the sequence encoder local validation.
 
     Args:
-        cfg_preprop (DictConfig):    Dataset config (specified in the 'config/dataset')
-        cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
-    
+        data (tuple[list[dict], list[dict], list[dict]]):
+            train, val & test sets
+        cfg_encoder (DictConfig):
+            Encoder config (specified in 'config/encoder')
+        cfg_validation (DictConfig):
+            Validation config (specified in 'config/validation')
+        encoder_name (str):
+            Name of used encoder (for logging & saving)
+        val_name (str):
+            Name of validation (for logging & saving)
+
     Returns:
-        results (pd.DataFrame):      Dataframe with test metrics for each run
+        results (dict[str]):
+            Metrics on test set.
     """
     logger = get_logger(name=__name__)
-    train, val, test = preprocess(cfg_preprop)
+    train, val, test = data
 
     logger.info("Instantiating the sequence encoder")
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder: SeqEncoderContainer = instantiate(
+        cfg_encoder, is_reduce_sequence=cfg_validation["is_reduce_sequence"]
+    )
+    encoder_state_dict_path = Path(f"saved_models/{encoder_name}.pth")
+    if encoder_state_dict_path.exists():
+        sequence_encoder.load_state_dict(torch.load(encoder_state_dict_path))
+    else:
+        warnings.warn(
+            "No encoder state dict found! Validating without pre-loading state-dict..."
+        )
 
-    data_train = MemoryMapDataset(train, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-    data_val = MemoryMapDataset(val, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-    data_test = MemoryMapDataset(test, [SeqLenFilter(cfg_validation["model"]["seq_len"])])
-
-    train_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_train)
-    val_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_val)
-    test_dataset: ColesDataset = instantiate(cfg_validation["dataset"], data=data_test)
+    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=False)
+    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=True)
+    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=True)
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],
@@ -53,24 +74,32 @@ def local_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig)
         test_data=test_dataset,
     )
 
-    results = []
-    for i in range(cfg_validation["n_runs"]):
-        logger.info(f'Training LocalValidationModel. Run {i+1}/{cfg_validation["n_runs"]}')
+    logger.info(f"Training LocalValidationModel")
 
-        seed_everything(i)
+    seed_everything()
+    valid_model: LocalValidationModelBase = instantiate(
+        cfg_validation["module"], backbone=sequence_encoder
+    )
 
-        valid_model: LocalValidationModel = instantiate(
-            cfg_validation["model"],
-            backbone=sequence_encoder 
-        )
+    val_trainer: Trainer = create_trainer(
+        logger=cfg_logger,
+        metric_name=valid_model.metric_name,
+        **cfg_validation["trainer"],
+    )
 
-        val_trainer: Trainer = instantiate(cfg_validation["trainer"])
+    # Make wandb log runs to different metric graphs
+    if isinstance(val_trainer.logger, WandbLogger):
+        val_trainer.logger._prefix = f"{val_name}"
 
-        val_trainer.fit(valid_model, datamodule)
-        torch.save(valid_model.state_dict(), f'saved_models/validation_head_{i}.pth')
+    val_trainer.fit(valid_model, datamodule)
+    if val_trainer.checkpoint_callback:
+        state_dict = torch.load(val_trainer.checkpoint_callback.best_model_path)[
+            "state_dict"
+        ]
+        valid_model.load_state_dict(state_dict)
 
-        # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
-        metrics = val_trainer.test(valid_model, datamodule)[0]
-        results.append(metrics)
+    torch.save(valid_model.state_dict(), f"saved_models/{val_name}_validation_head.pth")
+    # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
+    metrics = val_trainer.test(valid_model, datamodule)[0]
 
-    return pd.DataFrame(results)
+    return metrics

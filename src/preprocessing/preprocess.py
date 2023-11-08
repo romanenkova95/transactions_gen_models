@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 
 from ptls.preprocessing.base import ColTransformer
 
-
 def preprocess(cfg: DictConfig) -> tuple[list[dict], list[dict], list[dict]]:
     """Preprocess data according to given config. Caches function result using joblib to cache directory
 
@@ -31,7 +30,7 @@ def preprocess(cfg: DictConfig) -> tuple[list[dict], list[dict], list[dict]]:
         return dataframe.to_dict(orient='records')
     
     if "cache_dir" in cfg:
-        memory = Memory("cache", verbose=5)
+        memory = Memory("cache")
         _preprocess = memory.cache(_preprocess) # type: ignore
     
     data = _preprocess(OmegaConf.to_container(cfg)) # type: ignore

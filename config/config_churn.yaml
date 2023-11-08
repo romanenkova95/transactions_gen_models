@@ -1,6 +1,0 @@
-defaults:
-  - preprocessing: churn_ae
-  - dataset: simple
-  - model: ae_transformer
-  # - validation: local_target
-  - _self_
