@@ -17,7 +17,7 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.utilities.model_helpers import is_overridden
 import wandb
 
-from src.modules import CustomCoLES, VanillaAE
+from src.modules import CustomCoLES, VanillaAE, Cotic
 from src.utils.create_trainer import create_trainer
 from src.utils.logging_utils import get_logger
 
@@ -80,7 +80,7 @@ def learn(
     # Instantiate the LightningModule.
     # _recursive_=False to save all hyperparameters
     # as DictConfigs, to enable hp loading from lightning checkpoint
-    module: Union[CustomCoLES, VanillaAE] = instantiate(
+    module: Union[CustomCoLES, VanillaAE, Cotic] = instantiate(
         backbone_cfg["module"], **module_args, _recursive_=False
     )
 

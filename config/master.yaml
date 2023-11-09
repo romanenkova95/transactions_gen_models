@@ -1,8 +1,8 @@
 defaults:
-  - preprocessing: churn_100
-  - backbone: ae_nlp
+  - preprocessing: cotic_churn
+  - backbone: cotic_churn
   - validation: [event_type_100, event_time, global_target, local_target]
-  - logger: wandb
+  - logger: comet
   - _self_
 
 pretrain: true

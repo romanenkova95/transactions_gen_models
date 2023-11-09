@@ -30,7 +30,7 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
         col_name_original (str) - source column name
         is_drop_original_col (bool) - when target and original columns are different manage original col deletion.
     """
-
+    
     def __init__(
         self,
         col_name_original: str,
@@ -48,6 +48,7 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
         """
         super().fit(x)
         self.min_timestamp = int(x[self.col_name_original].min().timestamp())
+        return self
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """Transform datetime column. Convert unix timestamps into days (float) since 'min_timestamp'."""
