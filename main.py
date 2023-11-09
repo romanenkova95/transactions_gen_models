@@ -32,7 +32,8 @@ def run(cfg: DictConfig):
     preproc_name: str = hydra_cfg.runtime.choices["preprocessing"]
     backbone_name: str = hydra_cfg.runtime.choices["backbone"]
     val_names: list[str] = cfg.get("validation", {}).keys()
-    if "wandb" in hydra_cfg.runtime.choices["logger"]:
+    lightning_logger_name = hydra_cfg.runtime.choices.get("logger", "tensorboard")
+    if "wandb" in lightning_logger_name:
         wandb.init(
             project="macro_micro_coles", 
             config=OmegaConf.to_container(cfg),
@@ -46,7 +47,7 @@ def run(cfg: DictConfig):
         learn(
             data=data,
             backbone_cfg=cfg["backbone"],
-            logger_cfg=cfg["logger"],
+            logger_cfg=cfg.get("logger"),
             encoder_save_name=backbone_name,
         )
 
@@ -61,7 +62,7 @@ def run(cfg: DictConfig):
                 data=data,
                 cfg_encoder=cfg["backbone"]["encoder"],
                 cfg_validation=cfg_validation,
-                cfg_logger=cfg["logger"],
+                cfg_logger=cfg.get("logger"),
                 encoder_name=backbone_name,
                 val_name=val_name,
             )

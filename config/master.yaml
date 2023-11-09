@@ -2,7 +2,6 @@ defaults:
   - preprocessing: churn_100
   - backbone: ae_nlp
   - validation: [event_type_100, event_time, global_target, local_target]
-  - logger: wandb
   - _self_
 
 pretrain: true
