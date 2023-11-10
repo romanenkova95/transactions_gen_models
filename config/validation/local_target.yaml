@@ -1,7 +1,7 @@
 local_target:
   module:
     _target_: src.local_validation.BinaryLocalVal
-    backbone_embd_size: 16
+    backbone_embd_size: ${backbone.encoder.hidden_size}
     learning_rate: 0.001
 
   dataset:
@@ -16,9 +16,9 @@ local_target:
 
   datamodule:
     _target_: ptls.frames.PtlsDataModule
-    train_batch_size: 64
-    valid_batch_size: 64
-    test_batch_size: 64 
+    train_batch_size: 512
+    valid_batch_size: 512
+    test_batch_size: 512 
     train_num_workers: 8
     valid_num_workers: 8
     test_num_workers: 8

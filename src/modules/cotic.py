@@ -6,10 +6,6 @@ from ptls.frames.abs_module import ABSModule
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
-from src.losses.cotic_losses import CoticLoss
-from src.metrics.cotic_metrics import CoticMetrics
-from src.nn.cotic_components import PredictionHead
-
 
 class Cotic(ABSModule):
     """Cotic module in ptls format."""

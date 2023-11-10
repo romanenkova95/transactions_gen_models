@@ -1,7 +1,7 @@
 _target_: src.modules.Cotic
 head:
   _target_: src.nn.cotic_components.PredictionHead
-  in_channels: 16
+  in_channels: ${backbone.encoder.hidden_size}
   num_types: 100
 loss:
   _target_: src.losses.CoticLoss

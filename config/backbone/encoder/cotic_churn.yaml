@@ -9,8 +9,8 @@ kernel:
   hidden1: 8
   hidden2: 4
   hidden3: 8
-  in_channels: 16
-  out_channels: 16
+  in_channels: ${backbone.encoder.hidden_size}
+  out_channels: ${backbone.encoder.hidden_size}
 num_layers: 9
 kernel_size: 5
 reducer: maxpool

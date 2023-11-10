@@ -1,7 +1,7 @@
 defaults:
   - preprocessing: cotic_churn
   - backbone: cotic_churn
-  - validation: [event_type_100, event_time, global_target, local_target]
+  - validation: [global_target, event_type_100, event_time, local_target]
   - logger: comet
   - _self_
 

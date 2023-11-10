@@ -1,11 +1,9 @@
 """Main coles learning script"""
-from ast import literal_eval
-import os
 from pathlib import Path
 from typing import Union
 
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from ptls.frames import PtlsDataModule
@@ -13,9 +11,7 @@ from ptls.frames import PtlsDataModule
 import torch
 
 from pytorch_lightning import seed_everything
-
 from pytorch_lightning.utilities.model_helpers import is_overridden
-import wandb
 
 from src.modules import CustomCoLES, VanillaAE, Cotic
 from src.utils.create_trainer import create_trainer
