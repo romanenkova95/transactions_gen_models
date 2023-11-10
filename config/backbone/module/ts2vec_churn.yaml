@@ -1,0 +1,11 @@
+_target_: src.modules.TS2Vec
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.Adam
+  lr: 0.004
+lr_scheduler_partial: 
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  factor: .9025
+  patience: 5
+  mode: min

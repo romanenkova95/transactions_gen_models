@@ -1,6 +1,6 @@
 defaults:
-  - preprocessing: cotic_churn
-  - backbone: cotic_churn
+  - preprocessing: churn
+  - backbone: ts2vec_churn
   - validation: [global_target, event_type_100, event_time, local_target]
   - logger: comet
   - _self_

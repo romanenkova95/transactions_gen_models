@@ -1,0 +1,11 @@
+_target_: src.nn.ConvSeqEncoder
+trx_encoder: 
+  _target_: ptls.nn.TrxEncoder
+  use_batch_norm_with_lens: True
+  norm_embeddings: False
+  embeddings_noise: 0.0003
+  embeddings: {mcc_code: {in: 344, out: 24}}
+  numeric_values: {amount: identity}
+hidden_size: 1024
+num_layers: 10
+dropout: 0.1
