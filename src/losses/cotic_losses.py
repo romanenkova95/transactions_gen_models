@@ -3,21 +3,34 @@ import math
 import torch
 import torch.nn as nn
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Dict
 
 from .log_cosh_loss import LogCoshLoss
 
 
 class CoticLoss(nn.Module):
+    """Loss computation for COTIC."""
     def __init__(
         self,
         type_loss_coeff: float = 1,
         time_loss_coeff: float = 1,
         sim_size: int = 100,
         type_pad_value: int = 0,
-        reductions: dict = {"log_likelihood": "mean", "type": "sum", "time": "mean"},
-    ):
+        reductions: Dict[str, str] = {"log_likelihood": "mean", "type": "sum", "time": "mean"},
+    ) -> None:
+        """Initializ CoticLoss.
+        
+        Args:
+            type_loss_coeff (float) - weighting coefficient for the type loss
+            time_loss_coeff (float) - weighting coefficient for the type loss
+            sim_size (int) - number of simulated timestamps between events for likelihood computation
+            type_pad_value (int) - padding value for event type (mcc)
+            reductions (dict) - dict with reductions used for all 3 losses
+        """
         super().__init__()
+        
+        if reductions["log_likelihood"] not in ["mean", "sum"]:
+            raise ValueError("log_likelihood reduction is not in ['mean', 'sum']")
 
         self.reductions = reductions
 
@@ -31,9 +44,15 @@ class CoticLoss(nn.Module):
         self.sim_size = sim_size
 
     @staticmethod
-    def compute_event(type_lambda, non_pad_mask):
-        """Log-likelihood of events."""
-
+    def compute_event(type_lambda: torch.Tensor, non_pad_mask: torch.Tensor) -> torch.Tensor:
+        """Compute log-likelihood of events.
+        
+        Args:
+            type_lambda (torch.Tensor) - intesitities for events
+            non_pad_mask (torch.Tensor) - boolean mask indicating non-padding events
+        Returns:
+            'event term' of log-likelihood
+        """
         # add 1e-9 in case some events have 0 likelihood
         type_lambda += math.pow(10, -9)
         type_lambda.masked_fill_(~non_pad_mask.bool(), 1.0)
@@ -45,15 +64,14 @@ class CoticLoss(nn.Module):
     def __add_sim_times(
         times: torch.Tensor, sim_size: int
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Takes batch of times and events and adds sim_size auxiliar times
+        """Take batch of times and events and adds sim_size auxiliar times
 
-        args:
-            times  - torch.Tensor of shape (bs, max_len), that represents event arrival time since start
-            featuers - torch.Tensor of shape (bs, max_len, d), that represents event features
-            sim_size - int, number of points to simulate
+        Args:
+            times (torch.Tensor) - event times since start, shape = (bs, max_len)
+            featuers (torch.Tensor) event features, shape = (bs, max_len, d)
+            sim_size (int) - number of simulated timestamps between events for likelihood computation
 
-        returns:
+        Returns:
             bos_full_times - torch.Tensor of shape(bs, (sim_size + 1) * (max_len - 1) + 1)
                          that consists of times and sim_size auxiliar times between events
         """
@@ -79,9 +97,25 @@ class CoticLoss(nn.Module):
         return bos_full_times
 
     def compute_integral_unbiased(
-        self, model, enc_output, event_time, non_pad_mask, type_mask, num_samples
-    ):
-        """Log-likelihood of non-events, using Monte Carlo integration."""
+        self, 
+        model: nn.Module,
+        enc_output: torch.Tensor, 
+        event_time: torch.Tensor, 
+        non_pad_mask: torch.Tensor, 
+        num_samples: int
+    ) -> torch.Tensor:
+        """Compute log-likelihood of non-events, using Monte Carlo integration.
+        
+        Args:
+            model (nn.Module) - backbone CCNN model (for intensity prediction)
+            enc_output (torch.Tensor) - embeddings produces by the core (continuous convolutional part of the model)
+            event_time (torch.Tensor) - event times (padded)
+            non_pad_mask (torch.Tensor) - boolean mask indicating non-padding timestamps
+            num_samples (int) - sample size for MC-integration
+            
+        Returns: 
+            approximated integral (non-event term of log-likelohood)
+        """
 
         bos_full_times = self.__add_sim_times(event_time, num_samples)
         all_lambda = model.final(
@@ -109,10 +143,17 @@ class CoticLoss(nn.Module):
         event_time: torch.Tensor,
         event_type: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Computes log of the intensity and the integral
-
-        model -- CCNN model
+        """Compute log of the intensity and the integral.
+        
+        Args:
+            model (nn.Module) - CCNN model
+            enc_output (torch.Tensor)
+            event_time (torch.Tensor)
+            event_type (torch.Tensor)
+        
+        Returns a tuple of:
+            * event term of log-likelihood (sum)
+            * non-event term of log-likelihood (integral)
         """
 
         non_pad_mask = event_type.ne(0).type(torch.float)
@@ -149,18 +190,27 @@ class CoticLoss(nn.Module):
             enc_output,
             event_time,
             non_pad_mask,
-            type_mask,
+            # type_mask,
             self.sim_size,
         )
         non_event_ll = torch.sum(non_event_ll, dim=-1)
 
         return event_ll, non_event_ll
 
-    def type_loss(self, prediction, types):
-        """Event prediction loss, cross entropy."""
+    def type_loss(
+        self, prediction: torch.Tensor, types: torch.Tensor
+    ) -> float:
+        """Compute event type prediction head loss.
+        
+        Args:
+            prediction (torch.Tensor) - predicted event types
+            types (torch.Tensor) - true event types
+        
+        Returns:
+            event type loss function value (reduced)
+        """
 
-        # ??? convert [1,2,3] based types to [0,1,2]; also convert padding events to -1
-        truth = types[:, 1:]  # - 1
+        truth = types[:, 1:] # do not take the 1st value - it cannot be predicted
         prediction = prediction[:, :-1, :]
 
         loss = self.type_loss_func(prediction.transpose(1, 2), truth)
@@ -168,15 +218,26 @@ class CoticLoss(nn.Module):
         loss = torch.mean(loss)
         return loss
 
-    def time_loss(self, prediction, event_time, event_type):
-        """Time prediction loss."""
+    def time_loss(
+        self, prediction: torch.Tensor, event_time: torch.Tensor, event_type: torch.Tensor
+    ) -> float:
+        """Compute return time prediction head loss.
+        
+        Args:
+            prediction (torch.Tensor) - predicted return times
+            event_time (torch.Tensor) - true event times
+            event_type (torch.Tensor) - true event types (to compute non-padding mask)
+        
+        Returns:
+            return time loss function value (reduced)
+        """
 
         prediction.squeeze_(-1)
 
         mask = event_type.ne(0)[:, 1:]
 
-        true = event_time[:, 1:] - event_time[:, :-1]
-        prediction = prediction[:, :-1]
+        true = event_time[:, 1:] - event_time[:, :-1] # get return time target
+        prediction = prediction[:, :-1] # do not take the last prediction, as there is no target for it
 
         return self.return_time_loss_func(true[mask], prediction[mask])
 
@@ -184,26 +245,21 @@ class CoticLoss(nn.Module):
         self,
         model: nn.Module,
         inputs: Union[Tuple, torch.Tensor],
-        outputs: Union[Tuple, torch.Tensor],
+        outputs: Tuple[torch.Tensor],
     ) -> torch.Tensor:
-        """
-        Takes lighning model, input batch and model outputs, returns the corresponding loss for backpropagation,
-        one can use self.step_[return_time_target/event_type_target/return_time_predicted/event_type_predicted/ll_per_event] if needed
+        """Compute composite loss for the COTIC model.
 
-        args:
-            pl_module - LightningModule, training lightning model
-            inputs - Tuple or torch.Tensor, batch received from the dataloader
-            outputs - Tuple or torch.Tensor, model output
+        Args:
+            model (nn.Module) - CCNN backbone model that is being trained
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            outputs (Tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
-        return:
-            loss - torch.Tensor, loss for backpropagation
+        Returns:
+            value of the loss fucntion
         """
         event_ll, non_event_ll = self.event_and_non_event_log_likelihood(
             model, outputs[0], inputs[0], inputs[1]
         )
-
-        if self.reductions["log_likelihood"] not in ["mean", "sum"]:
-            raise ValueError("log_likelihood reduction not in 'mean', 'sum'")
 
         if self.reductions["log_likelihood"] == "mean":
             ll_loss = -torch.mean(event_ll - non_event_ll)

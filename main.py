@@ -29,7 +29,7 @@ def run(cfg: DictConfig):
     # Setup names & log config
     hydra_cfg = HydraConfig.get()
     preproc_name: str = hydra_cfg.runtime.choices["preprocessing"]
-    backbone_name: str = hydra_cfg.runtime.choices["backbone"]
+    backbone_name: str = hydra_cfg.runtime.choices["backbone"] + "standard_params"
     val_names: list[str] = cfg.get("validation", {}).keys()
     if "wandb" in hydra_cfg.runtime.choices["logger"]:
         wandb.init(

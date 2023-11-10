@@ -26,18 +26,17 @@ class ContConv1d(nn.Module):
         """Initialize Continuous convolution layer.
 
         Args:
-            kernel (torch.nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
+            kernel (nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
             kernel_size (int) - convolution layer kernel size
             in_channels (int) - features input size
             out_channles (int) - output size
             dilation (int) - convolutional layer dilation (default = 1)
             include_zero_lag (bool) - indicates if the model should use current time step features for prediction
-            skip_connection (bool) - indicates if the model should add skip connection in the end, in_channels == out_channels
         """
         super().__init__()
-        assert dilation >= 1
-        assert in_channels >= 1
-        assert out_channels >= 1
+        assert dilation >= 1, "Wrong dilation size."
+        assert in_channels >= 1, "Wrong in_channels."
+        assert out_channels >= 1, "Wrong out_channels."
 
         self.kernel = kernel
         self.kernel_size = kernel_size

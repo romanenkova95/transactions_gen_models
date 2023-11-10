@@ -1,7 +1,7 @@
 _target_: src.nn.CoticSeqEncoder
 trx_encoder: null # no trx encoder for COTIC
 is_reduce_sequence: False
-input_size: 24
+input_size: 24 # default params from the COTIC paper
 hidden_size: 16
 num_types: 100
 kernel:

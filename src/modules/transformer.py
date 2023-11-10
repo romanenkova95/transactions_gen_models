@@ -1,7 +1,6 @@
-from ptls.data_load import PaddedBatch
 import torch
 
-from ptls.data_load.padded_batch import PaddedBatch
+from ptls.data_load import PaddedBatch
 
 from .vanilla import VanillaAE
 

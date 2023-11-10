@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from .kernels import Kernel
 
 from typing import Tuple
 

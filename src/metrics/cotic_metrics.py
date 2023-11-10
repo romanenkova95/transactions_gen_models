@@ -1,11 +1,6 @@
 from typing import Union, Tuple
 from abc import ABC
 
-import inspect
-
-import numpy as np
-
-import math
 import torch
 import torch.nn.functional as F
 
@@ -14,24 +9,21 @@ from torchmetrics.regression import MeanAbsoluteError
 
 
 class CoticMetrics(ABC):
-    """Continuous convolution metrics computing class"""
-
+    """COTIC metrics computing class."""
     def __init__(
         self,
         num_types: int,
         type_pad_value: int = 0,
-    ):
-        """
-        args:
-            return_time_metric - metric for return time prediction, takes target, prediction
-            event_type_metric  - metric for event type prediction, takes target, prediction
-            type_loss_coeff - float, type loss multiplier
-            time_loss_coeff - float, time loss multiplier,
-            reductions - dict of losses reduction type
+    ) -> None:
+        """Initalize CoticMetrcics.
+        
+        Args:
+            num_types (int) - total number of event types in the dataset
+            type_pad_value (int) - padding value for event types (0, by default)
         """
 
-        self.num_types = num_types
-        self.type_pad_value = type_pad_value
+        #self.num_types = num_types
+        #self.type_pad_value = type_pad_value
 
         self.return_time_metric = MeanAbsoluteError()
         self.event_type_metric = Accuracy(
@@ -40,16 +32,9 @@ class CoticMetrics(ABC):
 
         self.clear_values()
 
-    def copy_empty(self):
-        """
-        Returns the object of the same time with the same initial parameters
-        """
-        return type(self)(num_types=self.num_types, type_pad_value=self.type_pad_value)
-
     def clear_values(self):
-        """
-        Clears stored values
-        """
+        """Clears stored metrics values."""
+        
         self.__return_time_target = torch.Tensor([])
         self.__event_type_target = torch.Tensor([])
         self.__return_time_preds = torch.Tensor([])
@@ -57,13 +42,12 @@ class CoticMetrics(ABC):
 
     @staticmethod
     def get_return_time_target(inputs: Union[Tuple, torch.Tensor]) -> torch.Tensor:
-        """
-        Takes input batch and returns the corresponding return time targets as 1d Tensor
+        """Take input batch and returns the corresponding return time targets as 1d Tensor.
 
-        args:
-            inputs - Tuple or torch.Tensor, batch received from the dataloader
+        Args:
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
 
-        return:
+        Returns:
             return_time_target - torch.Tensor, 1d Tensor with return time targets
         """
         event_time = inputs[0]
@@ -73,13 +57,12 @@ class CoticMetrics(ABC):
 
     @staticmethod
     def get_event_type_target(inputs: Union[Tuple, torch.Tensor]) -> torch.Tensor:
-        """
-        Takes input batch and returns the corresponding event type targets as 1d Tensor
+        """Take input batch and returns the corresponding event type targets as 1d Tensor.
 
-        args:
-            inputs - Tuple or torch.Tensor, batch received from the dataloader
+        Args:
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
 
-        return:
+        Returns:
             event_type_target - torch.Tensor, 1d Tensor with event type targets
         """
         event_type = inputs[1][:, 1:]
@@ -91,15 +74,13 @@ class CoticMetrics(ABC):
         inputs: Union[Tuple, torch.Tensor],
         outputs: Union[Tuple, torch.Tensor],
     ) -> torch.Tensor:
-        """
-        Takes lighning model, input batch and model outputs, returns the corresponding predicted return times as 1d Tensor
+        """Get return time predictions from model outputs.
 
-        args:
-            pl_module - LightningModule, current model
-            inputs - Tuple or torch.Tensor, batch received from the dataloader
-            outputs - Tuple or torch.Tensor, model output
+        Args:
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
-        return:
+        Returns:
             return_time_predicted - torch.Tensor, 1d Tensor with return time prediction
         """
         return_time_prediction = outputs[1][0].squeeze_(-1)[:, 1:-1]
@@ -111,15 +92,13 @@ class CoticMetrics(ABC):
         inputs: Union[Tuple, torch.Tensor],
         outputs: Union[Tuple, torch.Tensor],
     ) -> torch.Tensor:
-        """
-        Takes lighning model, input batch and model outputs, returns the corresponding predicted event types as 1d Tensor logits
+        """Get event type predictions from model outputs.
 
-        args:
-            pl_module - LightningModule, current model
-            inputs - Tuple or torch.Tensor, batch received from the dataloader
-            outputs - Tuple or torch.Tensor, model output
+        Args:
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
-        return:
+        Returns:
             event_type_predicted - torch.Tensor, 2d Tensor with event type unnormalized predictions
         """
         event_type_prediction = outputs[1][1][:, 1:-1, :]
@@ -128,13 +107,20 @@ class CoticMetrics(ABC):
 
     def update(
         self, inputs: Union[Tuple, torch.Tensor], outputs: Union[Tuple, torch.Tensor]
-    ):
+    ) -> None:
+        """Compute predictions and targets for a batch and store values.
+        
+        Args:
+            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+        """
         step_return_time_target = self.get_return_time_target(inputs)
         step_event_type_target = self.get_event_type_target(inputs)
 
         step_return_time_preds = self.get_return_time_predicted(inputs, outputs)
         step_event_type_preds = self.get_event_type_predicted(inputs, outputs)
 
+        # store computed values
         self.__return_time_target = torch.concat(
             [
                 self.__return_time_target,
@@ -161,6 +147,12 @@ class CoticMetrics(ABC):
         )
 
     def compute(self) -> Tuple[float, float, float]:
+        """Compute metrics for the set of stored predictions and targets.
+        
+        Returns:
+            return_time_metric (reduced)
+            event_type_metric (reduced) 
+        """
         return_time_metric = self.return_time_metric(
             self.__return_time_preds, self.__return_time_target
         )
@@ -169,6 +161,7 @@ class CoticMetrics(ABC):
             self.__event_type_target,
         )
 
+        # clear values, initialize new empty tensors for predictions and targets
         self.clear_values()
 
         return return_time_metric, event_type_metric
