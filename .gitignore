@@ -185,7 +185,7 @@ fabric.properties
 
 .vscode/
 
-*wandb*
+wandb/
 *hparams*
 *.ckpt
 *events.out*
@@ -194,3 +194,7 @@ data/
 preproc_data/
 outputs/
 multirun/
+sweeps/
+cache/
+docker_scripts/credentials
+saved_models/

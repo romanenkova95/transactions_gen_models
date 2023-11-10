@@ -1,5 +1,0 @@
-defaults:
-  - dataset: churn
-  - model: coles_churn
-  - validation: local_target
-  - _self_

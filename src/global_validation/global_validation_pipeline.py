@@ -1,4 +1,6 @@
 """Global target validation script"""
+from pathlib import Path
+import warnings
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -6,8 +8,6 @@ import pandas as pd
 import numpy as np
 
 import torch
-
-from sklearn.model_selection import train_test_split
 
 from ptls.data_load.utils import collate_feature_dict
 
@@ -19,44 +19,40 @@ from torchmetrics.classification import (
 )
 
 from src.utils.logging_utils import get_logger
-from src.utils.data_utils.prepare_dataset import prepare_dataset
+from src.preprocessing import preprocess
 
 
-def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
+def global_target_validation(
+    data: tuple[list[dict], list[dict], list[dict]], 
+    cfg_encoder: DictConfig,
+    cfg_validation: DictConfig,
+    encoder_name: str
+    ) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
-        cfg_preprop (DictConfig):    Dataset config (specified in the 'config/dataset')
-        cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
+        data (tuple[list[dict], list[dict], list[dict]]):
+            train, val & test sets
+        cfg_encoder (DictConfig):
+            encoder config (specified in 'config/encoder')
+        cfg_validation (DictConfig): 
+            Validation config (specified in 'config/validation')
     
     Returns:
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
     
-    dataset = prepare_dataset(cfg_preprop, logger)
-
-    # train val test split
-    valid_size = cfg_preprop["coles"]["valid_size"]
-    test_size = cfg_preprop["coles"]["test_size"]
-
-    train, val_test = train_test_split(
-        dataset,
-        test_size=valid_size+test_size,
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
-    val, test = train_test_split(
-        val_test,
-        test_size=test_size/(valid_size+test_size),
-        random_state=cfg_preprop["coles"]["random_state"]
-    )
-
+    train, val, test = data
     logger.info("Instantiating the sequence encoder")
 
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder = instantiate(cfg_encoder, is_reduce_sequence=True)
+    encoder_state_dict_path = Path(f"saved_models/{encoder_name}.pth")
+    if encoder_state_dict_path.exists():
+        sequence_encoder.load_state_dict(torch.load(encoder_state_dict_path))
+    else:
+        warnings.warn("No encoder state dict found! Validating with random weights...")
 
     logger.info("Processing train sequences")
 
@@ -101,7 +97,7 @@ def embed_data(
         dataset:     list[dict],
         batch_size:  int = 64,
         device:      str = "cuda",
-    ) -> tuple[np.array, np.array]:
+    ) -> tuple[np.ndarray, np.ndarray]:
     """
     Returns embeddings of sequences and corresponding targets.
 

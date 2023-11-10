@@ -1,0 +1,15 @@
+defaults:
+  - dataset: basic
+  - encoder: transformer
+  - module: transformer
+  - _self_
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 1024
+  train_num_workers: 4
+  valid_batch_size: 1024
+  valid_num_workers: 4
+
+trainer:
+  max_steps: 8000
