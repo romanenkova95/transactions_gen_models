@@ -41,7 +41,6 @@ def run(cfg: DictConfig):
         )
         
     data = preprocess(cfg["preprocessing"])
-    
     seed = seed_everything(cfg.get("seed"))
     experiment_name = f"{backbone_name}_{preproc_name}_{seed}"
     
@@ -55,7 +54,7 @@ def run(cfg: DictConfig):
         )
 
     for val_name, cfg_validation in cfg.get("validation", {}).items():
-        seed_everything(seed)
+        seed_everything() # get seed from os.environ["PL_GLOBAL_SEED"]
         logger.info(f"{val_name} validation for {experiment_name}")
         if val_name.startswith("global_target"):
             res = global_target_validation(
