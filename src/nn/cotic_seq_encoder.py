@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 import torch.nn as nn
@@ -20,7 +20,7 @@ class CoticEncoder(AbsSeqEncoder):
         kernel: nn.Module,
         num_layers: int = 10,
         kernel_size: int = 5,
-        is_reduce_sequence: bool = False,
+        is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
     ) -> None:
         """Continous convoluitonal sequence encoder for COTIC model.
@@ -79,7 +79,7 @@ class CoticSeqEncoder(SeqEncoderContainer):
     def __init__(
         self,
         input_size: int,
-        trx_encoder: TrxEncoder = None,
+        trx_encoder: Optional[TrxEncoder] = None,
         is_reduce_sequence: bool = False,
         col_time: str = "event_time",
         col_type: str = "mcc_code",
@@ -93,7 +93,7 @@ class CoticSeqEncoder(SeqEncoderContainer):
             is_reduce_sequence (bool) - if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             col_time (str) - name of the field (in PaddedBatch.payload) containig event times
             col_type (str) - name of the field (in PaddedBatch.payload) containig event types
-            **seq_encoder_params - sequence encoder parameters
+            **seq_encoder_params - other sequence encoder parameters
         """
         super().__init__(
             trx_encoder=trx_encoder,
