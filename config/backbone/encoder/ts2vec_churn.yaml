@@ -6,6 +6,7 @@ trx_encoder:
   embeddings_noise: 0.0003
   embeddings: {mcc_code: {in: 344, out: 24}}
   numeric_values: {amount: identity}
+kernel_size: 3
 hidden_size: 1024
 num_layers: 10
 dropout: 0.1

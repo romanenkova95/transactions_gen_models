@@ -14,6 +14,7 @@ class ConvEncoder(AbsSeqEncoder):
     """Convolutional sequence encoder for the TS2Vec model."""
     def __init__(
         self,
+        kernel_size: int,
         input_size: Optional[int] = None,
         hidden_size: Optional[int] = None,
         num_layers: int = 10,
@@ -24,6 +25,7 @@ class ConvEncoder(AbsSeqEncoder):
         """Initialize ConvEncoder.
         
         Args:
+            kernel_size (int) - kernel size
             input_size (int or None) - input size (if None, use output size of TrxEncoder)
             hidden_size (Optional or None) - hidden size
             num_layers (int) - number of layers (convolutional blocks)
@@ -38,7 +40,7 @@ class ConvEncoder(AbsSeqEncoder):
         self.feature_extractor = DilatedConvEncoder(
             input_size,
             [input_size] * num_layers + [hidden_size],
-            kernel_size=3
+            kernel_size=kernel_size
         )
 
         self.repr_dropout = nn.Dropout(dropout)

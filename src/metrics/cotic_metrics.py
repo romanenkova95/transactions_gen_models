@@ -4,7 +4,7 @@ from abc import ABC
 import torch
 import torch.nn.functional as F
 
-from torchmetrics.classification import Accuracy
+from torchmetrics.classification import MulticlassAccuracy
 from torchmetrics.regression import MeanAbsoluteError
 
 
@@ -22,14 +22,13 @@ class CoticMetrics(ABC):
             type_pad_value (int) - padding value for event types (0, by default)
         """
 
-        #self.num_types = num_types
-        #self.type_pad_value = type_pad_value
-
         self.return_time_metric = MeanAbsoluteError()
-        self.event_type_metric = Accuracy(
-            task="multiclass", num_classes=num_types, ignore_index=type_pad_value
+        self.event_type_metric = MulticlassAccuracy(
+            num_classes=num_types,
+            ignore_index=type_pad_value,
+            average="micro",
         )
-
+        
         self.clear_values()
 
     def clear_values(self):
