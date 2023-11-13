@@ -76,7 +76,6 @@ def local_target_validation(
 
     logger.info(f"Training LocalValidationModel")
 
-    seed_everything()
     valid_model: LocalValidationModelBase = instantiate(
         cfg_validation["module"], backbone=sequence_encoder
     )
@@ -96,7 +95,7 @@ def local_target_validation(
         checkpoint = torch.load(val_trainer.checkpoint_callback.best_model_path)
         valid_model.load_state_dict(checkpoint["state_dict"])
 
-    torch.save(valid_model.state_dict(), f"saved_models/{val_name}_validation_head.pth")
+    torch.save(valid_model.state_dict(), f"saved_models/{val_name}.pth")
     # trainer.test() returns List[Dict] of results for each dataloader; we use a single dataloader
     metrics = val_trainer.test(valid_model, datamodule)[0]
 
