@@ -1,5 +1,6 @@
 """CategoricalLocalVal class: local validation with categorical targets."""
 
+from ptls.data_load.padded_batch import PaddedBatch
 import torch
 import torch.nn as nn
 from torchmetrics import MetricCollection
@@ -79,3 +80,10 @@ class CategoricalLocalVal(LocalValidationModelBase):
 
         self.num_types = num_types
         self.pad_value = pad_value
+
+    def shared_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        inputs, target = batch
+        inputs.payload["mcc_code"] = torch.clip(inputs.payload["mcc_code"], 0, self.num_types - 1)
+        target = torch.clip(target, 0, self.num_types - 1)
+        preds = self(inputs)
+        return preds, target

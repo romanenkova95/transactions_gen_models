@@ -32,8 +32,8 @@ class TestBackbones(unittest.TestCase):
     def test_ae_nlp(self):
         self.run_with_config(
             backbone="ae_nlp",
-            preprocessing="churn_100",
-            validations=["local_target", "event_time", "event_type_100"],
+            preprocessing="churn",
+            validations=["local_target", "event_time", "event_type"],
         )
 
     def test_coles_churn(self):
@@ -53,8 +53,8 @@ class TestBackbones(unittest.TestCase):
     def test_transformer(self):
         self.run_with_config(
             backbone="transformer",
-            preprocessing="churn_100",
-            validations=["local_target", "event_time", "event_type_100"],
+            preprocessing="churn",
+            validations=["local_target", "event_time", "event_type"],
         )
 
 
