@@ -2,7 +2,6 @@
 Custom coles datamodule
 """
 import torch
-import pandas as pd
 
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter

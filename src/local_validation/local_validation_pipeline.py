@@ -48,7 +48,6 @@ def local_target_validation(
             Metrics on test set.
     """
     logger = get_logger(name=__name__)
-
     train, val, test = data
 
     logger.info("Instantiating the sequence encoder")

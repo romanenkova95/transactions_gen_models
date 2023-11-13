@@ -47,14 +47,6 @@ class LocalValidationModelBase(pl.LightningModule):
 
             for param in self.backbone.parameters():
                 param.requires_grad = False
-        # freeze backbone model
-        for m in self.backbone.modules():
-            if isinstance(m, nn.BatchNorm1d):
-                m.track_running_stats = False
-                m.eval()
-
-        for param in self.backbone.parameters():
-            param.requires_grad = False
 
         self.lr = learning_rate
         self.pred_head = pred_head
