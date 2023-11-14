@@ -66,7 +66,7 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
     keeping according to ```keep``` parameter ("first"/"last"/False).
     """
 
-    def __init__(self, index_cols: list[str], keep: Literal["first", "last", False]):
+    def __init__(self, index_cols: list[str], keep: Literal["first", "last", False]) -> None:
         """Initialize DropDuplicates transform
 
         Args:
@@ -81,7 +81,7 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
         self.index_cols = index_cols
         self.keep = keep
 
-    def fit(self, x: pd.DataFrame):
+    def fit(self, x: pd.DataFrame) -> "DropDuplicates":
         if not set(self.index_cols) < set(x.columns):
             raise ValueError(
                 f"Columns mismatch! {self.index_cols} is not subset of {x.columns}"
