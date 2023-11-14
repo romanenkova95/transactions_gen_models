@@ -4,14 +4,13 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
 from tqdm import tqdm
 
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.data_load.utils import collate_feature_dict
 
 
-class PoolingModel(pl.LightningModule):
+class PoolingModel(nn.Module):
     """
     PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions
         representations with pooling of information of different users.
@@ -28,13 +27,13 @@ class PoolingModel(pl.LightningModule):
         max_seq_length: int = 1000,
         max_embs_per_user: int = 1000,
         columns: List[str] = ["event_time", "mcc_code", "amount"],
+        init_device="cuda",
     ) -> None:
         """Initialize method for PoolingModel.
 
         Args:
             train_data (List[Dict]): Dataset for calculating embedings
             backbone (nn.Module):  Local embeding model
-            argegating_model (torch.nn.Module): Model for agregating pooled embeddings
             pooling_type (str): "max", "mean", "attention" or "learnable_attention", type of pooling
             backbone_embd_size (int): Size of local embedings from backbone model
             max_users_in_train_dataloader (int): Maximum number of users to save
@@ -46,13 +45,15 @@ class PoolingModel(pl.LightningModule):
             max_embs_per_user (int): How many datapoints to take from one user
             in self.embegings_dataset preparation
             columns (List[str]): Columns of data needed for backbone
+            init_device (str): Name of device to use during initialization
         """
         super().__init__()
 
         if pooling_type not in ["mean", "max", "attention", "learnable_attention"]:
             raise ValueError("Unknown pooling type.")
 
-        self.backbone = backbone
+        self.backbone = backbone.to(init_device)
+        self.backbone.eval()
         self.backbone_embd_size = backbone_embd_size
 
         # freeze backbone model
@@ -66,19 +67,20 @@ class PoolingModel(pl.LightningModule):
         self.columns = columns
 
         self.embegings_dataset = self.make_pooled_embegings_dataset(
-            train_data, max_users_in_train_dataloader
+            train_data, max_users_in_train_dataloader, init_device
         )
 
         if pooling_type == "learnable_attention":
             self.learnable_attention_matrix = nn.Linear(
                 self.backbone_embd_size, self.backbone_embd_size
-                    )
+            )
 
-    def prepare_data_for_one_user(self, x):
+    def prepare_data_for_one_user(self, x, device):
         """Function for preparing one user's embedings and last times for this embedings.
 
         Args:
             x (Dict): Data from one user
+            device (str): Name of device to use
 
         Return:
             embs (np.array): Embeddings of slices of one user
@@ -97,13 +99,11 @@ class PoolingModel(pl.LightningModule):
                 data_for_timestamp[column] = x[column][start_index:i]
             resulting_user_data.append(data_for_timestamp)
         resulting_user_data = collate_feature_dict(resulting_user_data)
-        embs = self.backbone(resulting_user_data).detach().cpu().numpy()
+        embs = self.backbone(resulting_user_data.to(device)).detach().cpu().numpy()
         return embs, times
 
     def make_pooled_embegings_dataset(
-        self,
-        train_data: List[Dict],
-        max_users_in_train_dataloader: int,
+        self, train_data: List[Dict], max_users_in_train_dataloader: int, device: str
     ) -> dict[int, torch.Tensor]:
         """Creation of pooled embeding dataset. This function for each timestamp get
         sequences in dataset which ends close to this timestamp,
@@ -112,53 +112,70 @@ class PoolingModel(pl.LightningModule):
         Args:
             train_data (List[Dict]): data for calculating global embedings
                 from local sequences
+            device (str): name of device to use
 
         Return:
             embegings_dataset(dict): dictionary containing timestamps and pooling
                 vectors for that timestamps
         """
-        data = {}
+        data = []
         all_times = set()
-        k = 0
         for x in tqdm(train_data):
             # check if the user's sequence is not long enough
             if len(x[self.columns[0]]) <= self.min_seq_length:
                 continue
 
-            data[k] = {}
-            embs, times = self.prepare_data_for_one_user(x)
+            data.append({})
+            embs, times = self.prepare_data_for_one_user(x, device)
             all_times.update(times)
             for emb, time in zip(embs, times):
-                data[k][time] = emb
+                data[-1][time] = emb
 
             # check if the number of users is enough
-            if k >= max_users_in_train_dataloader:
+            if len(data) >= max_users_in_train_dataloader:
                 break
-            k += 1
 
         all_times = list(all_times)
         all_times.sort()
+        embegings_dataset = self.reshape_time_user_dataset(all_times, data)
+        self.times = np.sort(list(embegings_dataset.keys()))
 
-        # data[user][time] = emb  ->  embegings_dataset[time] = concated users embedings
+        return embegings_dataset
+
+    def reshape_time_user_dataset(
+        self, all_times: List, data: List[Dict]
+    ) -> dict[int, torch.Tensor]:
+        """Reshaping of time-users-embeddings data from List of users with Dicts
+        with time keys to Dict with time keys and values with concatenated users
+        embeddings
+
+        Args:
+            all_times (List): list of all time points that can be found in data
+            data (List[Dict]): list of users containing the time as a keys and
+            embeddings as values
+
+        Return:
+            embegings_dataset(dict): dictionary containing timestamps and pooling
+                vectors for that timestamps
+        """
+
         embegings_dataset = {}
         for time in tqdm(all_times):
             embs_for_this_time = []
-            for _, user_data in data.items():
+            for user_data in data:
                 user_times = list(user_data.keys())
                 user_times.sort()
                 user_times = np.array(user_times)
 
-                indexes = np.where(user_times < time)[0]
-                if len(indexes) == 0:
+                index = np.searchsorted(user_times, time, "right") - 1
+                if index < 0:
                     continue
 
-                closest_time = user_times[indexes[-1]]
+                closest_time = user_times[index]
                 closest_emb = user_data[closest_time]
                 embs_for_this_time.append(closest_emb)
             if len(embs_for_this_time) > 0:
                 embegings_dataset[time] = np.stack(embs_for_this_time)
-
-        self.times = np.sort(list(embegings_dataset.keys()))
 
         return embegings_dataset
 
@@ -188,17 +205,17 @@ class PoolingModel(pl.LightningModule):
                 last times for data in batch
         """
 
-        batch_of_global_poolings = torch.Tensor([]).to(self.device)
+        batch_of_global_poolings = []
         for event_time_seq, user_emb in zip(
             batch.payload["event_time"], batch_of_local_embedings
         ):
             local_pooled_emb = self.make_local_pooled_embedding(
                 event_time_seq.max().item(), user_emb
             )
-            local_pooled_emb = local_pooled_emb.to(self.device)
-            batch_of_global_poolings = torch.cat(
-                (batch_of_global_poolings, local_pooled_emb.unsqueeze(0))
-            )
+            batch_of_global_poolings.append(local_pooled_emb)
+        batch_of_global_poolings = torch.stack(batch_of_global_poolings)
+        device = next(self.parameters()).device
+        batch_of_global_poolings = batch_of_global_poolings.to(device)
 
         return batch_of_global_poolings
 
@@ -269,23 +286,23 @@ class PoolingModel(pl.LightningModule):
                 raise ValueError("Unsupported pooling type.")
         return pooled_vector
 
-    def get_emb_dim(self) -> int:
+    @property
+    def embedding_size(self) -> int:
         """Function that return the output size of the model.
 
         Return: output_size (int): the output size of the model
         """
         output_size = 2 * self.backbone_embd_size
         return output_size
-    
+
     def change_pooling_type(self, pooling_type: str) -> None:
-        """Function that change pooling type of the model.
-        """
+        """Function that change pooling type of the model."""
         if pooling_type not in ["mean", "max", "attention", "learnable_attention"]:
             raise ValueError("Unknown pooling type.")
-        
+
         self.pooling_type = pooling_type
         if pooling_type == "learnable_attention":
-            if "learnable_attention_matrix" not in self.__dict__.keys():
+            if hasattr("learnable_attention_matrix", self):
                 self.learnable_attention_matrix = nn.Linear(
                     self.backbone_embd_size, self.backbone_embd_size
-                    )
+                )
