@@ -1,4 +1,5 @@
 from typing import Optional
+from typing_extensions import Self
 import pandas as pd
 
 from ptls.preprocessing.base import ColTransformer
@@ -43,7 +44,7 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
             is_drop_original_col=is_drop_original_col
         )
     
-    def fit(self, x: pd.DataFrame):
+    def fit(self, x: pd.DataFrame) -> Self:
         """Record minimum timestamp
         """
         super().fit(x)
