@@ -4,7 +4,7 @@ import os
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning import seed_everything
+from pytorch_lightning.utilities.seed import reset_seed, seed_everything
 import wandb
 
 from src import learn
@@ -36,7 +36,7 @@ def run(cfg: DictConfig):
     if "wandb" in hydra_cfg.runtime.choices["logger"]:
         wandb.init(
             project="macro_micro_coles", 
-            config=OmegaConf.to_container(cfg),
+            config=OmegaConf.to_container(cfg), # type: ignore
             tags=[preproc_name, backbone_name, *val_names]
         )
         
@@ -54,7 +54,7 @@ def run(cfg: DictConfig):
         )
 
     for val_name, cfg_validation in cfg.get("validation", {}).items():
-        seed_everything() # get seed from os.environ["PL_GLOBAL_SEED"]
+        reset_seed() # get seed from os.environ["PL_GLOBAL_SEED"]
         logger.info(f"{val_name} validation for {experiment_name}")
         if val_name.startswith("global_target"):
             res = global_target_validation(
