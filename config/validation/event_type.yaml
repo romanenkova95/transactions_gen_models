@@ -2,7 +2,7 @@ event_type:
   module:
     _target_: src.local_validation.CategoricalLocalVal
     backbone_embd_size: ${backbone.encoder.hidden_size}
-    num_types: 344
+    num_types: 100
     learning_rate: 0.001
 
   dataset:

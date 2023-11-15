@@ -28,7 +28,7 @@ class MLMModule(VanillaAE):
         super().__init__(**kwargs)
         self.save_hyperparameters()
         self.replace_proba = replace_proba
-        self.mask_token = self.encoder.trx_encoder.embeddings["mcc_code"].num_embeddings - 1 # type: ignore
+        self.mask_token = self.num_types
     
     def forward(self, batch: PaddedBatch):
         """Mask the mcc-codes of given batch & pass them through encoder and decoder
