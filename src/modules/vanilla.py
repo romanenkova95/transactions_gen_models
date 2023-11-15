@@ -66,9 +66,8 @@ class VanillaAE(LightningModule):
         self,
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
-        mcc_head: DictConfig,
-        amount_head: DictConfig,
         optimizer: DictConfig,
+        num_types: Optional[int],
         decoder: Optional[DictConfig] = None,
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
@@ -85,12 +84,10 @@ class VanillaAE(LightningModule):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
                 SeqEncoderContainer to be used as an encoder.
-            mcc_head (DictConfig):
-                DictConfig for mcc head, instantiated with in_channels keyword argument.
-            amount_head (DictConfig):
-                Partial dictconfig for amount head, instantiated with in_channels keyword argument.
             optimizer (DictConfig):
                 Optimizer dictconfig, instantiated with params kwarg.
+            num_types (int):
+                Amount of mcc types; clips all input to this value.
             decoder (AbsDecoder):
                 AbsDecoder, to be used as the decoder.
             scheduler (Optional[DictConfig]):
@@ -119,6 +116,7 @@ class VanillaAE(LightningModule):
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
+        self.num_types = num_types
         self.decoder: AbsDecoder = (
             instantiate(decoder) if decoder else AbsDecoder(self.encoder.embedding_size)
         )
@@ -141,9 +139,8 @@ class VanillaAE(LightningModule):
             logger.info("Freezing decoder weights")
             self.decoder.requires_grad_(False)
 
-        self.amount_head = instantiate(amount_head, in_channels=self.ae_output_size)
-
-        self.mcc_head = instantiate(mcc_head, in_channels=self.ae_output_size)
+        self.amount_head = nn.Linear(self.ae_output_size, 1)
+        self.mcc_head = nn.Linear(self.ae_output_size, self.num_types)
 
         self.optimizer_dictconfig = optimizer
         self.scheduler_dictconfig = scheduler
@@ -159,7 +156,7 @@ class VanillaAE(LightningModule):
 
         multiclass_args: dict[str, Any] = dict(
             task="multiclass",
-            num_classes=self.mcc_head[-2].out_features,
+            num_classes=self.num_types,
             ignore_index=0,
         )
 
@@ -288,6 +285,10 @@ class VanillaAE(LightningModule):
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
         """
+        batch.payload["mcc_code"] = torch.clip(
+            batch.payload["mcc_code"], 0, self.num_types - 1
+        )
+        
         mcc_pred, amount_pred, _, nonpad_mask = self(
             batch
         )  # (B * S, L, MCC_N), (B * S, L)
