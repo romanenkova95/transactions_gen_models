@@ -214,8 +214,8 @@ class PoolingModel(nn.Module):
             )
             batch_of_global_poolings.append(local_pooled_emb)
         batch_of_global_poolings = torch.stack(batch_of_global_poolings)
-        device = next(self.parameters()).device
-        batch_of_global_poolings = batch_of_global_poolings.to(device)
+        
+        batch_of_global_poolings = batch_of_global_poolings
 
         return batch_of_global_poolings
 
@@ -284,7 +284,8 @@ class PoolingModel(nn.Module):
                 pooled_vector = (sortmax_dot_prod * vectors).sum(axis=0)
             else:
                 raise ValueError("Unsupported pooling type.")
-        return pooled_vector
+        device = next(self.parameters()).device
+        return pooled_vector.to(device)
 
     @property
     def embedding_size(self) -> int:
@@ -302,7 +303,7 @@ class PoolingModel(nn.Module):
 
         self.pooling_type = pooling_type
         if pooling_type == "learnable_attention":
-            if hasattr("learnable_attention_matrix", self):
+            if not hasattr(self, "learnable_attention_matrix"):
                 self.learnable_attention_matrix = nn.Linear(
                     self.backbone_embd_size, self.backbone_embd_size
                 )
