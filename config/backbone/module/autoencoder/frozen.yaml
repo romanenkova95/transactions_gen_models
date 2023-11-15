@@ -1,18 +1,11 @@
 _target_: src.modules.VanillaAE
+num_types: 100
 loss_weights:
   mcc: 5
   amount: 1
 
 encoder_weights: coles_best_state_dict.pth
 freeze_enc: True
-
-mcc_head:
-  _target_: torchvision.ops.MLP
-  hidden_channels: [4096, 100]
-
-amount_head:
-  _target_: torchvision.ops.MLP
-  hidden_channels: [4096, 1]
 
 optimizer:
   _target_: torch.optim.AdamW
