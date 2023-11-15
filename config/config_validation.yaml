@@ -1,5 +1,0 @@
-defaults:
-  - preprocessing: churn
-  - dataset: coles
-  - validation: global_target
-  - _self_

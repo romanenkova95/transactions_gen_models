@@ -1,3 +1,5 @@
 """Init module. """
 
-from .local_validation_model import LocalValidationModel
+from .categorical import CategoricalLocalVal
+from .numeric import NumericLocalVal
+from .binary import BinaryLocalVal

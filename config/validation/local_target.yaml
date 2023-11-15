@@ -1,43 +1,29 @@
-name: local_target
+local_target:
+  module:
+    _target_: src.local_validation.BinaryLocalVal
+    backbone_embd_size: 1024
+    learning_rate: 0.001
 
-defaults:
-  - val_mode: event_type
+  dataset:
+    _target_: src.datasets.create_last_token_dataset
+    min_len: 20
+    random_min_seq_len: 20
+    random_max_seq_len: 40
+    window_size: 32
+    window_step: 16
+    target_seq_col: local_target
+    drop_last: false
 
-sequence_encoder:
-  _target_: ptls.nn.RnnSeqEncoder
-  trx_encoder:
-    _target_: ptls.nn.TrxEncoder
-    use_batch_norm_with_lens: True
-    norm_embeddings: False
-    embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 345, out: 24}}
-    numeric_values: {amount: identity}
-  hidden_size: 1024
-  bidir: False
-  trainable_starter: static
-  type: lstm
+  datamodule:
+    _target_: ptls.frames.PtlsDataModule
+    train_batch_size: 512
+    valid_batch_size: 512
+    test_batch_size: 512 
+    train_num_workers: 8
+    valid_num_workers: 8
+    test_num_workers: 8
 
-path_to_state_dict: saved_models/coles_churn_yugay.pth
+  is_reduce_sequence: true
 
-datamodule:
- _target_: ptls.frames.PtlsDataModule
- train_batch_size: 4
- valid_batch_size: 4
- test_batch_size: 4 
- train_num_workers: 2
- valid_num_workers: 2
- test_num_workers: 2
-
-n_runs: 1
-
-trainer:
-  _target_: pytorch_lightning.Trainer
-  accelerator: gpu
-  devices: [0]
-  max_epochs: 1500
-  log_every_n_steps: 10
-  logger: 
-    _target_: pytorch_lightning.loggers.TensorBoardLogger
-    save_dir: logs/local_validation/tensorboard
-    # log_every_n_steps: 10
-  
+  trainer:
+    max_epochs: 10

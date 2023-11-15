@@ -2,14 +2,15 @@
 source credentials
 
 docker run \
- -d \
- -p ${CONTAINER_PORT}:8890 \
- --shm-size=16g \
- --memory=128g \
- --cpus=2 \
- --user root:root \
- --name ${CONTAINER_NAME} \
- --rm -it --init \
- -v /home/${USER}/${SRC}:/app \
- --gpus '"device=3"' \
- ${DOCKER_NAME} bash
+	-d \
+	--shm-size=8g \
+	--memory=60g \
+	--cpus=16 \
+	--user ${DOCKER_USER_ID}:${DOCKER_GROUP_ID} \
+	--name ${CONTAINER_NAME} \
+	--rm -it --init \
+	--gpus all \
+	-p ${PORT}:${PORT} \
+	-v /home/${USER}/${SRC}:/app \
+	--gpus all \
+	${DOCKER_NAME} bash

@@ -1,0 +1,4 @@
+_target_: src.nn.LSTMCellDecoder
+input_size: 1024
+hidden_size: 2048
+num_layers: 1

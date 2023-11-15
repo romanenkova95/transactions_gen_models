@@ -1,2 +1,2 @@
 """Init module"""
-from .coles_learning import learn_coles
+from .learning import learn

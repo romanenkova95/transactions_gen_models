@@ -6,6 +6,10 @@ transforms:
  - 
     _target_: src.preprocessing.CustomDatetimeNormalization
     col_name_original: timestamp
+ -
+    _target_: ptls.preprocessing.pandas.category_identity_encoder.CategoryIdentityEncoder
+    col_name_original: churn_target
+    col_name_target: local_target
  - 
     _target_: ptls.preprocessing.PandasDataPreprocessor
     col_id: user_id
@@ -16,7 +20,6 @@ transforms:
     cols_numerical: [amount]
     return_records: False
 
-# TODO: test normalize timestamp ability
 source: data/preprocessed_new/churn.parquet
 cache_dir: cache
 val_size: .1

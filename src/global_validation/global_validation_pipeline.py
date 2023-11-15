@@ -1,4 +1,6 @@
 """Global target validation script"""
+from pathlib import Path
+import warnings
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -20,24 +22,37 @@ from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
 
 
-def global_target_validation(cfg_preprop: DictConfig, cfg_validation: DictConfig) -> pd.DataFrame:
+def global_target_validation(
+    data: tuple[list[dict], list[dict], list[dict]], 
+    cfg_encoder: DictConfig,
+    cfg_validation: DictConfig,
+    encoder_name: str
+    ) -> pd.DataFrame:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
-        cfg_preprop (DictConfig):    Preprocessing config (specified in the 'config/preprocessing')
-        cfg_validation (DictConfig): Validation config (specified in the 'config/validation')
+        data (tuple[list[dict], list[dict], list[dict]]):
+            train, val & test sets
+        cfg_encoder (DictConfig):
+            encoder config (specified in 'config/encoder')
+        cfg_validation (DictConfig): 
+            Validation config (specified in 'config/validation')
     
     Returns:
         results (pd.DataFrame):      Dataframe with test metrics for each run
     """
     logger = get_logger(name=__name__)
     
-    train, val, test = preprocess(cfg_preprop)
+    train, val, test = data
     logger.info("Instantiating the sequence encoder")
 
     # load pretrained sequence encoder
-    sequence_encoder = instantiate(cfg_validation["sequence_encoder"])
-    sequence_encoder.load_state_dict(torch.load(cfg_validation["path_to_state_dict"]))
+    sequence_encoder = instantiate(cfg_encoder, is_reduce_sequence=True)
+    encoder_state_dict_path = Path(f"saved_models/{encoder_name}.pth")
+    if encoder_state_dict_path.exists():
+        sequence_encoder.load_state_dict(torch.load(encoder_state_dict_path))
+    else:
+        warnings.warn("No encoder state dict found! Validating with random weights...")
 
     logger.info("Processing train sequences")
 
