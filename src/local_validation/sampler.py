@@ -51,10 +51,8 @@ def sliding_window_sampler(
         if is_seq_feature(k, v)
     }
     # convert into PaddedBatch format
-    lengths = (
-        torch.ones(len(idxs_list) * bs, dtype=torch.int, device=times_batch.device)
-        * seq_len
-    )
+    lengths = (splits["event_time"] > 0).sum(axis=-1).to(times_batch.device)
+
     collated_batch = PaddedBatch(splits, lengths)
 
     return collated_batch
