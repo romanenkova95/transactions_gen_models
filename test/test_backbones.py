@@ -63,7 +63,20 @@ class TestBackbones(unittest.TestCase):
             preprocessing="churn",
             validations=["local_target", "event_time", "event_type", "global_target"],
         )
-
+    
+    def test_cotic(self):
+        self.run_with_config(
+            backbone="cotic_churn",
+            preprocessing="cotic_churn",
+            validations=["local_target", "event_time", "event_type", "global_target"],
+        )
+    
+    def test_ts2vec(self):
+        self.run_with_config(
+            backbone="ts2vec_churn",
+            preprocessing="churn",
+            validations=["local_target", "event_time", "event_type", "global_target"],
+        )
 
 if __name__ == "__main__":
     unittest.main()
