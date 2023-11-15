@@ -129,6 +129,18 @@ class TimeCLSampler(AbsSplit):
         return [sorted(idx) for idx in idxs]
 
 
+class SampleLength(AbsSplit):
+    """
+    A sampler that cuts only first N transactions.
+    """
+
+    def __init__(self, length):
+        self.length = length
+
+    def split(self, dates):
+        return [np.arange(self.length)]
+
+
 class CustomColesDataset(ColesDataset):
     """
     Custom coles dataset inhereted from ptls coles dataset.
