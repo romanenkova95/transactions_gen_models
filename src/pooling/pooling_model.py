@@ -255,16 +255,15 @@ class PoolingModel(nn.Module):
             pooled_vector (torch.Tensor): pooling vector for given timepoint
 
         """
-
-        indexes = np.where(np.array(self.times) < time)[0]
-
-        if len(indexes) == 0:
+        index = np.searchsorted(self.times, time, "right") - 1
+        if index < 0:
             warnings.warn(
                 "Attention! Given data was before than any in train dataset. Pooling vector is set to random."
             )
             pooled_vector = torch.rand(self.backbone_embd_size)
+
         else:
-            closest_time = self.times[indexes[-1]]
+            closest_time = self.times[index]
             vectors = self.embegings_dataset[closest_time]
 
             if self.pooling_type == "mean":
