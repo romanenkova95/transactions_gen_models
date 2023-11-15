@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Literal, Optional
 import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from ptls.preprocessing.base import ColTransformer
 from ptls.preprocessing.pandas.col_transformer import ColTransformerPandasMixin
@@ -39,13 +40,12 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
     ) -> None:
         super().__init__(
             col_name_original=col_name_original,
-            col_name_target=col_name_target, # type: ignore
-            is_drop_original_col=is_drop_original_col
+            col_name_target=col_name_target,  # type: ignore
+            is_drop_original_col=is_drop_original_col,
         )
-    
+
     def fit(self, x: pd.DataFrame):
-        """Record minimum timestamp
-        """
+        """Record minimum timestamp"""
         super().fit(x)
         self.min_timestamp = int(x[self.col_name_original].min().timestamp())
 
@@ -59,3 +59,35 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
         )
         x = super().transform(x)
         return x
+
+
+class DropDuplicates(BaseEstimator, TransformerMixin):
+    """Drop duplicate rows (with same index_cols),
+    keeping according to ```keep``` parameter ("first"/"last"/False).
+    """
+
+    def __init__(self, index_cols: list[str], keep: Literal["first", "last", False]) -> None:
+        """Initialize DropDuplicates transform
+
+        Args:
+            index_cols (list[str]):
+                which columns to consider
+            keep (Literal[&quot;first&quot;, &quot;last&quot;, False]):
+                which rows to keep:
+                - first - keep first row in duplicates
+                - last - keep last row in duplicates
+                - False - remove all duplicates
+        """
+        self.index_cols = index_cols
+        self.keep = keep
+
+    def fit(self, x: pd.DataFrame) -> "DropDuplicates":
+        if not set(self.index_cols) < set(x.columns):
+            raise ValueError(
+                f"Columns mismatch! {self.index_cols} is not subset of {x.columns}"
+            )
+        
+        return self
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        return x.drop_duplicates(subset=self.index_cols, keep=self.keep)
