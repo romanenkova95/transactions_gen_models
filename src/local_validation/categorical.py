@@ -39,9 +39,7 @@ class CategoricalLocalVal(LocalValidationModelBase):
             freeze_backbone (bool) - whether to freeze backbone model
             learning_rate (float) - learning rate for prediction head training
         """
-        pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, num_types)
-        )
+        pred_head = nn.Sequential(nn.Linear(backbone_embd_size, num_types))
 
         metrics = MetricCollection(
             {
@@ -75,15 +73,28 @@ class CategoricalLocalVal(LocalValidationModelBase):
             metrics=metrics,
             freeze_backbone=freeze_backbone,
             learning_rate=learning_rate,
-            postproc=nn.Softmax(1)
+            postproc=nn.Softmax(1),
         )
 
         self.num_types = num_types
         self.pad_value = pad_value
 
-    def shared_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def shared_step(
+        self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Override shared_step to clip mcc_code values to [0, num_types]
+
+        Args:
+            batch (tuple[PaddedBatch, torch.Tensor]): Tuple of paddedbatch & target 
+            batch_idx (int): ignored
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: preds, target
+        """
         inputs, target = batch
-        inputs.payload["mcc_code"] = torch.clip(inputs.payload["mcc_code"], 0, self.num_types - 1)
+        inputs.payload["mcc_code"] = torch.clip(
+            inputs.payload["mcc_code"], 0, self.num_types - 1
+        )
         target = torch.clip(target, 0, self.num_types - 1)
         preds = self(inputs)
         return preds, target

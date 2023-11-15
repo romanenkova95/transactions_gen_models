@@ -1,6 +1,5 @@
 import os
 import unittest
-import warnings
 
 import logging
 from main import run
@@ -33,28 +32,28 @@ class TestBackbones(unittest.TestCase):
         self.run_with_config(
             backbone="ae_nlp",
             preprocessing="churn",
-            validations=["local_target", "event_time", "event_type"],
+            validations=["local_target", "event_time", "event_type", "global_target"],
         )
 
     def test_coles_churn(self):
         self.run_with_config(
             backbone="coles_churn",
             preprocessing="churn",
-            validations=["local_target", "event_time", "event_type"],
+            validations=["local_target", "event_time", "event_type", "global_target"],
         )
 
     def test_coles_emb_churn(self):
         self.run_with_config(
             backbone="coles_emb_churn",
             preprocessing="churn",
-            validations=["local_target", "event_time", "event_type"],
+            validations=["local_target", "event_time", "event_type", "global_target"],
         )
 
     def test_transformer(self):
         self.run_with_config(
             backbone="transformer",
             preprocessing="churn",
-            validations=["local_target", "event_time", "event_type"],
+            validations=["local_target", "event_time", "event_type", "global_target"],
         )
 
 
