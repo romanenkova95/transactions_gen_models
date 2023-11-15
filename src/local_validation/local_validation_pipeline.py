@@ -88,7 +88,7 @@ def local_target_validation(
 
     # Make wandb log runs to different metric graphs
     if isinstance(val_trainer.logger, WandbLogger):
-        val_trainer.logger._prefix = f"{val_name}"
+        val_trainer.logger._prefix = val_name
 
     val_trainer.fit(valid_model, datamodule)
     if not val_trainer.fast_dev_run and val_trainer.checkpoint_callback:
@@ -99,6 +99,6 @@ def local_target_validation(
     metrics = val_trainer.test(valid_model, datamodule)[0]
 
     if not val_trainer.fast_dev_run:
-        torch.save(valid_model.state_dict(), f"saved_models/{val_name}.pth")
+        torch.save(valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth")
 
     return metrics
