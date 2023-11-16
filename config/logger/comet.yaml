@@ -3,5 +3,5 @@ save_dir: logs/coltic
 api_key: agnHNC2vEt7tOxnnxT4LzYf7Y
 project_name: macro-micro-coles
 workspace: stalex2902
-experiment_name: COTIC_churn_standard_params
+experiment_name: COTIC
 display_summary_level: 0

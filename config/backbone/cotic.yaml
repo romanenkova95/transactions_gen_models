@@ -1,7 +1,7 @@
 defaults:
  - dataset: cotic
- - encoder: cotic_churn
- - module: cotic_churn
+ - encoder: cotic
+ - module: cotic
  - _self_
 
 datamodule:
