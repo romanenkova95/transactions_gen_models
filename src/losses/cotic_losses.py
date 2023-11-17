@@ -18,7 +18,7 @@ class CoticLoss(nn.Module):
         type_pad_value: int = 0,
         reductions: Dict[str, str] = {"log_likelihood": "mean", "type": "sum", "time": "mean"},
     ) -> None:
-        """Initializ CoticLoss.
+        """Initialize CoticLoss.
         
         Args:
             type_loss_coeff (float) - weighting coefficient for the type loss
@@ -68,7 +68,6 @@ class CoticLoss(nn.Module):
 
         Args:
             times (torch.Tensor) - event times since start, shape = (bs, max_len)
-            featuers (torch.Tensor) event features, shape = (bs, max_len, d)
             sim_size (int) - number of simulated timestamps between events for likelihood computation
 
         Returns:
@@ -146,10 +145,11 @@ class CoticLoss(nn.Module):
         """Compute log of the intensity and the integral.
         
         Args:
-            model (nn.Module) - CCNN model
-            enc_output (torch.Tensor)
-            event_time (torch.Tensor)
-            event_type (torch.Tensor)
+            model (nn.Module) - CCNN backbone model
+            enc_output (torch.Tensor) - embedding obtained by the CCNN model 
+                                        that is fed into final_list of layers for intensity computation
+            event_time (torch.Tensor) - true event times
+            event_type (torch.Tensor) - true event types
         
         Returns a tuple of:
             * event term of log-likelihood (sum)
@@ -161,6 +161,7 @@ class CoticLoss(nn.Module):
         type_mask = torch.zeros(
             [*event_type.size(), model.num_types], device=enc_output.device
         )
+        
         for i in range(model.num_types):
             type_mask[:, :, i] = (event_type == i + 1).bool().to(enc_output.device)
 
@@ -244,14 +245,14 @@ class CoticLoss(nn.Module):
     def compute_loss(
         self,
         model: nn.Module,
-        inputs: Union[Tuple, torch.Tensor],
+        inputs: Tuple[torch.Tensor],
         outputs: Tuple[torch.Tensor],
     ) -> torch.Tensor:
         """Compute composite loss for the COTIC model.
 
         Args:
             model (nn.Module) - CCNN backbone model that is being trained
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            inputs (Tuple of torch.Tensors) - batch received from the dataloader
             outputs (Tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
         Returns:

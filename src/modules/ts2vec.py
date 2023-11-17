@@ -57,11 +57,11 @@ def generate_binomial_mask(B: int, T: int, p: float = 0.5) -> torch.Tensor:
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
 
 
-def take_per_row(A: torch.Tensor, indx: np.array, num_elem: int):
-    """Takes 'num_elem' from each row of 'A', based on the indices provided in the 'indx'.
+def take_per_row(inputs: torch.Tensor, indx: np.array, num_elem: int) -> torch.Tensor:
+    """Takes 'num_elem' from each row of 'A', starting from the indices provided in the 'indx'.
     
     Args:
-        A (torch.Tensor) - original tensor with data
+        inputs (torch.Tensor) - original tensor with data
         indx (np.array) - array of indices to be taken
         num_elem (int) - number of element to be taken from each row
         
@@ -69,36 +69,36 @@ def take_per_row(A: torch.Tensor, indx: np.array, num_elem: int):
         subset of initial sequences data
     """
     all_indx = indx[:, None] + np.arange(num_elem)
-    return A[torch.arange(all_indx.shape[0])[:, None], all_indx]
+    return inputs[torch.arange(all_indx.shape[0])[:, None], all_indx]
 
 
-def mask_input(x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+def mask_input(inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """Mask input using the given boolean mask.
     
     Args:
-        x (torch.Tensor) - input seqiences
+        inputs (torch.Tensor) - input sequences
         mask (torch.Tensor) - boolean mask
     
     Returns:
         masked input sequences
     """
-    shape = x.size()
+    shape = inputs.size()
 
     if mask == 'binomial':
-        mask = generate_binomial_mask(shape[0], shape[1]).to(x.device)
+        mask = generate_binomial_mask(shape[0], shape[1]).to(inputs.device)
     elif mask == 'continuous':
-        mask = generate_continuous_mask(shape[0], shape[1]).to(x.device)
+        mask = generate_continuous_mask(shape[0], shape[1]).to(inputs.device)
     elif mask == 'all_true':
-        mask = x.payload.new_full((shape[0], shape[1]), True, dtype=torch.bool)
+        mask = inputs.new_full((shape[0], shape[1]), True, dtype=torch.bool)
     elif mask == 'all_false':
-        mask = x.payload.new_full((shape[0], shape[1]), False, dtype=torch.bool)
+        mask = inputs.new_full((shape[0], shape[1]), False, dtype=torch.bool)
     elif mask == 'mask_last':
-        mask = x.payload.new_full((shape[0], shape[1]), True, dtype=torch.bool)
+        mask = inputs.new_full((shape[0], shape[1]), True, dtype=torch.bool)
         mask[:, -1] = False
 
-    x[~mask] = 0
+    inputs[~mask] = 0
 
-    return x
+    return inputs
 
 
 class TS2Vec(ABSModule):
@@ -119,8 +119,10 @@ class TS2Vec(ABSModule):
             encoder (DictConfig) - config for TS2Vec sequence encoder instantiation
             optimizer_partial (DictConfig) - config for optimizer instantiation (ptls format)
             lr_scheduler_partial (DictConfig) - config for lr scheduler instantiation (ptls format)
-            head (DictConfig or None) - if not None, use this head after the backbone model
-            loss: (DictConfig or None) - if not None, contains DictConfig for TS2Vec loss instantiation, else use default loss
+            head (DictConfig or None) - if not None, use this head after the backbone model,
+                                        else use ptls.nn.head.Head(use_norm_encoder=True) 
+            loss: (DictConfig or None) - if not None, contains DictConfig for TS2Vec loss instantiation, else use default loss,
+                                         else use src.losses.HierarchicalContrastiveLoss with default hyper-parameters
             col_time (str) - name of the column containing timestamps
             mask_mode (str) - type of mask to be generated & used
         '''

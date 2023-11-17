@@ -76,8 +76,14 @@ class Cotic(ABSModule):
             pred_times,
             pred_types,
         )  # format is (encoded_output, (pred_times, pred_types))
+        
+        ll_loss, type_loss, time_loss = self._loss.compute_loss(
+            model=self.seq_encoder.seq_encoder.feature_extractor,
+            inputs=inputs,
+            outputs=outputs,
+        )
 
-        return inputs, outputs
+        return (inputs, outputs), (ll_loss, type_loss, time_loss)
 
     def training_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> Dict[str, float]:
         """Training step of the module.
@@ -88,13 +94,8 @@ class Cotic(ABSModule):
         Returns:
             dict with train loss
         """
-        inputs, outputs = self.shared_step(batch)
-
-        ll_loss, type_loss, time_loss = self._loss.compute_loss(
-            model=self.seq_encoder.seq_encoder.feature_extractor,
-            inputs=inputs,
-            outputs=outputs,
-        )
+        
+        (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("train_ll_loss", ll_loss, prog_bar=True)
 
@@ -117,13 +118,8 @@ class Cotic(ABSModule):
         Returns:
             dict with val loss
         """
-        inputs, outputs = self.shared_step(batch)
-
-        ll_loss, type_loss, time_loss = self._loss.compute_loss(
-            model=self.seq_encoder.seq_encoder.feature_extractor,
-            inputs=inputs,
-            outputs=outputs,
-        )
+        
+        (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("val_ll_loss", ll_loss, prog_bar=True)
 
@@ -137,14 +133,14 @@ class Cotic(ABSModule):
 
         return {"loss": ll_loss}
 
-    def test_step(self, batch, _) -> None:
+    def test_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> None:
         """Test step of the module.
         
         Args:
             batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
         """
         if self.head_start is not None:
-            inputs, outputs = self.shared_step(batch)
+            (inputs, outputs), _ = self.shared_step(batch)
 
             self.test_metrics.update(inputs, outputs)
 

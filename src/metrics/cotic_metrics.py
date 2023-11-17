@@ -40,11 +40,11 @@ class CoticMetrics(ABC):
         self.__event_type_preds = torch.Tensor([])
 
     @staticmethod
-    def get_return_time_target(inputs: Union[Tuple, torch.Tensor]) -> torch.Tensor:
+    def get_return_time_target(inputs: Tuple[torch.Tensor]) -> torch.Tensor:
         """Take input batch and returns the corresponding return time targets as 1d Tensor.
 
         Args:
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            inputs (Tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
 
         Returns:
             return_time_target - torch.Tensor, 1d Tensor with return time targets
@@ -55,11 +55,11 @@ class CoticMetrics(ABC):
         return return_time[mask]
 
     @staticmethod
-    def get_event_type_target(inputs: Union[Tuple, torch.Tensor]) -> torch.Tensor:
+    def get_event_type_target(inputs: Tuple[torch.Tensor]) -> torch.Tensor:
         """Take input batch and returns the corresponding event type targets as 1d Tensor.
 
         Args:
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            inputs (Tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
 
         Returns:
             event_type_target - torch.Tensor, 1d Tensor with event type targets
@@ -70,13 +70,12 @@ class CoticMetrics(ABC):
 
     @staticmethod
     def get_return_time_predicted(
-        inputs: Union[Tuple, torch.Tensor],
-        outputs: Union[Tuple, torch.Tensor],
+        inputs: Tuple[torch.Tensor], outputs: Tuple[torch.Tensor],
     ) -> torch.Tensor:
         """Get return time predictions from model outputs.
 
         Args:
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
+            inputs (Tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
             outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
         Returns:
@@ -88,14 +87,13 @@ class CoticMetrics(ABC):
 
     @staticmethod
     def get_event_type_predicted(
-        inputs: Union[Tuple, torch.Tensor],
-        outputs: Union[Tuple, torch.Tensor],
+        inputs: Tuple[torch.Tensor], outputs: Tuple[torch.Tensor],
     ) -> torch.Tensor:
         """Get event type predictions from model outputs.
 
         Args:
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
-            outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+            inputs (Tuple of torch.Tensors) - input batch in the form of (event_times, event_types)
+            outputs (Tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
         Returns:
             event_type_predicted - torch.Tensor, 2d Tensor with event type unnormalized predictions
@@ -105,13 +103,13 @@ class CoticMetrics(ABC):
         return event_type_prediction[mask, :]
 
     def update(
-        self, inputs: Union[Tuple, torch.Tensor], outputs: Union[Tuple, torch.Tensor]
+        self, inputs: Tuple[torch.Tensor], outputs: Tuple[torch.Tensor]
     ) -> None:
         """Compute predictions and targets for a batch and store values.
         
         Args:
-            inputs (Tuple or torch.Tensor) - batch received from the dataloader
-            outputs (Tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+            inputs (Tuple of torch.Tensors) - input batch in the form of (event_times, event_types)
+            outputs (Tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
         """
         step_return_time_target = self.get_return_time_target(inputs)
         step_event_type_target = self.get_event_type_target(inputs)
@@ -145,7 +143,7 @@ class CoticMetrics(ABC):
             ]
         )
 
-    def compute(self) -> Tuple[float, float, float]:
+    def compute(self) -> Tuple[float]:
         """Compute metrics for the set of stored predictions and targets.
         
         Returns:

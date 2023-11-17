@@ -15,8 +15,8 @@ class ConvEncoder(AbsSeqEncoder):
     def __init__(
         self,
         kernel_size: int,
+        hidden_size: int,
         input_size: Optional[int] = None,
-        hidden_size: Optional[int] = None,
         num_layers: int = 10,
         dropout: float = 0,
         is_reduce_sequence: bool = False,  
@@ -26,8 +26,8 @@ class ConvEncoder(AbsSeqEncoder):
         
         Args:
             kernel_size (int) - kernel size
+            hidden_size (int) - hidden size (aka embedding dim for this backbone)
             input_size (int or None) - input size (if None, use output size of TrxEncoder)
-            hidden_size (Optional or None) - hidden size
             num_layers (int) - number of layers (convolutional blocks)
             dropout (float) - dropout probability
             is_reduce_sequence (bool) - if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq' 

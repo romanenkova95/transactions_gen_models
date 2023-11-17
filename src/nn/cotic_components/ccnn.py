@@ -35,7 +35,7 @@ class CCNN(nn.Module):
         self.event_emb = nn.Embedding(num_types + 2, in_channels, padding_idx=0)
 
         self.in_channels = [in_channels] + [nb_filters] * nb_layers
-        include_zero_lag = [True] + [True] * nb_layers
+        include_zero_lag = [True] * (nb_layers + 1)
         self.dilation_factors = [2**i for i in range(0, nb_layers)]
 
         self.num_types = num_types
