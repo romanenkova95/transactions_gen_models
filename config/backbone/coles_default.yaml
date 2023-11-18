@@ -1,14 +1,8 @@
-name: coles_default
-
-dataset:
-  _target_: src.coles.CustomColesDataset
-  min_len: 25
-  col_time: event_time
-  splitter:
-    _target_: ptls.frames.coles.split_strategy.SampleSlices
-    split_count: 5
-    cnt_min: 25
-    cnt_max: 150
+defaults:
+ - dataset: coles
+ - encoder: coles_default
+ - module: coles_default
+ - _self_
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
@@ -17,31 +11,6 @@ datamodule:
   train_num_workers: 8
   valid_num_workers: 8
 
-model:
-  _target_: src.coles.CustomCoLES
-  optimizer_partial:
-    _partial_: True
-    _target_: torch.optim.Adam
-    lr: 0.004
-    weight_decay: 0.0
-  lr_scheduler_partial:
-    _partial_: True
-    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-    factor: 0.9025
-    patience: 2
-  sequence_encoder:
-    _target_: ptls.nn.RnnSeqEncoder
-    trx_encoder:
-      _target_: ptls.nn.TrxEncoder
-      use_batch_norm_with_lens: True
-      norm_embeddings: False
-      embeddings_noise: 0.0003
-      embeddings: {mcc_code: {in: 345, out: 16}}
-      numeric_values: {amount: identity}
-    hidden_size: 512
-    bidir: False
-    trainable_starter: static
-    type: lstm
-
-defaults:
-  - trainer_coles: trainer 
+trainer:
+  max_epochs: 60
+  log_every_n_steps: 10
