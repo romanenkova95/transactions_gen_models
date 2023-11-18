@@ -1,6 +1,6 @@
 defaults:
   - preprocessing: churn
-  - backbone: ae_nlp
+  - backbone: transformer
   - validation: [event_type, event_time, global_target, local_target]
   - logger: wandb
   - _self_
