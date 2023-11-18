@@ -1,0 +1,7 @@
+_target_: src.datasets.TimeCLColesDataset
+min_len: 15
+max_len: 150
+split_count: 5
+llambda: 0.4
+rlambda: 0.6
+col_time: event_time

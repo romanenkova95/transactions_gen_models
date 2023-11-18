@@ -1,17 +1,9 @@
-name: coles_churn
+defaults:
+  - dataset: coles_timecl
+  - encoder: coles_churn
+  - module: coles_churn
+  - _self_
 
-dataset:
-  _target_: src.coles.CustomColesDataset
-  min_len: 15
-  col_time: event_time
-  splitter:
-    _target_: src.coles.datamodule.TimeCLSampler
-    min_len: ${..min_len}
-    max_len: 150
-    llambda: 0.4
-    rlambda: 0.6
-    split_count: 5
-  
 datamodule:
   _target_: ptls.frames.PtlsDataModule
   train_batch_size: 128
@@ -19,29 +11,6 @@ datamodule:
   train_num_workers: 8
   valid_num_workers: 8
 
-model:
-  _target_: src.coles.CustomCoLES
-  optimizer_partial:
-    _partial_: True
-    _target_: torch.optim.Adam
-    lr: .004
-    weight_decay: .0
-  lr_scheduler_partial:
-    _partial_: True
-    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-    factor: .9025
-    patience: 2
-  sequence_encoder:
-    _target_: ptls.nn.RnnSeqEncoder
-    trx_encoder:
-      _target_: ptls.nn.TrxEncoder
-      use_batch_norm_with_lens: True
-      norm_embeddings: False
-      embeddings_noise: .0003
-      embeddings: {mcc_code: {in: 345, out: 24}}
-      numeric_values: {amount: identity}
-    hidden_size: 1024
-    type: lstm
-
-defaults:
-  - trainer_coles: trainer 
+trainer:
+  max_epochs: 60
+  log_every_n_steps: 10
