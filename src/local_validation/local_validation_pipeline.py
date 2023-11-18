@@ -10,7 +10,7 @@ import pandas as pd
 import torch
 
 from pytorch_lightning import seed_everything, Trainer
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import WandbLogger, CometLogger, LightningLoggerBase
 
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
@@ -86,8 +86,8 @@ def local_target_validation(
         **cfg_validation["trainer"],
     )
 
-    # Make wandb log runs to different metric graphs
-    if isinstance(val_trainer.logger, WandbLogger):
+    # Make wandb/comet log runs to different metric graphs
+    if isinstance(val_trainer.logger, (WandbLogger, CometLogger)):
         val_trainer.logger._prefix = val_name
 
     val_trainer.fit(valid_model, datamodule)
