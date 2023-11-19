@@ -23,7 +23,7 @@ class LocalValidationModelBase(pl.LightningModule):
         metrics: MetricCollection,
         freeze_backbone: bool = True,
         learning_rate: float = 1e-3,
-        postproc: Optional[Callable[[torch.Tensor], torch.Tensor]]=None
+        postproc: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
     ) -> None:
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 
@@ -116,6 +116,6 @@ class LocalValidationModelBase(pl.LightningModule):
         self.test_metrics(self.postproc(preds), target)
         self.log_dict(self.test_metrics, on_step=False, on_epoch=True)  # type: ignore
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> torch.optim.Optimizer:
         """Initialize optimizer for the LocalValidationModel."""
         return torch.optim.Adam(self.parameters(), lr=self.lr)
