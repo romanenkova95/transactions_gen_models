@@ -6,6 +6,7 @@ from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import AbsSplit, SampleUniform
 
+
 class TimeCLSampler(AbsSplit):
     """
     TimeCL sampler implementation, ptls-style.
@@ -82,6 +83,7 @@ class TimeCLColesDataset(ColesDataset):
     """
     CoLES dataset with TimeCL sampler.
     """
+
     def __init__(
         self,
         data: list[dict[str, torch.Tensor]],
@@ -95,19 +97,15 @@ class TimeCLColesDataset(ColesDataset):
         col_time: str = "event_time",
         **kwargs
     ):
-    if deterministic:
-        splitter = SampleUniform(
-            split_count, (min + random_max_seq_len) // 2
+        if deterministic:
+            splitter = SampleUniform(split_count, (min + random_max_seq_len) // 2)
+        else:
+            splitter = TimeCLSampler(min_len, max_len, llambda, rlambda, split_count)
+
+        super().__init__(
+            MemoryMapDataset(data, [SeqLenFilter(min_len)]),
+            splitter,
+            col_time,
+            *args,
+            **kwargs
         )
-    else:
-        splitter = TimeCLSampler(min_len, max_len, llambda, rlambda, split_count)
-
-    super().__init__(
-        MemoryMapDataset(data, [SeqLenFilter(min_len)]),
-        splitter,
-        col_time,
-        *args,
-        **kwargs
-    )
-
-
