@@ -1,7 +1,7 @@
 defaults:
   - dataset: basic
-  - encoder: transformer
-  - module: transformer
+  - encoder: mlm
+  - module: mlm
   - _self_
 
 datamodule:

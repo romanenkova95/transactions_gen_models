@@ -20,50 +20,37 @@ class TestBackbones(unittest.TestCase):
         for file in saved_test_models:
             file.unlink()
 
-    def run_with_config(self, backbone, preprocessing, validations):
-        with self.subTest("train"), initialize("../config", version_base=None):
-            cfg = compose(
-                "master.yaml",
-                overrides=[
-                    f"backbone={backbone}",
-                    f"preprocessing={preprocessing}",
-                    f"validation={validations}",
-                    f"seed={TEST_SEED}"
-                ],
-                return_hydra_config=True,
-            )
-            instance = HydraConfig.instance()
-            instance.set_config(cfg)
-            run(cfg)
+    def run_with_config(self, backbones, preprocessings, validations):
+        for backbone in backbones:
+            for preprocessing in preprocessings:
+                with self.subTest(f"{backbone}_{preprocessing}"), initialize("../config", version_base=None):
+                    cfg = compose(
+                        "master.yaml",
+                        overrides=[
+                            f"backbone={backbone}",
+                            f"preprocessing={preprocessing}",
+                            f"validation={validations}",
+                            f"seed={TEST_SEED}"
+                        ],
+                        return_hydra_config=True,
+                    )
+                    instance = HydraConfig.instance()
+                    instance.set_config(cfg)
+                    run(cfg)
 
-    def test_ae_nlp(self):
+    def test_run_config(self):
         self.run_with_config(
-            backbone="ae_nlp",
-            preprocessing="churn",
+            backbones=[
+                "ae_nlp_pretrained", 
+                "ae_nlp_from_scratch",
+                "ae_nlp_frozen",
+                "coles_churn", 
+                "coles_emb_churn", 
+                "mlm"
+            ],
+            preprocessings=["default", "churn"],
             validations=["local_target", "event_time", "event_type", "global_target"],
         )
-
-    def test_coles_churn(self):
-        self.run_with_config(
-            backbone="coles_churn",
-            preprocessing="churn",
-            validations=["local_target", "event_time", "event_type", "global_target"],
-        )
-
-    def test_coles_emb_churn(self):
-        self.run_with_config(
-            backbone="coles_emb_churn",
-            preprocessing="churn",
-            validations=["local_target", "event_time", "event_type", "global_target"],
-        )
-
-    def test_transformer(self):
-        self.run_with_config(
-            backbone="transformer",
-            preprocessing="churn",
-            validations=["local_target", "event_time", "event_type", "global_target"],
-        )
-
 
 if __name__ == "__main__":
     unittest.main()
