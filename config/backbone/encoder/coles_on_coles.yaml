@@ -1,7 +1,7 @@
 _target_: ptls.nn.RnnSeqEncoder
 trx_encoder:
   _target_: src.nn.PretrainedRnnSeqEncoder
-  path_to_dict: saved_models/encoders/encoder_dict.pth
+  path_to_dict: coles_best_state_dict.pth
   trx_encoder:
     _target_: ptls.nn.TrxEncoder
     use_batch_norm_with_lens: True

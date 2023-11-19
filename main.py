@@ -4,6 +4,7 @@ import os
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning.utilities.seed import reset_seed, seed_everything
 import wandb
 
 from src import learn
@@ -35,26 +36,32 @@ def run(cfg: DictConfig):
     if "wandb" in hydra_cfg.runtime.choices["logger"]:
         wandb.init(
             project="macro_micro_coles", 
-            config=OmegaConf.to_container(cfg),
+            config=OmegaConf.to_container(cfg), # type: ignore
             tags=[preproc_name, backbone_name, *val_names]
         )
         
     data = preprocess(cfg["preprocessing"])
+    seed = seed_everything(cfg.get("seed"))
+    experiment_name = f"{backbone_name}_{preproc_name}_{seed}"
     
     if cfg["pretrain"]:
-        logger.info(f"Fitting {backbone_name}...")
+        logger.info(f"Experiment {experiment_name}...")
         learn(
             data=data,
             backbone_cfg=cfg["backbone"],
             logger_cfg=cfg["logger"],
-            encoder_save_name=backbone_name,
+            encoder_save_name=experiment_name,
         )
 
     for val_name, cfg_validation in cfg.get("validation", {}).items():
-        logger.info(f"{val_name} validation for {backbone_name}")
+        reset_seed() # get seed from os.environ["PL_GLOBAL_SEED"]
+        logger.info(f"{val_name} validation for {experiment_name}")
         if val_name.startswith("global_target"):
             res = global_target_validation(
-                data, cfg["backbone"]["encoder"], cfg_validation, backbone_name
+                data=data, 
+                cfg_encoder=cfg["backbone"]["encoder"], 
+                cfg_validation=cfg_validation, 
+                encoder_name=experiment_name
             )
         else:
             res = local_target_validation(
@@ -62,8 +69,8 @@ def run(cfg: DictConfig):
                 cfg_encoder=cfg["backbone"]["encoder"],
                 cfg_validation=cfg_validation,
                 cfg_logger=cfg["logger"],
-                encoder_name=backbone_name,
-                val_name=val_name,
+                encoder_name=experiment_name,
+                val_name=f"{experiment_name}_{val_name}",
             )
 
         print(res)

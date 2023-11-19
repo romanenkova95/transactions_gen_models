@@ -91,7 +91,6 @@ def learn(
     )
 
     # Training the model
-    seed_everything()
     trainer.fit(module, datamodule)
 
     # Load the checkpoint & recalculate val metrics
