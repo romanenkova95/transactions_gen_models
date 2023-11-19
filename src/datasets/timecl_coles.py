@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from typing import List
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
@@ -71,8 +72,20 @@ class TimeCLSampler(AbsSplit):
         ).astype(int)
 
         idxs = [
-            list(np.random.choice(dense_timestamps, size=n_d, replace=False))
-            + list(np.random.choice(sparse_timestamps, size=n_s, replace=False))
+            list(
+                np.random.choice(
+                    dense_timestamps,
+                    size=min(n_d, len(dense_timestamps)),
+                    replace=False,
+                )
+            )
+            + list(
+                np.random.choice(
+                    sparse_timestamps,
+                    size=min(n_s, len(sparse_timestamps)),
+                    replace=False,
+                )
+            )
             for (n_d, n_s) in list(zip(n_dense, n_sparse))
         ]
 
@@ -98,7 +111,7 @@ class TimeCLColesDataset(ColesDataset):
         **kwargs
     ):
         if deterministic:
-            splitter = SampleUniform(split_count, (min + random_max_seq_len) // 2)
+            splitter = SampleUniform(split_count, (min_len + max_len) // 2)
         else:
             splitter = TimeCLSampler(min_len, max_len, llambda, rlambda, split_count)
 
