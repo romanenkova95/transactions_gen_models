@@ -1,6 +1,6 @@
 defaults:
-  - preprocessing: churn
-  - backbone: transformer
+  - preprocessing: default
+  - backbone: mlm
   - validation: [event_type, event_time, global_target, local_target]
   - logger: wandb
   - _self_
