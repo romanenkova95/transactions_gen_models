@@ -63,9 +63,13 @@ def local_target_validation(
             "No encoder state dict found! Validating without pre-loading state-dict..."
         )
 
-    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=False)
-    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=True)
-    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=True)
+    ds_factory = call(cfg_validation["dataset"], _partial_=True)
+    train_deterministic = cfg_validation["dataset"].get("deterministic", False)
+    val_deterministic = cfg_validation["dataset"].get("deterministic", True)
+    
+    train_dataset = ds_factory(data=train, deterministic=train_deterministic)
+    val_dataset = ds_factory(data=val, deterministic=val_deterministic)
+    test_dataset = ds_factory(data=test, deterministic=val_deterministic)
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],
@@ -99,6 +103,8 @@ def local_target_validation(
     metrics = val_trainer.test(valid_model, datamodule)[0]
 
     if not val_trainer.fast_dev_run:
-        torch.save(valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth")
+        torch.save(
+            valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth"
+        )
 
     return metrics
