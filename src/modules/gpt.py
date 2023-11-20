@@ -24,6 +24,7 @@ from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
 
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+
 from ptls.frames.bert.losses.query_soft_max import QuerySoftmaxLoss
 
 from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
@@ -35,7 +36,7 @@ logger = get_logger(name=__name__)
 
 
 class GPTModule(LightningModule):
-    """A vanilla autoencoder, without masking, just encodes target sequence and then restores it.
+    """A module for GPT-like training, just encodes the sequence and predicts its shifted version.
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -45,18 +46,12 @@ class GPTModule(LightningModule):
      - an r2-score on amounts
 
      Attributes:
-        out_amount (nn.Linear):
-            A linear layer, which restores the transaction amounts.
-        out_mcc (nn.Linear):
-            A linear layer, which restores the transaction mcc codes.
         amount_loss_weight (float):
             Normalized loss weight for the transaction amount MSE loss.
         mcc_loss_weight (float):
             Normalized loss weight for the transaction mcc code CE loss.
         lr (float):
             The learning rate, extracted from the optimizer_config.
-        ae_output_size (int):
-            The output size of the decoder.
 
     Notes:
         amount_loss_weight, mcc_loss_weight are normalized so that amount_loss_weight + mcc_loss_weight = 1.
@@ -74,7 +69,7 @@ class GPTModule(LightningModule):
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
     ) -> None:
-        """Initialize VanillaAE internal state.
+        """Initialize GPTModule internal state.
 
         Args:
             loss_weights (dict):
@@ -87,29 +82,11 @@ class GPTModule(LightningModule):
                 Partial dictconfig for amount head, instantiated with in_channels keyword argument.
             optimizer (DictConfig):
                 Optimizer dictconfig, instantiated with params kwarg.
-            decoder (AbsDecoder):
-                AbsDecoder, to be used as the decoder.
             scheduler (Optional[DictConfig]):
                 Optionally, an lr scheduler dictconfig, instantiated with optimizer kwarg
             scheduler_config (Optional[dict]):
                 An lr_scheduler config for specifying scheduler-specific params, such as which metric to monitor
                 See LightningModule.configure_optimizers docstring for more details.
-            encoder_weights (Optional[str], optional):
-                Path to encoder weights. If not specified, no weights are loaded by default.
-            decoder_weights (Optional[str], optional):
-                Path to decoder weights. If not specified, no weights are loaded by default.
-            unfreeze_enc_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
-            unfreeze_dec_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
-            reconstruction_len (Optional[int]):
-                length of reconstructed batch in predict_step, optional.
-                If None, determine length from batch.seq_lens.
-                If int, reconstruct that many tokens.
         """
         super().__init__()
         self.save_hyperparameters()
@@ -277,10 +254,10 @@ class GPTModule(LightningModule):
         self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
     ) -> None:
         return super().lr_scheduler_step(scheduler, optimizer_idx, metric)
-    
+
 
 class GPTContrastiveModule(LightningModule):
-    """A vanilla autoencoder, without masking, just encodes target sequence and then restores it.
+    """A module for GPT-like contrastive training, just encodes the sequence and predicts the embeddings of its shifted version.
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -290,22 +267,11 @@ class GPTContrastiveModule(LightningModule):
      - an r2-score on amounts
 
      Attributes:
-        out_amount (nn.Linear):
-            A linear layer, which restores the transaction amounts.
-        out_mcc (nn.Linear):
-            A linear layer, which restores the transaction mcc codes.
-        amount_loss_weight (float):
-            Normalized loss weight for the transaction amount MSE loss.
-        mcc_loss_weight (float):
-            Normalized loss weight for the transaction mcc code CE loss.
         lr (float):
             The learning rate, extracted from the optimizer_config.
-        ae_output_size (int):
-            The output size of the decoder.
 
     Notes:
-        amount_loss_weight, mcc_loss_weight are normalized so that amount_loss_weight + mcc_loss_weight = 1.
-        This is done to remove one hyperparameter. Loss gradient size can be managed separately through lr.
+        Loss gradient size can be managed separately through lr.
 
     """
 
@@ -316,44 +282,24 @@ class GPTContrastiveModule(LightningModule):
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         neg_count: int = 5,
-        temperature: float = 20,
+        temperature: float = 1.0,
     ) -> None:
-        """Initialize VanillaAE internal state.
+        """Initialize GPTContrastiveModule internal state.
 
         Args:
-            loss_weights (dict):
-                A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
-            encoder (SeqEncoderContainer):
-                SeqEncoderContainer to be used as an encoder.
-            mcc_head (DictConfig):
-                DictConfig for mcc head, instantiated with in_channels keyword argument.
-            amount_head (DictConfig):
-                Partial dictconfig for amount head, instantiated with in_channels keyword argument.
+            encoder (DictConfig):
+                SeqEncoderContainer dictconfig to be used as an encoder.
             optimizer (DictConfig):
                 Optimizer dictconfig, instantiated with params kwarg.
-            decoder (AbsDecoder):
-                AbsDecoder, to be used as the decoder.
             scheduler (Optional[DictConfig]):
                 Optionally, an lr scheduler dictconfig, instantiated with optimizer kwarg
             scheduler_config (Optional[dict]):
                 An lr_scheduler config for specifying scheduler-specific params, such as which metric to monitor
                 See LightningModule.configure_optimizers docstring for more details.
-            encoder_weights (Optional[str], optional):
-                Path to encoder weights. If not specified, no weights are loaded by default.
-            decoder_weights (Optional[str], optional):
-                Path to decoder weights. If not specified, no weights are loaded by default.
-            unfreeze_enc_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
-            unfreeze_dec_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
-            reconstruction_len (Optional[int]):
-                length of reconstructed batch in predict_step, optional.
-                If None, determine length from batch.seq_lens.
-                If int, reconstruct that many tokens.
+            neg_count (int):
+                negative count for `QuerySoftmaxLoss`
+            temperature (float):
+                temperature parameter of `QuerySoftmaxLoss`
         """
         super().__init__()
         self.save_hyperparameters()
@@ -367,30 +313,8 @@ class GPTContrastiveModule(LightningModule):
 
         self.loss_fn = QuerySoftmaxLoss(temperature, reduce=True)
 
-        self.token_mask = torch.nn.Parameter(torch.randn(1, 1, self.encoder.trx_encoder.output_size), requires_grad=True)
-
     def forward(self, x):
         return self.encoder(x)
-
-    def mask_x(self, x, attention_mask, mask):
-        shuffled_tokens = x[attention_mask.bool()]
-        B, T, H = x.size()
-        ix = torch.multinomial(torch.ones(shuffled_tokens.size(0)), B * T, replacement=True)
-        shuffled_tokens = shuffled_tokens[ix].view(B, T, H)
-
-        rand = torch.rand(B, T, device=x.device).unsqueeze(2).expand(B, T, H)
-        replace_to = torch.where(
-            rand < 0.8,
-            self.token_mask.expand_as(x),  # [MASK] token 80%
-            shuffled_tokens                # replaced roken                 
-        )
-        return torch.where(mask.bool().unsqueeze(2).expand_as(x), replace_to, x)
-
-    def get_mask(self, attention_mask):
-        last_ind = attention_mask.sum(dim=1) - 1 
-        mask = torch.zeros_like(attention_mask)
-        mask[:, last_ind] = 1
-        return mask.bool()
 
     def get_neg_ix(self, mask):
         """Sample from predicts, where `mask == True`, without self element.
@@ -423,18 +347,15 @@ class GPTContrastiveModule(LightningModule):
             batch_idx (int): ignored
 
         Returns:
-            STEP_OUTPUT:
-                if stage == "train", returns total loss.
-                else returns a dictionary of metrics.
+            loss: computed value of the loss function
         """
-        mask = self.get_mask(batch.seq_len_mask)
-        x_trx = self.encoder.trx_encoder(batch)
-        x_trx_masked = self.mask_x(x_trx.payload, batch.seq_len_mask, mask)
+        mask = batch.seq_len_mask.bool()[:, 1:]
+        x_trx = self.encoder.trx_encoder(batch).payload[:, 1:]
 
-        embeddings = self.encoder.seq_encoder(PaddedBatch(x_trx_masked, batch.seq_len_mask)).payload
+        embeddings = self(batch).payload[:, :-1]
         out = self.head(embeddings)
 
-        target = x_trx.payload[mask].unsqueeze(1)  # N, 1, H
+        target = x_trx[mask].unsqueeze(1)  # N, 1, H
         predict = out[mask].unsqueeze(1)  # N, 1, H
         
         neg_ix = self.get_neg_ix(mask)

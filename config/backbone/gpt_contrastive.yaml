@@ -1,7 +1,7 @@
 defaults:
  - dataset: basic
  - encoder: gpt
- - module: gpt
+ - module: gpt_contrastive
  - _self_
 
 datamodule:
