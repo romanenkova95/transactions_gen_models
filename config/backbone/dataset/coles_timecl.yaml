@@ -1,7 +1,11 @@
-_target_: src.datasets.TimeCLColesDataset
+_target_: src.datasets.CustomColesDatasetWithSplitter
+split_count: 1
 min_len: 15
-max_len: 150
-split_count: 5
-llambda: 0.4
-rlambda: 0.6
 col_time: event_time
+splitter:
+  _target_: src.datasets.splitters.TimeCLSampler
+  min_len: ${..min_len}
+  max_len: 150
+  split_count: ${..split_count}
+  llambda: 0.4
+  rlambda: 0.6
