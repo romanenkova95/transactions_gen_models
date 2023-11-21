@@ -104,6 +104,8 @@ def local_target_validation(
     metrics = val_trainer.test(valid_model, datamodule)[0]
 
     if not val_trainer.fast_dev_run:
-        torch.save(valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth")
+        torch.save(
+            valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth"
+        )
 
     return metrics
