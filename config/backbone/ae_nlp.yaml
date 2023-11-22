@@ -13,4 +13,4 @@ datamodule:
   valid_num_workers: 4
 
 trainer:
-  max_steps: 8000
+  max_steps: 2000
