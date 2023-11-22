@@ -75,7 +75,8 @@ def global_target_validation(
         logger.info(f'Training classifier. Run {i+1}/{cfg_validation["n_runs"]}')
 
         # bootstrap sample
-        bootstrap_inds = np.random.choice(indices, size=N, replace=True)
+        # use bootstrap if cfg_validation["n_runs"] != 1, else use the whole sample 
+        bootstrap_inds = np.random.choice(indices, size=N, replace=cfg_validation["n_runs"]!=1)
         embeddings_train, targets_train = embeddings[bootstrap_inds], targets[bootstrap_inds]
 
         # evaluate trained model

@@ -3,8 +3,7 @@ from typing import Literal
 import torch.nn as nn
 from torchmetrics import MeanSquaredError, MetricCollection, R2Score
 from .local_validation_model import LocalValidationModelBase
-from .head_loss import LogCoshLoss
-
+from src.losses import LogCoshLoss
 
 class NumericLocalVal(LocalValidationModelBase):
     """

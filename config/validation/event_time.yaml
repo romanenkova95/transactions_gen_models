@@ -1,7 +1,7 @@
 event_time:
   module:
     _target_: src.local_validation.NumericLocalVal
-    backbone_embd_size: 1024
+    backbone_embd_size: ${backbone.encoder.hidden_size}
     learning_rate: 0.001
 
   dataset:
