@@ -19,6 +19,6 @@ learning_encoder:
   input_size: ${..frozen_encoder.hidden_size}
   hidden_size: 256
   type: gru
-  is_reduce_sequence: True
+is_reduce_sequence: True
 encoding_seq_len: 10
 encoding_step: 4
