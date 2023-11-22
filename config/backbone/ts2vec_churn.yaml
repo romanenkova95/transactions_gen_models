@@ -1,0 +1,16 @@
+defaults:
+ - dataset: ts2vec
+ - encoder: ts2vec_churn
+ - module: ts2vec_churn
+ - _self_
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 128
+  valid_batch_size: 128
+  train_num_workers: 8
+  valid_num_workers: 8
+
+trainer:
+  max_epochs: 100
+  log_every_n_steps: 10

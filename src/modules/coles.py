@@ -1,8 +1,6 @@
 """CoLES model"""
-from typing import Callable
 from omegaconf import DictConfig
 from hydra.utils import instantiate
-from torch import Tensor
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.frames.coles import CoLESModule
