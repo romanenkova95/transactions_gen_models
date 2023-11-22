@@ -35,13 +35,15 @@ def run(cfg: DictConfig):
     preproc_name: str = hydra_cfg.runtime.choices["preprocessing"]
     backbone_name: str = hydra_cfg.runtime.choices["backbone"]
     val_names: list[str] = cfg.get("validation", {}).keys()
-    if "wandb" in hydra_cfg.runtime.choices["logger"]:
+    lightning_logger_name = hydra_cfg.runtime.choices.get("logger", "tensorboard")
+    if lightning_logger_name == "wandb":
         wandb.init(
             project="macro_micro_coles", 
             config=OmegaConf.to_container(cfg), # type: ignore
             tags=[preproc_name, backbone_name, *val_names]
         )
-        
+    # CometML TODO (optionally): add experiment tagging
+
     data = preprocess(cfg["preprocessing"])
     seed = seed_everything(cfg.get("seed"))
     experiment_name = f"{backbone_name}_{preproc_name}_{seed}"
@@ -65,6 +67,8 @@ def run(cfg: DictConfig):
                 cfg_validation=cfg_validation, 
                 encoder_name=experiment_name
             )
+            
+            res = {"global_target" + k: v for k, v in res.items()}
         else:
             res = local_target_validation(
                 data=data,
@@ -72,12 +76,17 @@ def run(cfg: DictConfig):
                 cfg_validation=cfg_validation,
                 cfg_logger=cfg["logger"],
                 encoder_name=experiment_name,
-                val_name=f"{experiment_name}_{val_name}",
+                val_name=val_name,
             )
 
         print(res)
-
-    wandb.finish()
+        if lightning_logger_name == "wandb":
+            wandb.log(res)
+        
+        # CometML TODO (optionally): add global validation logging
+            
+    if lightning_logger_name == "wandb":
+        wandb.finish()
 
 
 if __name__ == "__main__":
