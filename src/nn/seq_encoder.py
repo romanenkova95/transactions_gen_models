@@ -103,12 +103,11 @@ class CoLESonCoLESEncoder(nn.Module):
         dates = x.payload[self.col_time]  # (B, T)
         dates_len = dates.shape[1]
         start_pos = torch.arange(
-            0, dates_len - self.encoding_seq_len, self.encoding_step
+            0, dates_len - self.encoding_seq_len, self.encoding_step, device="cuda"
         )
 
         def encode():
             for s in start_pos:
-                torch.cuda.empty_cache()
                 payload = {
                     k: v[:, s : s + self.encoding_seq_len]
                     for k, v in x.payload.items()
@@ -119,18 +118,17 @@ class CoLESonCoLESEncoder(nn.Module):
                     torch.full_like(x.seq_lens, self.encoding_seq_len),
                 )
                 pb = PaddedBatch(payload, seq_lens)
-                yield self.frozen_encoder(pb).detach().cpu()
+                yield self.frozen_encoder(pb).detach()
 
         emb_sequences = torch.stack(
             [*encode()], dim=1
         )  # (B, T - self.encoding_seq_len, C)
 
-        seq_lens = x.seq_lens.cpu()
         seq_lens = (
-            start_pos.expand(seq_lens.size(0), start_pos.size(0))
-            < seq_lens.unsqueeze(-1)
+            start_pos.expand(x.seq_lens.size(0), start_pos.size(0))
+            < x.seq_lens.unsqueeze(-1)
         ).sum(dim=-1)
-        return PaddedBatch(payload=emb_sequences.to(x.device), length=seq_lens)
+        return PaddedBatch(payload=emb_sequences, length=seq_lens)
 
     def forward(self, x: PaddedBatch):
         embeddings = self._encode(x)
