@@ -3,8 +3,6 @@ from typing import Optional
 import numpy as np
 import torch
 
-from torch.nn.utils.rnn import pad_sequence
-
 from ptls.nn import RnnSeqEncoder, RnnEncoder
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.frames.coles.split_strategy import AbsSplit, SampleSlices
@@ -14,13 +12,6 @@ import torch.nn as nn
 
 def is_seq_feature(k: str, x):
     """Check is value sequential feature
-    Synchronized with ptls.data_load.feature_dict.FeatureDict.is_seq_feature
-
-                    1-d        2-d
-    event_time | True      True
-    target_    | False     False  # from FeatureDict.is_seq_feature
-    tensor     | False     True
-
     Parameters
     ----------
     k:
@@ -80,6 +71,7 @@ class CoLESonCoLESEncoder(nn.Module):
         encoding_seq_len: int = 20,
         encoding_step: int = 1,
         training_splitter: Optional[AbsSplit] = None,
+        is_reduce_sequence: bool = True,
     ) -> None:
         """
         Model for training CoLES on CoLES embeddings obtained via seq2vec strategy.
@@ -95,6 +87,8 @@ class CoLESonCoLESEncoder(nn.Module):
         super().__init__()
         self.frozen_encoder = frozen_encoder
         self.learning_encoder = learning_encoder
+
+        self.learning_encoder.is_reduce_sequence = is_reduce_sequence
 
         self.training_splitter = training_splitter or SampleSlices(
             split_count=5, cnt_max=150, cnt_min=15
