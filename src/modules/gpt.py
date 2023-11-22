@@ -63,9 +63,8 @@ class GPTModule(LightningModule):
         self,
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
-        mcc_head: DictConfig,
-        amount_head: DictConfig,
-        optimizer: DictConfig, 
+        optimizer: DictConfig,
+        num_types: Optional[int], 
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
     ) -> None:
@@ -76,10 +75,8 @@ class GPTModule(LightningModule):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
                 SeqEncoderContainer to be used as an encoder.
-            mcc_head (DictConfig):
-                DictConfig for mcc head, instantiated with in_channels keyword argument.
-            amount_head (DictConfig):
-                Partial dictconfig for amount head, instantiated with in_channels keyword argument.
+            num_types (int):
+                Amount of mcc types; clips all input to this value.
             optimizer (DictConfig):
                 Optimizer dictconfig, instantiated with params kwarg.
             scheduler (Optional[DictConfig]):
@@ -92,10 +89,11 @@ class GPTModule(LightningModule):
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
+        
+        self.num_types = num_types
 
-        self.amount_head = instantiate(amount_head, in_channels=self.encoder.embedding_size)
-
-        self.mcc_head = instantiate(mcc_head, in_channels=self.encoder.embedding_size)
+        self.mcc_head = nn.Linear(self.encoder.embedding_size, num_types)
+        self.amount_head = nn.Linear(self.encoder.embedding_size, 1)
 
         self.optimizer_dictconfig = optimizer
         self.scheduler_dictconfig = scheduler
@@ -109,7 +107,7 @@ class GPTModule(LightningModule):
 
         multiclass_args: dict[str, Any] = dict(
             task="multiclass",
-            num_classes=self.mcc_head[-2].out_features,
+            num_classes=self.num_types,
             ignore_index=0,
         )
 
@@ -157,6 +155,7 @@ class GPTModule(LightningModule):
         Returns:
             Dictionary of losses, with keys loss, loss_mcc, loss_amt.
         """
+
         mcc_loss = self.mcc_criterion(mcc_pred[mask], mcc_target[mask])
         amount_loss = self.amount_criterion(amount_pred[mask], amount_target[mask])
 
@@ -185,12 +184,15 @@ class GPTModule(LightningModule):
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
         """
+        batch.payload["mcc_code"] = torch.clip(
+            batch.payload["mcc_code"], 0, self.num_types - 1
+        )
 
         embeddings = self(batch).payload
 
         mcc_pred = self.mcc_head(embeddings)[:, :-1, :]
         amount_pred = self.amount_head(embeddings)[:, :-1].squeeze(-1)
-        
+
         mcc_target = batch.payload["mcc_code"][:, 1:]
         amount_target = torch.log(batch.payload["amount"][:, 1:] + 1)  # Logarithmize targets
 
@@ -305,7 +307,7 @@ class GPTContrastiveModule(LightningModule):
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
-        self.head = instantiate({"_target_": "torchvision.ops.MLP"}, in_channels=self.encoder.embedding_size, hidden_channels=[self.encoder.trx_encoder.output_size])
+        self.head = nn.Linear(self.encoder.embedding_size, self.encoder.trx_encoder.output_size)
 
         self.optimizer_dictconfig = optimizer
         self.scheduler_dictconfig = scheduler
