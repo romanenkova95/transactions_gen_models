@@ -1,6 +1,7 @@
 """Local targets validation script. """
 
 from pathlib import Path
+from typing import Optional
 import warnings
 from hydra.utils import instantiate, call
 from omegaconf import DictConfig
@@ -28,6 +29,7 @@ def local_target_validation(
     cfg_logger: DictConfig,
     encoder_name: str,
     val_name: str,
+    is_deterministic: Optional[bool] = None
 ) -> dict[str, float]:
     """Full pipeline for the sequence encoder local validation.
 
@@ -63,9 +65,12 @@ def local_target_validation(
             "No encoder state dict found! Validating without pre-loading state-dict..."
         )
 
-    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=False)
-    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=True)
-    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=True)
+    train_deterministic = False if is_deterministic is None else is_deterministic
+    val_deterministic = True if is_deterministic is None else is_deterministic
+    
+    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=train_deterministic)
+    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=val_deterministic)
+    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=val_deterministic)
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],
@@ -99,6 +104,8 @@ def local_target_validation(
     metrics = val_trainer.test(valid_model, datamodule)[0]
 
     if not val_trainer.fast_dev_run:
-        torch.save(valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth")
+        torch.save(
+            valid_model.state_dict(), f"saved_models/{encoder_name}_{val_name}.pth"
+        )
 
     return metrics

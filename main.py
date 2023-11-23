@@ -77,6 +77,7 @@ def run(cfg: DictConfig):
                 cfg_logger=cfg["logger"],
                 encoder_name=experiment_name,
                 val_name=val_name,
+                is_deterministic=cfg["backbone"].get("val_deterministic")
             )
 
         print(res)
