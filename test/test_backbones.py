@@ -46,7 +46,10 @@ class TestBackbones(unittest.TestCase):
                 "ae_nlp_frozen",
                 "coles_churn", 
                 "coles_emb_churn", 
-                "mlm"
+                "mlm", 
+                "cotic_churn", 
+                "ts2vec_churn",
+
             ],
             preprocessings=["default", "churn"],
             validations=["local_target", "event_time", "event_type", "global_target"],

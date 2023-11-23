@@ -1,0 +1,4 @@
+_target_: src.datasets.NoSplitDataset
+min_len: 15
+max_len: 1000
+col_time: event_time
