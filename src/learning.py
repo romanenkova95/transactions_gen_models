@@ -1,11 +1,9 @@
 """Main coles learning script"""
-from ast import literal_eval
-import os
 from pathlib import Path
 from typing import Union
 
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from ptls.frames import PtlsDataModule
@@ -13,11 +11,9 @@ from ptls.frames import PtlsDataModule
 import torch
 
 from pytorch_lightning import seed_everything
-
 from pytorch_lightning.utilities.model_helpers import is_overridden
-import wandb
 
-from src.modules import CustomCoLES, VanillaAE
+from src.modules import CustomCoLES, VanillaAE, Cotic, TS2Vec
 from src.utils.create_trainer import create_trainer
 from src.utils.logging_utils import get_logger
 
@@ -80,7 +76,7 @@ def learn(
     # Instantiate the LightningModule.
     # _recursive_=False to save all hyperparameters
     # as DictConfigs, to enable hp loading from lightning checkpoint
-    module: Union[CustomCoLES, VanillaAE] = instantiate(
+    module: Union[CustomCoLES, VanillaAE, Cotic, TS2Vec] = instantiate(
         backbone_cfg["module"], **module_args, _recursive_=False
     )
 

@@ -5,7 +5,7 @@ loss_weights:
   amount: 1
 
 encoder_weights: coles_best_state_dict.pth
-unfreeze_enc_after: -1
+freeze_enc: True
 
 optimizer:
   _target_: torch.optim.AdamW

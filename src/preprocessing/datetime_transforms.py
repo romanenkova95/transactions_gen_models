@@ -1,4 +1,5 @@
 from typing import Literal, Optional
+
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -31,7 +32,7 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
         col_name_original (str) - source column name
         is_drop_original_col (bool) - when target and original columns are different manage original col deletion.
     """
-
+    
     def __init__(
         self,
         col_name_original: str,
@@ -43,11 +44,13 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
             col_name_target=col_name_target,  # type: ignore
             is_drop_original_col=is_drop_original_col,
         )
-
-    def fit(self, x: pd.DataFrame):
-        """Record minimum timestamp"""
+    
+    def fit(self, x: pd.DataFrame) -> "CustomDatetimeNormalization":
+        """Record minimum timestamp
+        """
         super().fit(x)
         self.min_timestamp = int(x[self.col_name_original].min().timestamp())
+        return self
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:
         """Transform datetime column. Convert unix timestamps into days (float) since 'min_timestamp'."""

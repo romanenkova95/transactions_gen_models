@@ -27,9 +27,10 @@ def global_target_validation(
     cfg_encoder: DictConfig,
     cfg_validation: DictConfig,
     encoder_name: str
-    ) -> pd.DataFrame:
-    """Full pipeline for the sequence encoder validation. 
-
+    ) -> dict:
+    """Full pipeline for the sequence encoder validation.
+    If n_runs > 1 bootstrap samples are used.
+    
     Args:
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val & test sets
@@ -39,7 +40,7 @@ def global_target_validation(
             Validation config (specified in 'config/validation')
     
     Returns:
-        results (pd.DataFrame):      Dataframe with test metrics for each run
+        results (dict):  dataframe with test metrics
     """
     logger = get_logger(name=__name__)
     
@@ -74,7 +75,7 @@ def global_target_validation(
     for i in range(cfg_validation["n_runs"]):
         logger.info(f'Training classifier. Run {i+1}/{cfg_validation["n_runs"]}')
 
-        # bootstrap sample
+        # bootstrap sample if n_runs > 1, otherwise original sample
         bootstrap_inds = np.random.choice(indices, size=N, replace=cfg_validation["n_runs"] > 1)
         embeddings_train, targets_train = embeddings[bootstrap_inds], targets[bootstrap_inds]
 
@@ -89,7 +90,7 @@ def global_target_validation(
 
         results.append(metrics)
 
-    return pd.DataFrame(results)
+    return pd.DataFrame(metrics)
 
 
 def embed_data(
