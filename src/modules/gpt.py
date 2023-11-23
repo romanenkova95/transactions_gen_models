@@ -194,7 +194,8 @@ class GPTModule(LightningModule):
         amount_pred = self.amount_head(embeddings)[:, :-1].squeeze(-1)
 
         mcc_target = batch.payload["mcc_code"][:, 1:]
-        amount_target = torch.log(batch.payload["amount"][:, 1:] + 1)  # Logarithmize targets
+        amount_target = batch.payload["amount"][:, 1:]  
+        amount_target = amount_target.abs().log1p() * amount_target.sign() # Logarithmize targets
 
         nonpad_mask = batch.seq_len_mask[:, 1:].bool()
 
