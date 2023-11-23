@@ -67,7 +67,7 @@ class VanillaAE(LightningModule):
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
         optimizer: DictConfig,
-        num_types: Optional[int],
+        num_types: int,
         decoder: Optional[DictConfig] = None,
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
@@ -268,7 +268,8 @@ class VanillaAE(LightningModule):
             batch
         )  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
-        amount_target = torch.log(batch.payload["amount"] + 1)  # Logarithmize targets
+        amount_target: Tensor = batch.payload["amount"]
+        amount_target = amount_target.abs().log1p() * amount_target.sign()  # Logarithmize targets
 
         loss_dict = self._calculate_losses(
             mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
