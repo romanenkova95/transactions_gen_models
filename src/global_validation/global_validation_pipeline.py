@@ -83,7 +83,7 @@ def global_target_validation(
         cfg_validation["model"]
     )
 
-    return pd.DataFrame(metrics)
+    return metrics
 
 
 def embed_data(
