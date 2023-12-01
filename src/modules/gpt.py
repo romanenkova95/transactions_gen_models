@@ -1,41 +1,27 @@
-from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
-from pytorch_lightning import LightningModule
-from sklearn import multiclass
 
 import torch
 from torch import nn, Tensor
 
 from hydra.utils import instantiate
-from torchmetrics import (
-    AUROC,
-    Accuracy,
-    AveragePrecision,
-    F1Score,
-    Metric,
-    MetricCollection,
-    MultitaskWrapper,
-    R2Score,
-)
-from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
 
 from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 from ptls.frames.bert.losses.query_soft_max import QuerySoftmaxLoss
 
-from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
-from src.nn.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
+
+from .vanilla import VanillaAE
 
 
 logger = get_logger(name=__name__)
 
 
-class GPTModule(LightningModule):
+class GPTModule(VanillaAE):
     """A module for GPT-like training, just encodes the sequence and predicts its shifted version.
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
@@ -67,6 +53,8 @@ class GPTModule(LightningModule):
         num_types: Optional[int], 
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
+        encoder_weights: Optional[str] = None,
+        freeze_enc: Optional[bool] = False,
     ) -> None:
         """Initialize GPTModule internal state.
 
@@ -84,86 +72,24 @@ class GPTModule(LightningModule):
             scheduler_config (Optional[dict]):
                 An lr_scheduler config for specifying scheduler-specific params, such as which metric to monitor
                 See LightningModule.configure_optimizers docstring for more details.
+            encoder_weights (Optional[str], optional):
+                Path to encoder weights. If not specified, no weights are loaded by default.
+            freeze_enc (Optional[int], optional):
+                Whether to freeze the encoder module.
         """
-        super().__init__()
-        self.save_hyperparameters()
-
-        self.encoder: SeqEncoderContainer = instantiate(encoder)
-        
-        self.num_types = num_types
-
-        self.mcc_head = nn.Linear(self.encoder.embedding_size, num_types)
-        self.amount_head = nn.Linear(self.encoder.embedding_size, 1)
-
-        self.optimizer_dictconfig = optimizer
-        self.scheduler_dictconfig = scheduler
-        self.scheduler_config = scheduler_config or {}
-
-        self.amount_loss_weight = loss_weights["amount"] / sum(loss_weights.values())
-        self.mcc_loss_weight = loss_weights["mcc"] / sum(loss_weights.values())
-
-        self.mcc_criterion = nn.CrossEntropyLoss(ignore_index=0)
-        self.amount_criterion = nn.MSELoss()
-
-        multiclass_args: dict[str, Any] = dict(
-            task="multiclass",
-            num_classes=self.num_types,
-            ignore_index=0,
+        super().__init__(
+            loss_weights=loss_weights,
+            encoder=encoder,
+            optimizer=optimizer,
+            num_types=num_types, 
+            scheduler=scheduler,
+            scheduler_config=scheduler_config,
+            encoder_weights=encoder_weights,
+            freeze_enc=freeze_enc,
         )
-
-        MetricsType = dict[Literal["mcc", "amount"], MetricCollection]
-        def make_metrics(stage: str) -> MetricsType:
-            return nn.ModuleDict({
-                "mcc": MetricCollection(
-                    AUROC(**multiclass_args, average="weighted"),
-                    F1Score(**multiclass_args, average="micro"),
-                    AveragePrecision(**multiclass_args, average="weighted"),
-                    Accuracy(**multiclass_args, average="micro"),
-                    prefix=stage
-                ),
-                "amount": MetricCollection(R2Score(), prefix=stage),
-            }) # type: ignore
-
-        self.train_metrics: MetricsType = make_metrics("train")
-        self.val_metrics: MetricsType = make_metrics("val")
-        self.test_metrics: MetricsType = make_metrics("test")
 
     def forward(self, x):
         return self.encoder(x)
-
-    @property
-    def metric_name(self):
-        return "val_loss"
-
-    def _calculate_losses(
-        self,
-        mcc_pred: Tensor,
-        amount_pred: Tensor,
-        mcc_target: Tensor,
-        amount_target: Tensor,
-        mask: Tensor,
-    ) -> dict[str, Tensor]:
-        """Calculate the losses, weigh them with respective weights
-
-        Args:
-            mcc_pred (Tensor): Predicted mcc logits, (B, L, mcc_vocab_size).
-            amount_pred (Tensor): Predicted amounts, (B, L).
-            mcc_target (Tensor): target mcc codes.
-            amount_target (Tensor): target amounts.
-            mask (Tensor): mask of non-padding elements
-
-        Returns:
-            Dictionary of losses, with keys loss, loss_mcc, loss_amt.
-        """
-
-        mcc_loss = self.mcc_criterion(mcc_pred[mask], mcc_target[mask])
-        amount_loss = self.amount_criterion(amount_pred[mask], amount_target[mask])
-
-        total_loss = (
-            self.mcc_loss_weight * mcc_loss + self.amount_loss_weight * amount_loss
-        )
-
-        return {"loss": total_loss, "loss_mcc": mcc_loss, "loss_amt": amount_loss}
 
     def shared_step(
         self,
@@ -228,46 +154,17 @@ class GPTModule(LightningModule):
             )
 
         return loss_dict["loss"]
-
-    def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
-        return self.shared_step("train", *args, **kwargs)
-
-    def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self.shared_step("val", *args, **kwargs)
-
-    def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self.shared_step("test", *args, **kwargs)
-
-    def configure_optimizers(self):
-        optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
-
-        if self.scheduler_dictconfig:
-            scheduler = instantiate(self.scheduler_dictconfig, optimizer=optimizer)
-            scheduler_config = {"scheduler": scheduler, **self.scheduler_config}
-
-            return [optimizer], [scheduler_config]
-
-        return optimizer
-
-    # Overriding lr_scheduler_step to fool the exception (which doesn't appear in later versions of pytorch_lightning):
-    # pytorch_lightning.utilities.exceptions.MisconfigurationException:
-    #   The provided lr scheduler `...` doesn't follow PyTorch's LRScheduler API.
-    #   You should override the `LightningModule.lr_scheduler_step` hook with your own logic if you are using a custom LR scheduler.
-    def lr_scheduler_step(
-        self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
-    ) -> None:
-        return super().lr_scheduler_step(scheduler, optimizer_idx, metric)
+    
+    def predict_step(
+        self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
+    ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
+        return self(batch)
 
 
-class GPTContrastiveModule(LightningModule):
+class GPTContrastiveModule(VanillaAE):
     """A module for GPT-like contrastive training, just encodes the sequence and predicts the embeddings of its shifted version.
     Logs train/val/test losses:
-     - a CrossEntropyLoss on mcc codes
-     - an MSELoss on amounts
-    and train/val/test metrics:
-     - a macro-averaged multiclass f1-score on mcc codes
-     - a macro-averaged multiclass auroc score on mcc codes
-     - an r2-score on amounts
+     - QuerySoftmaxLoss
 
      Attributes:
         lr (float):
@@ -284,8 +181,10 @@ class GPTContrastiveModule(LightningModule):
         optimizer: DictConfig, 
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
+        encoder_weights: Optional[str] = None,
+        freeze_enc: Optional[bool] = False,
         neg_count: int = 5,
-        temperature: float = 1.0,
+        temperature: float = 20.0,
     ) -> None:
         """Initialize GPTContrastiveModule internal state.
 
@@ -304,7 +203,8 @@ class GPTContrastiveModule(LightningModule):
             temperature (float):
                 temperature parameter of `QuerySoftmaxLoss`
         """
-        super().__init__()
+        super(VanillaAE, self).__init__()
+        
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
@@ -313,6 +213,14 @@ class GPTContrastiveModule(LightningModule):
         self.optimizer_dictconfig = optimizer
         self.scheduler_dictconfig = scheduler
         self.scheduler_config = scheduler_config or {}
+
+        if encoder_weights:
+            self.encoder.load_state_dict(torch.load(Path(encoder_weights)))
+
+        self.freeze_enc = freeze_enc
+        if freeze_enc:
+            logger.info("Freezing encoder weights")
+            self.encoder.requires_grad_(False)
 
         self.loss_fn = QuerySoftmaxLoss(temperature, reduce=True)
 
@@ -330,10 +238,6 @@ class GPTContrastiveModule(LightningModule):
         b_ix = torch.arange(mask.size(0), device=mask.device).view(-1, 1).expand_as(mask)[mask][neg_ix]
         t_ix = torch.arange(mask.size(1), device=mask.device).view(1, -1).expand_as(mask)[mask][neg_ix]
         return b_ix, t_ix
-
-    @property
-    def metric_name(self):
-        return "val_loss"
 
     def shared_step(
         self,
@@ -375,31 +279,7 @@ class GPTContrastiveModule(LightningModule):
 
         return loss
 
-    def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
-        return self.shared_step("train", *args, **kwargs)
-
-    def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self.shared_step("val", *args, **kwargs)
-
-    def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
-        return self.shared_step("test", *args, **kwargs)
-
-    def configure_optimizers(self):
-        optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
-
-        if self.scheduler_dictconfig:
-            scheduler = instantiate(self.scheduler_dictconfig, optimizer=optimizer)
-            scheduler_config = {"scheduler": scheduler, **self.scheduler_config}
-
-            return [optimizer], [scheduler_config]
-
-        return optimizer
-
-    # Overriding lr_scheduler_step to fool the exception (which doesn't appear in later versions of pytorch_lightning):
-    # pytorch_lightning.utilities.exceptions.MisconfigurationException:
-    #   The provided lr scheduler `...` doesn't follow PyTorch's LRScheduler API.
-    #   You should override the `LightningModule.lr_scheduler_step` hook with your own logic if you are using a custom LR scheduler.
-    def lr_scheduler_step(
-        self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
-    ) -> None:
-        return super().lr_scheduler_step(scheduler, optimizer_idx, metric)
+    def predict_step(
+        self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
+    ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
+        return self(batch)
