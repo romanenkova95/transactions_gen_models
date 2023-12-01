@@ -27,7 +27,7 @@ def global_target_validation(
     cfg_encoder: DictConfig,
     cfg_validation: DictConfig,
     encoder_name: str
-    ) -> pd.DataFrame:
+    ) -> dict:
     """Full pipeline for the sequence encoder validation. 
 
     Args:
@@ -39,7 +39,7 @@ def global_target_validation(
             Validation config (specified in 'config/validation')
     
     Returns:
-        results (pd.DataFrame):      Dataframe with test metrics for each run
+        results (dict):      dict with test metrics
     """
     logger = get_logger(name=__name__)
     
@@ -70,26 +70,20 @@ def global_target_validation(
         **cfg_validation["embed_data"]
     )
 
-    results = []
-    for i in range(cfg_validation["n_runs"]):
-        logger.info(f'Training classifier. Run {i+1}/{cfg_validation["n_runs"]}')
+    # bootstrap sample
+    bootstrap_inds = np.random.choice(indices, size=N, replace=True)
+    embeddings_train, targets_train = embeddings[bootstrap_inds], targets[bootstrap_inds]
 
-        # bootstrap sample
-        bootstrap_inds = np.random.choice(indices, size=N, replace=cfg_validation["n_runs"] > 1)
-        embeddings_train, targets_train = embeddings[bootstrap_inds], targets[bootstrap_inds]
+    # evaluate trained model
+    metrics = eval_embeddings(
+        embeddings_train,
+        targets_train,
+        embeddings_test,
+        targets_test,
+        cfg_validation["model"]
+    )
 
-        # evaluate trained model
-        metrics = eval_embeddings(
-            embeddings_train,
-            targets_train,
-            embeddings_test,
-            targets_test,
-            cfg_validation["model"]
-        )
-
-        results.append(metrics)
-
-    return pd.DataFrame(results)
+    return metrics
 
 
 def embed_data(

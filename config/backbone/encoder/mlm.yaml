@@ -10,5 +10,5 @@ trx_encoder:
       out: 24
   numeric_values: {amount: log}
   linear_projection_size: 1024
-dim_hidden: 1024
+hidden_size: 1024
 is_reduce_sequence: False
