@@ -1,0 +1,7 @@
+defaults:
+  - preprocessing: churn
+  - backbone: coles_churn
+  - validation: global_target
+  - _self_
+
+pretrain: true
