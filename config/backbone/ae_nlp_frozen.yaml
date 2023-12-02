@@ -1,8 +1,9 @@
 defaults:
-  - dataset: basic
-  - encoder: transformer
-  - module: transformer
-  - _self_
+ - dataset: basic
+ - encoder: ae_nlp
+ - decoder: lstmcell
+ - module: autoencoder/frozen
+ - _self_
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
