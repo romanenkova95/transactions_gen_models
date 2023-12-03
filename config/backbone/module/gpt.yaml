@@ -1,0 +1,9 @@
+_target_: src.modules.GPTModule
+num_types: 100
+loss_weights:
+  mcc: 5
+  amount: 1
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.0005

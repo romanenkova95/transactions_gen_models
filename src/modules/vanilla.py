@@ -331,7 +331,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor  # (B, L)
         mcc_pred, amount_pred, _, _ = self(batch, self.reconstruction_len)
         if self.reconstruction_len:
-            return mcc_pred, torch.exp(amount_pred)
+            return mcc_pred, amount_pred.sign()*(amount_pred.abs().exp() - 1)
         else:
             lens_mask = batch.seq_len_mask.bool()
             lens = batch.seq_lens.tolist()
@@ -339,7 +339,7 @@ class VanillaAE(LightningModule):
             mcc_pred_trim = mcc_pred[lens_mask]
             amount_pred_trim = amount_pred[lens_mask]
 
-            return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim).split(lens)
+            return mcc_pred_trim.split(lens), (amount_pred_trim.sign()*(amount_pred_trim.abs().exp() - 1)).split(lens)
 
     def configure_optimizers(self):
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
