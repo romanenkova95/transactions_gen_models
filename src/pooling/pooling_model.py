@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.data_load.utils import collate_feature_dict
+from ptls.data_load.feature_dict import FeatureDict
 
 
 class PoolingModel(nn.Module):
@@ -26,8 +27,8 @@ class PoolingModel(nn.Module):
         min_seq_length: int = 15,
         max_seq_length: int = 1000,
         max_embs_per_user: int = 1000,
-        columns: List[str] = ["event_time", "mcc_code", "amount"],
-        init_device="cuda",
+        init_device: str = "cuda",
+        freeze: bool = True
     ) -> None:
         """Initialize method for PoolingModel.
 
@@ -44,8 +45,8 @@ class PoolingModel(nn.Module):
                 in self.embegings_dataset preparation
             max_embs_per_user (int): How many datapoints to take from one user
             in self.embegings_dataset preparation
-            columns (List[str]): Columns of data needed for backbone
             init_device (str): Name of device to use during initialization
+            freeze (bool): Flag 
         """
         super().__init__()
 
@@ -56,15 +57,14 @@ class PoolingModel(nn.Module):
         self.backbone.eval()
         self.backbone_embd_size = backbone_embd_size
 
-        # freeze backbone model
-        for param in self.backbone.parameters():
-            param.requires_grad = False
+        if freeze:
+            for param in self.backbone.parameters():
+                param.requires_grad = False
 
         self.pooling_type = pooling_type
         self.min_seq_length = min_seq_length
         self.max_seq_length = max_seq_length
         self.max_embs_per_user = max_embs_per_user
-        self.columns = columns
 
         self.embegings_dataset = self.make_pooled_embegings_dataset(
             train_data, max_users_in_train_dataloader, init_device
@@ -74,6 +74,8 @@ class PoolingModel(nn.Module):
             self.learnable_attention_matrix = nn.Linear(
                 self.backbone_embd_size, self.backbone_embd_size
             )
+        else:
+            self.learnable_attention_matrix = None
 
     def prepare_data_for_one_user(self, x, device):
         """Function for preparing one user's embedings and last times for this embedings.
@@ -87,16 +89,14 @@ class PoolingModel(nn.Module):
             times (np.array): Times of last transaction in slices of ine user
         """
         resulting_user_data = []
-        indexes = np.arange(self.min_seq_length, len(x[self.columns[0]]))
+        indexes = np.arange(self.min_seq_length, len(x["event_time"]))
         if len(indexes) >= self.max_embs_per_user:
             indexes = np.random.choice(indexes, self.max_embs_per_user, replace=False)
             indexes = np.sort(indexes)
         times = x["event_time"][indexes - 1].cpu().numpy()
         for i in indexes:
             start_index = 0 if i < self.max_seq_length else i - self.max_seq_length
-            data_for_timestamp = {}
-            for column in self.columns:
-                data_for_timestamp[column] = x[column][start_index:i]
+            data_for_timestamp = FeatureDict.seq_indexing(x, range(start_index, i))
             resulting_user_data.append(data_for_timestamp)
         resulting_user_data = collate_feature_dict(resulting_user_data)
         embs = self.backbone(resulting_user_data.to(device)).detach().cpu().numpy()
@@ -122,7 +122,7 @@ class PoolingModel(nn.Module):
         all_times = set()
         for x in tqdm(train_data):
             # check if the user's sequence is not long enough
-            if len(x[self.columns[0]]) <= self.min_seq_length:
+            if len(x["event_time"]) <= self.min_seq_length:
                 continue
 
             data.append({})
@@ -292,17 +292,16 @@ class PoolingModel(nn.Module):
 
         Return: output_size (int): the output size of the model
         """
-        output_size = 2 * self.backbone_embd_size
-        return output_size
+        return 2 * self.backbone_embd_size
 
-    def change_pooling_type(self, pooling_type: str) -> None:
+    def set_pooling_type(self, pooling_type: str) -> None:
         """Function that change pooling type of the model."""
         if pooling_type not in ["mean", "max", "attention", "learnable_attention"]:
             raise ValueError("Unknown pooling type.")
 
         self.pooling_type = pooling_type
         if pooling_type == "learnable_attention":
-            if not hasattr(self, "learnable_attention_matrix"):
+            if self.learnable_attention_matrix is None:
                 self.learnable_attention_matrix = nn.Linear(
                     self.backbone_embd_size, self.backbone_embd_size
                 )
