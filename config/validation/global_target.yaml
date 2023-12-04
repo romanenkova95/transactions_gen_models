@@ -3,9 +3,6 @@ global_target:
     batch_size: 64
     device: cuda
 
-  # FAST_DEV_RUN runs if FAST_DEV_RUN env variable is set (for debugging), else 10 runs
-  n_runs: ${oc.decode:${oc.env:FAST_DEV_RUN,10}}
-
   model:
     _target_: lightgbm.LGBMClassifier
     n_estimators: 500

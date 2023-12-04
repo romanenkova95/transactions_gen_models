@@ -39,15 +39,12 @@ class LocalValidationModelBase(pl.LightningModule):
         super().__init__()
         self.backbone = backbone
 
+        # freeze backbone model
         if freeze_backbone:
-            # freeze backbone model
-            for m in self.backbone.modules():
-                if isinstance(m, nn.BatchNorm1d):
-                    m.track_running_stats = False
-                    m.eval()
-
             for param in self.backbone.parameters():
                 param.requires_grad = False
+                
+        self.freeze_backbone = freeze_backbone
 
         self.lr = learning_rate
         self.pred_head = pred_head
@@ -57,6 +54,13 @@ class LocalValidationModelBase(pl.LightningModule):
         self.test_metrics = metrics.clone("Test")
         self.metric_name = "val_loss"
         self.postproc = postproc or nn.Identity()
+        
+    def train(self, mode: bool = True): # override train to disable training when frozen
+        super().train(mode)
+        if self.freeze_backbone:
+            self.backbone.eval()
+            
+        return self
 
     def forward(self, inputs: PaddedBatch) -> tuple[torch.Tensor]:
         """Do forward pass through the local validation model.

@@ -1,0 +1,27 @@
+_target_: src.modules.Cotic
+head:
+  _target_: src.nn.cotic_components.PredictionHead
+  in_channels: ${backbone.encoder.hidden_size}
+  num_types: 100
+loss:
+  _target_: src.losses.CoticLoss
+  type_loss_coeff: 1
+  time_loss_coeff: 4
+  sim_size: 40
+  type_pad_value: 0
+  reductions: {log_likelihood: mean, type: mean, time: mean}
+metrics:
+  _target_: src.metrics.CoticMetrics
+  num_types: 100
+  type_pad_value: 0
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.Adam
+  lr: 0.01
+  weight_decay: 1e-8
+lr_scheduler_partial:
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [1, 40, 75]
+  gamma: 0.1
+head_start: 1

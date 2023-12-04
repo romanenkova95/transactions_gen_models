@@ -67,14 +67,12 @@ class VanillaAE(LightningModule):
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
         optimizer: DictConfig,
-        num_types: Optional[int],
+        num_types: int,
         decoder: Optional[DictConfig] = None,
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         encoder_weights: Optional[str] = None,
-        decoder_weights: Optional[str] = None,
-        unfreeze_enc_after: Optional[int] = None,
-        unfreeze_dec_after: Optional[int] = None,
+        freeze_enc: Optional[bool] = False,
         reconstruction_len: Optional[int] = None,
     ) -> None:
         """Initialize VanillaAE internal state.
@@ -97,16 +95,8 @@ class VanillaAE(LightningModule):
                 See LightningModule.configure_optimizers docstring for more details.
             encoder_weights (Optional[str], optional):
                 Path to encoder weights. If not specified, no weights are loaded by default.
-            decoder_weights (Optional[str], optional):
-                Path to decoder weights. If not specified, no weights are loaded by default.
-            unfreeze_enc_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
-            unfreeze_dec_after (Optional[int], optional):
-                Number of epochs to wait before unfreezing encoder weights.
-                The module doesn't get frozen by default.
-                A negative number would freeze the weights indefinetly.
+            freeze_enc (Optional[int], optional):
+                Whether to freeze the encoder module.
             reconstruction_len (Optional[int]):
                 length of reconstructed batch in predict_step, optional.
                 If None, determine length from batch.seq_lens.
@@ -121,23 +111,15 @@ class VanillaAE(LightningModule):
             instantiate(decoder) if decoder else AbsDecoder(self.encoder.embedding_size)
         )
 
-        self.unfreeze_enc_after = unfreeze_enc_after
-        self.unfreeze_dec_after = unfreeze_dec_after
         self.ae_output_size = self.decoder.output_size
 
         if encoder_weights:
             self.encoder.load_state_dict(torch.load(Path(encoder_weights)))
 
-        if decoder_weights:
-            self.decoder.load_state_dict(torch.load(Path(decoder_weights)))
-
-        if unfreeze_enc_after:
+        self.freeze_enc = freeze_enc
+        if freeze_enc:
             logger.info("Freezing encoder weights")
             self.encoder.requires_grad_(False)
-
-        if unfreeze_dec_after:
-            logger.info("Freezing decoder weights")
-            self.decoder.requires_grad_(False)
 
         self.amount_head = nn.Linear(self.ae_output_size, 1)
         self.mcc_head = nn.Linear(self.ae_output_size, self.num_types)
@@ -180,20 +162,13 @@ class VanillaAE(LightningModule):
     @property
     def metric_name(self):
         return "val_loss"
-
-    def on_train_epoch_start(self) -> None:
-        """Overrided method to unfreeze encoder/decoder weights"""
-        if self.unfreeze_enc_after and self.current_epoch == self.unfreeze_enc_after:
-            logger.info("Unfreezing encoder weights")
-            self.encoder.requires_grad_(True)
-
-        if self.unfreeze_dec_after and self.current_epoch == self.unfreeze_dec_after:
-            logger.info("Unfreezing decoder weights")
-
-            self.decoder.requires_grad_(True)
-            self.parameters()
-
-        return super().on_train_epoch_start()
+    
+    def train(self, mode: bool = True): # eval encoder if needed
+        super().train(mode)
+        if self.freeze_enc:
+            self.encoder.eval()
+            
+        return self
 
     def forward(
         self, batch: PaddedBatch, L: Optional[int] = None
@@ -293,7 +268,8 @@ class VanillaAE(LightningModule):
             batch
         )  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
-        amount_target = torch.log(batch.payload["amount"] + 1)  # Logarithmize targets
+        amount_target: Tensor = batch.payload["amount"]
+        amount_target = amount_target.abs().log1p() * amount_target.sign()  # Logarithmize targets
 
         loss_dict = self._calculate_losses(
             mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
@@ -355,7 +331,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor  # (B, L)
         mcc_pred, amount_pred, _, _ = self(batch, self.reconstruction_len)
         if self.reconstruction_len:
-            return mcc_pred, torch.exp(amount_pred)
+            return mcc_pred, amount_pred.sign()*(amount_pred.abs().exp() - 1)
         else:
             lens_mask = batch.seq_len_mask.bool()
             lens = batch.seq_lens.tolist()
@@ -363,7 +339,7 @@ class VanillaAE(LightningModule):
             mcc_pred_trim = mcc_pred[lens_mask]
             amount_pred_trim = amount_pred[lens_mask]
 
-            return mcc_pred_trim.split(lens), torch.exp(amount_pred_trim).split(lens)
+            return mcc_pred_trim.split(lens), (amount_pred_trim.sign()*(amount_pred_trim.abs().exp() - 1)).split(lens)
 
     def configure_optimizers(self):
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
