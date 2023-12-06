@@ -4,11 +4,13 @@ import numpy as np
 import torch
 from torch import nn
 
-from ptls.nn import RnnSeqEncoder, RnnEncoder
+from ptls.nn import RnnEncoder, TrxEncoder
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.frames.coles.split_strategy import AbsSplit, SampleSlices
 
 import torch.nn as nn
+
+from .pretrained_seq_encoder import PretrainedRnnSeqEncoder
 
 
 def is_seq_feature(k: str, x):
@@ -35,38 +37,6 @@ def is_seq_feature(k: str, x):
     return True
 
 
-class PretrainedRnnSeqEncoder(RnnSeqEncoder):
-    """Pretrained network layer which makes representation for single transactions
-
-    Args:
-        path_to_dict (str): Path to state dict of a pretrained RnnSeqEncoder
-        **seq_encoder_params: Params for RnnSeqEncoder initialization
-    """
-
-    def __init__(self, path_to_dict: Optional[str]=None, freeze: bool=True, **seq_encoder_params):
-        super().__init__(**seq_encoder_params)
-
-        if path_to_dict is not None:
-            self.load_state_dict(torch.load(path_to_dict))
-
-        self.freeze = freeze
-        if freeze:
-            # freeze parameters
-            for param in self.parameters():
-                param.requires_grad = False
-
-    @property
-    def output_size(self) -> int:
-        """Returns embedding size of a single transaction"""
-        return self.embedding_size
-    
-    def train(self, mode: bool = True): # override to disable training when frozen
-        if self.freeze:
-            mode = False
-
-        return super().train(mode)
-
-
 class CoLESonCoLESEncoder(nn.Module):
     """
     Coles on coles embeddings model
@@ -74,8 +44,12 @@ class CoLESonCoLESEncoder(nn.Module):
 
     def __init__(
         self,
-        frozen_encoder: PretrainedRnnSeqEncoder,
-        learning_encoder: RnnEncoder,
+        trx_encoder: TrxEncoder,
+        frozen_enc_type: str,
+        frozen_enc_weight_path: str,
+        learning_enc_type: str,
+        intermediate_size: int,
+        hidden_size: int,
         col_time: str = "event_time",
         encoding_seq_len: int = 20,
         encoding_step: int = 1,
@@ -85,17 +59,41 @@ class CoLESonCoLESEncoder(nn.Module):
         """
         Model for training CoLES on CoLES embeddings obtained via seq2vec strategy.
         Args:
-            frozen_encoder: pretrained CoLES model (used to embed raw data)
-            learning_encoder: SeqEncoder which is to be trained on embeddings
-            col_time: name of the column with events datettime
-            encoding_seq_len: sequence length which is used to embed raw data
+            trx_encoder:
+                TrxEncoder of the first encoder.
+            frozen_enc_type:
+                Type of the first encoder.
+            frozen_enc_weight_path:
+                Path to the state dict of first encoder.
+            learning_enc_type:
+                Type of SeqEncoder which is to be trained on embeddings
+            intermediate_size:
+                Output size of first, frozen encoder, input size of second.
+            col_time:
+                name of the column with events datettime
+            encoding_seq_len:
+                sequence length which is used to embed raw data
                 (to obtain 1 embedding, we use encoding_seq_len timestamps)
-            training_splitter: splitter used to train CoLES
-            training_mode: whether a model is training or not
+            training_splitter:
+                splitter used to train CoLES
+            training_mode:
+                whether a model is training or not
         """
         super().__init__()
-        self.frozen_encoder = frozen_encoder
-        self.learning_encoder = learning_encoder
+        self.frozen_encoder = PretrainedRnnSeqEncoder(
+            path_to_dict=frozen_enc_weight_path,
+            trx_encoder=trx_encoder,
+            hidden_size=intermediate_size,
+            type=frozen_enc_type,
+            is_reduce_sequence=True,
+        )
+
+        self.learning_encoder = RnnEncoder(
+            input_size=intermediate_size,
+            hidden_size=hidden_size,
+            type=learning_enc_type,
+            is_reduce_sequence=is_reduce_sequence,
+        )
 
         self.learning_encoder.is_reduce_sequence = is_reduce_sequence
 

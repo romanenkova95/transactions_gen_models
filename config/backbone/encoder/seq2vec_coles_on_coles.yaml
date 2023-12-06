@@ -1,24 +1,16 @@
 _target_: src.nn.CoLESonCoLESEncoder
-frozen_encoder:
-  _target_: src.nn.PretrainedRnnSeqEncoder
-  path_to_dict: coles_best_state_dict.pth
-  trx_encoder:
-    _target_: ptls.nn.TrxEncoder
-    use_batch_norm_with_lens: True
-    norm_embeddings: False
-    embeddings_noise: 0.0003
-    embeddings: {mcc_code: {in: 345, out: 24}}
-    numeric_values: {amount: identity}
-  hidden_size: 1024
-  bidir: False
-  trainable_starter: static
-  type: lstm
-  is_reduce_sequence: True
-learning_encoder:
-  _target_: ptls.nn.seq_encoder.RnnEncoder
-  input_size: ${..frozen_encoder.hidden_size}
-  hidden_size: 256
-  type: gru
+frozen_enc_weight_path: coles_best_state_dict.pth
+trx_encoder:
+  _target_: ptls.nn.TrxEncoder
+  use_batch_norm_with_lens: True
+  norm_embeddings: False
+  embeddings_noise: 0.0003
+  embeddings: {mcc_code: {in: 345, out: 24}}
+  numeric_values: {amount: identity}
+intermediate_size: 1024
+hidden_size: 256
+frozen_enc_type: lstm
+learning_enc_type: gru
 is_reduce_sequence: True
 encoding_seq_len: 10
 encoding_step: 4
