@@ -1,6 +1,6 @@
 defaults:
   - dataset: basic
-  - encoder: mlm
+  - encoder: transformer
   - module: mlm
   - _self_
 

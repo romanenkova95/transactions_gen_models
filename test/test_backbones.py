@@ -47,7 +47,7 @@ class TestBackbones(unittest.TestCase):
                 "coles_churn", 
                 "coles_emb_churn", 
                 "mlm", 
-                "cotic_churn", 
+                # "cotic", # doesn't run on a small GPU
                 "ts2vec_churn",
 
             ],
