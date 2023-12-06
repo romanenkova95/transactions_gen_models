@@ -1,4 +1,5 @@
-_target_: ptls.nn.TransformerSeqEncoder
+_target_: src.nn.TransformerSeqEncoder
+_recursive_: False # To correctly initialize trx_encoder
 trx_encoder:
   _target_: ptls.nn.TrxEncoder
   use_batch_norm_with_lens: True
@@ -10,5 +11,7 @@ trx_encoder:
       out: 24
   numeric_values: {amount: log}
   linear_projection_size: 1024
+# THESE ARE NOT THE SAME
+dim_hidden: 1024
 hidden_size: 1024
 is_reduce_sequence: False

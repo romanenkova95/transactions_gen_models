@@ -1,0 +1,7 @@
+defaults:
+  - preprocessing: default
+  - backbone: coles_default
+  - validation: global_target
+  - _self_
+
+pretrain: true
