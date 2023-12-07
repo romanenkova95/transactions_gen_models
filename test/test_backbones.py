@@ -49,6 +49,8 @@ class TestBackbones(unittest.TestCase):
                 "mlm", 
                 # "cotic", # doesn't run on a small GPU
                 "ts2vec_churn",
+                "coles_timecl_churn",
+                "seq2vec_coles_emb_churn"
 
             ],
             preprocessings=["default", "churn"],

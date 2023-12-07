@@ -3,6 +3,7 @@ from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pytorch_lightning as pl
 from torchmetrics import Metric, MetricCollection
 
@@ -22,7 +23,7 @@ class LocalValidationModelBase(pl.LightningModule):
         metrics: MetricCollection,
         freeze_backbone: bool = True,
         learning_rate: float = 1e-3,
-        postproc: Optional[Callable[[torch.Tensor], torch.Tensor]]=None
+        postproc: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
     ) -> None:
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 

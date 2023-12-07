@@ -4,4 +4,5 @@ from .time_diff_ds import create_time_diff_dataset
 from .coles import CustomColesDataset
 from .random_crop import RandomCropDataset
 from .sliding_window import SlidingWindowDataset
+from .coles_with_splitter import CustomColesDatasetWithSplitter
 from .no_split import NoSplitDataset

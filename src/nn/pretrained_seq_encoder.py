@@ -1,6 +1,7 @@
 from typing import Optional
+
 import torch
-from torch import nn
+
 from ptls.nn import RnnSeqEncoder
 
 
@@ -12,7 +13,12 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
         **seq_encoder_params: Params for RnnSeqEncoder initialization
     """
 
-    def __init__(self, path_to_dict: Optional[str]=None, freeze: bool=True, **seq_encoder_params):
+    def __init__(
+        self,
+        path_to_dict: Optional[str] = None,
+        freeze: bool = True,
+        **seq_encoder_params
+    ):
         super().__init__(**seq_encoder_params)
 
         if path_to_dict is not None:
@@ -29,7 +35,7 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
         """Returns embedding size of a single transaction"""
         return self.embedding_size
 
-    def train(self, mode: bool = True): # override to disable training when frozen
+    def train(self, mode: bool = True):  # override to disable training when frozen
         if self.freeze:
             mode = False
 
