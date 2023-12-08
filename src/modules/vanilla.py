@@ -1,15 +1,17 @@
+"""Main logic for the classic autoencoder method."""
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
-from omegaconf import DictConfig
-from pytorch_lightning.utilities.types import STEP_OUTPUT
-from pytorch_lightning import LightningModule
-from sklearn import multiclass
 
 import torch
-from torch import nn, Tensor
-
 from hydra.utils import instantiate
+from omegaconf import DictConfig
+from ptls.data_load import PaddedBatch
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from pytorch_lightning import LightningModule
+from pytorch_lightning.utilities.types import STEP_OUTPUT, LRSchedulerTypeUnion
+from sklearn import multiclass
+from torch import Tensor, nn
 from torchmetrics import (
     AUROC,
     Accuracy,
@@ -20,12 +22,8 @@ from torchmetrics import (
     MultitaskWrapper,
     R2Score,
 )
-from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
+from torchmetrics.functional import auroc, average_precision, f1_score, r2_score
 
-from ptls.data_load import PaddedBatch
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-
-from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
 from src.nn.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
 
@@ -34,6 +32,7 @@ logger = get_logger(name=__name__)
 
 class VanillaAE(LightningModule):
     """A vanilla autoencoder, without masking, just encodes target sequence and then restores it.
+
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -42,7 +41,8 @@ class VanillaAE(LightningModule):
      - a macro-averaged multiclass auroc score on mcc codes
      - an r2-score on amounts
 
-     Attributes:
+    Attributes
+    ----------
         out_amount (nn.Linear):
             A linear layer, which restores the transaction amounts.
         out_mcc (nn.Linear):
@@ -56,7 +56,8 @@ class VanillaAE(LightningModule):
         ae_output_size (int):
             The output size of the decoder.
 
-    Notes:
+    Notes
+    -----
         amount_loss_weight, mcc_loss_weight are normalized so that amount_loss_weight + mcc_loss_weight = 1.
         This is done to remove one hyperparameter. Loss gradient size can be managed separately through lr.
 
@@ -78,6 +79,7 @@ class VanillaAE(LightningModule):
         """Initialize VanillaAE internal state.
 
         Args:
+        ----
             loss_weights (dict):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
@@ -143,17 +145,20 @@ class VanillaAE(LightningModule):
         )
 
         MetricsType = dict[Literal["mcc", "amount"], MetricCollection]
+
         def make_metrics(stage: str) -> MetricsType:
-            return nn.ModuleDict({
-                "mcc": MetricCollection(
-                    AUROC(**multiclass_args, average="weighted"),
-                    F1Score(**multiclass_args, average="micro"),
-                    AveragePrecision(**multiclass_args, average="weighted"),
-                    Accuracy(**multiclass_args, average="micro"),
-                    prefix=stage
-                ),
-                "amount": MetricCollection(R2Score(), prefix=stage),
-            }) # type: ignore
+            return nn.ModuleDict(
+                {
+                    "mcc": MetricCollection(
+                        AUROC(**multiclass_args, average="weighted"),
+                        F1Score(**multiclass_args, average="micro"),
+                        AveragePrecision(**multiclass_args, average="weighted"),
+                        Accuracy(**multiclass_args, average="micro"),
+                        prefix=stage,
+                    ),
+                    "amount": MetricCollection(R2Score(), prefix=stage),
+                }
+            )  # type: ignore
 
         self.train_metrics: MetricsType = make_metrics("train")
         self.val_metrics: MetricsType = make_metrics("val")
@@ -161,27 +166,32 @@ class VanillaAE(LightningModule):
 
     @property
     def metric_name(self):
+        """The name of the metric to monitor."""
         return "val_loss"
-    
-    def train(self, mode: bool = True): # eval encoder if needed
+
+    def train(self, mode: bool = True):
+        """Set encoder to eval if it's supposed to be frozen."""
         super().train(mode)
         if self.freeze_enc:
             self.encoder.eval()
-            
+
         return self
 
     def forward(
         self, batch: PaddedBatch, L: Optional[int] = None
     ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
+
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
         to get the respective targets.
 
         Args:
+        ----
             batch (PaddedBatch): Input batch of raw transactional data.
             L (int): Optionally, specify length of decoded sequence
 
         Returns:
+        -------
             tuple[Tensor, Tensor]:
                 tuple of tensors:
                     - Predicted mcc logits, shape (B, L, mcc_vocab_size + 1)
@@ -190,6 +200,7 @@ class VanillaAE(LightningModule):
                     - Pad mask
 
         Notes:
+        -----
             The padding elements, determined by the padding mask of the input PaddedBatch,
             are zeroed out to prevent gradient flow.
 
@@ -220,9 +231,10 @@ class VanillaAE(LightningModule):
         amount_target: Tensor,
         mask: Tensor,
     ) -> dict[str, Tensor]:
-        """Calculate the losses, weigh them with respective weights
+        """Calculate the losses, weigh them with respective weights.
 
         Args:
+        ----
             mcc_pred (Tensor): Predicted mcc logits, (B, L, mcc_vocab_size).
             amount_pred (Tensor): Predicted amounts, (B, L).
             mcc_target (Tensor): target mcc codes.
@@ -230,6 +242,7 @@ class VanillaAE(LightningModule):
             mask (Tensor): mask of non-padding elements
 
         Returns:
+        -------
             Dictionary of losses, with keys loss, loss_mcc, loss_amt.
         """
         mcc_loss = self.mcc_criterion(mcc_pred[mask], mcc_target[mask])
@@ -251,11 +264,15 @@ class VanillaAE(LightningModule):
         """Generalized function to do a train/val/test step.
 
         Args:
+        ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
-            batch_idx (int): ignored
+            batch_idx (int): ignored.
+            *args: ignored.
+            **kwargs: ignored.
 
         Returns:
+        -------
             STEP_OUTPUT:
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
@@ -263,13 +280,15 @@ class VanillaAE(LightningModule):
         batch.payload["mcc_code"] = torch.clip(
             batch.payload["mcc_code"], 0, self.num_types - 1
         )
-        
+
         mcc_pred, amount_pred, _, nonpad_mask = self(
             batch
         )  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
         amount_target: Tensor = batch.payload["amount"]
-        amount_target = amount_target.abs().log1p() * amount_target.sign()  # Logarithmize targets
+        amount_target = (
+            amount_target.abs().log1p() * amount_target.sign()
+        )  # Logarithmize targets
 
         loss_dict = self._calculate_losses(
             mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
@@ -290,10 +309,10 @@ class VanillaAE(LightningModule):
             on_epoch=True,
             batch_size=batch.seq_feature_shape[0],
         )
-        
+
         for metric in metrics.values():
             self.log_dict(
-                metric, # type: ignore
+                metric,  # type: ignore
                 on_step=False,
                 on_epoch=True,
                 batch_size=batch.seq_feature_shape[0],
@@ -302,12 +321,15 @@ class VanillaAE(LightningModule):
         return loss_dict["loss"]
 
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
+        """Run the training step of this model."""
         return self.shared_step("train", *args, **kwargs)
 
     def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
+        """Run the validation step of this model."""
         return self.shared_step("val", *args, **kwargs)
 
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
+        """Run the test step of this model."""
         return self.shared_step("test", *args, **kwargs)
 
     def predict_step(
@@ -316,11 +338,13 @@ class VanillaAE(LightningModule):
         """Run the predict step: forward pass for the input batch, and trim padding in output.
 
         Args:
+        ----
             batch (PaddedBatch): input padded batch
             batch_idx (int): ignored
             dataloader_idx (int, optional): ignored
 
         Returns:
+        -------
             tuple[list[Tensor], list[Tensor]]:
                 - list of predicted mcc logits, (B, L_i, mcc_vocab_size)
                 - list of predicted amounts, (B, L_i)
@@ -331,7 +355,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor  # (B, L)
         mcc_pred, amount_pred, _, _ = self(batch, self.reconstruction_len)
         if self.reconstruction_len:
-            return mcc_pred, amount_pred.sign()*(amount_pred.abs().exp() - 1)
+            return mcc_pred, amount_pred.sign() * (amount_pred.abs().exp() - 1)
         else:
             lens_mask = batch.seq_len_mask.bool()
             lens = batch.seq_lens.tolist()
@@ -339,9 +363,12 @@ class VanillaAE(LightningModule):
             mcc_pred_trim = mcc_pred[lens_mask]
             amount_pred_trim = amount_pred[lens_mask]
 
-            return mcc_pred_trim.split(lens), (amount_pred_trim.sign()*(amount_pred_trim.abs().exp() - 1)).split(lens)
+            return mcc_pred_trim.split(lens), (
+                amount_pred_trim.sign() * (amount_pred_trim.abs().exp() - 1)
+            ).split(lens)
 
     def configure_optimizers(self):
+        """Configure the optimizers from the configs given in init."""
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
 
         if self.scheduler_dictconfig:
@@ -359,4 +386,5 @@ class VanillaAE(LightningModule):
     def lr_scheduler_step(
         self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
     ) -> None:
+        """Return the super method just for lightning to think it's overriden."""
         return super().lr_scheduler_step(scheduler, optimizer_idx, metric)

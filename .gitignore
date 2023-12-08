@@ -196,5 +196,4 @@ outputs/
 multirun/
 sweeps/
 cache/
-docker_scripts/credentials
 saved_models/

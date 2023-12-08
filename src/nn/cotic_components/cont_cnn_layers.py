@@ -1,14 +1,10 @@
-###############################################################################################
-#         Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main             #
-###############################################################################################
+"""Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main."""
 
-import torch
-import torch.nn as nn
-
-import torch.nn.functional as F
 import math
 
-from typing import Tuple
+import torch
+import torch.nn.functional as F
+from torch import nn
 
 
 class ContConv1d(nn.Module):
@@ -26,12 +22,13 @@ class ContConv1d(nn.Module):
         """Initialize Continuous convolution layer.
 
         Args:
-            kernel (nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
-            kernel_size (int) - convolution layer kernel size
-            in_channels (int) - features input size
-            out_channles (int) - output size
-            dilation (int) - convolutional layer dilation (default = 1)
-            include_zero_lag (bool) - indicates if the model should use current time step features for prediction
+        ----
+            kernel (nn.Module): Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
+            kernel_size (int): convolution layer kernel size
+            in_channels (int): features input size
+            out_channels (int): output size
+            dilation (int): convolutional layer dilation (default = 1)
+            include_zero_lag (bool): indicates if the model should use current time step features for prediction
         """
         super().__init__()
         assert dilation >= 1, "Wrong dilation size."
@@ -63,9 +60,11 @@ class ContConv1d(nn.Module):
         """Positional encoding of event sequences.
 
         Args:
-            time (torch.Tensor) - true event times
+        ----
+            time (torch.Tensor): true event times
 
         Returns:
+        -------
             torch.Tensor with encoded times tensor
         """
         result = time.unsqueeze(-1) / self.position_vec.to(time.device)
@@ -81,18 +80,20 @@ class ContConv1d(nn.Module):
         kernel_size: int,
         dilation: int,
         include_zero_lag: bool,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
 
         Args:
-            times (torch.Tensor) - all times of shape = (bs, max_len)
-            features (torch.Tensor) - input of shape = (bs, max_len, in_channels)
-            non_pad_mask (torch.Tensor) non-padding timestamps of shape = (bs, max_len)
-            kernel_size (int) - covolution kernel size
-            dilation (int) - convolution dilation
-            include_zero_lag (bool) - indicates if we should use zero-lag timestamp
+        ----
+            times (torch.Tensor): all times of shape = (bs, max_len)
+            features (torch.Tensor): input of shape = (bs, max_len, in_channels)
+            non_pad_mask (torch.Tensor): non-padding timestamps of shape = (bs, max_len)
+            kernel_size (int): covolution kernel size
+            dilation (int): convolution dilation
+            include_zero_lag (bool): indicates if we should use zero-lag timestamp
 
-        Returns a tuple of:
+        Returns:
+        -------
             * delta_times - torch.Tensor of shape = (bs, kernel_size, max_len) with delta times value between current time and kernel_size true times before it
             * pre_conv_features - torch.Tensor of shape = (bs, kernel_size, max_len, in_channels) with corresponding input features of timestamps in delta_times
             * dt_mask - torch.Tensor of shape = (bs, kernel_size, max_len), bool tensor that indicates delta_times true values
@@ -155,11 +156,13 @@ class ContConv1d(nn.Module):
         """Neural net layer forward pass.
 
         Args:
-            times (torch.Tensor) - event times of shape = (bs, L)
-            features (torch.Tensor) - event features of shape = (bs, L, in_channels)
-            non_pad_mask (torch.Tensor) - mask that indicates non pad values shape = (bs, L)
+        ----
+            times (torch.Tensor): event times of shape = (bs, L)
+            features (torch.Tensor): event features of shape = (bs, L, in_channels)
+            non_pad_mask (torch.Tensor): mask that indicates non pad values shape = (bs, L)
 
         Returns:
+        -------
             torch.Tensor of shape = (bs, L, out_channels)
         """
         delta_times, features_kern, dt_mask = self.__conv_matrix_constructor(
@@ -184,8 +187,7 @@ class ContConv1d(nn.Module):
 
 
 class ContConv1dSim(nn.Module):
-    """Continuous convolution layer for a sequence with auxiliary (simulated) random timestamps
-    for intensity function calculation."""
+    """Continuous convolution layer for a sequence with auxiliary (simulated) random timestamps for intensity function calculation."""
 
     def __init__(
         self, kernel: nn.Module, kernel_size: int, in_channels: int, out_channels: int
@@ -193,10 +195,11 @@ class ContConv1dSim(nn.Module):
         """Initialize Continuous convolutional layer for a sequences with auxiliary simulated times.
 
         Args:
-            kernel (torch.nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
-            kernel_size (int) - convolution layer kernel size
-            in_channels (int) - features input size
-            out_channles (int) - output size
+        ----
+            kernel (torch.nn.Module): Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
+            kernel_size (int): convolution layer kernel size
+            in_channels (int): features input size
+            out_channels (int): output size
         """
         super().__init__()
         self.kernel = kernel
@@ -217,9 +220,11 @@ class ContConv1dSim(nn.Module):
         """Positional encoding of event sequences.
 
         Args:
-            time (torch.Tensor) - true event times
+        ----
+            time (torch.Tensor): true event times
 
         Returns:
+        -------
             torch.Tensor with encoded times tensor
         """
         result = time.unsqueeze(-1) / self.position_vec.to(time.device)
@@ -235,18 +240,20 @@ class ContConv1dSim(nn.Module):
         non_pad_mask: torch.Tensor,
         kernel_size: int,
         sim_size: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
 
         Args:
-            times (torch.Tensor) - all times of shape = (bs, max_len)
-            features (torch.Tensor) - input of shape = (bs, max_len, in_channels)
-            non_pad_mask (torch.Tensor) non-padding timestamps of shape = (bs, max_len)
-            kernel_size (int) - covolution kernel size
-            dilation (int) - convolution dilation
-            include_zero_lag (bool) - indicates if we should use zero-lag timestamp
+        ----
+            times (torch.Tensor): all times of shape = (bs, max_len)
+            true_times (torch.Tensor): all times of shape = (bs, max_len)
+            true_features (torch.Tensor): input of shape = (bs, max_len, in_channels)
+            non_pad_mask (torch.Tensor): non-padding timestamps of shape = (bs, max_len)
+            kernel_size (int): covolution kernel size
+            sim_size (int): where to consider similarity.
 
-        Returns a tuple of:
+        Returns:
+        -------
             * delta_times - torch.Tensor of shape = (bs, kernel_size, max_len) with delta times value between current time and kernel_size true times before it
             * pre_conv_features - torch.Tensor of shape = (bs, kernel_size, max_len, in_channels) with corresponding input features of timestamps in delta_times
             * dt_mask - torch.Tensor of shape = (bs, kernel_size, max_len), bool tensor that indicates delta_times true values
@@ -325,13 +332,15 @@ class ContConv1dSim(nn.Module):
         """Neural net layer forward pass.
 
         Args:
-            times (torch.Tensor) - all times (prepended with zeros by .__ad_bos) of shape = (bs, (sim_size+1)*(max_len-1)+1)
-            true_times (torch.Tensor) true times of shape = (bs, max_len)
-            true_features (torch.Tensor) input (aka 'encoded_outpup') of shape = (bs, max_len, in_channels)
-            non_pad_mask (torch.Tensor) non-padding timestamps of shape = (bs, max_len)
-            sim_size (int) - simulated times size
+        ----
+            times (torch.Tensor): all times (prepended with zeros by .__ad_bos) of shape = (bs, (sim_size+1)*(max_len-1)+1)
+            true_times (torch.Tensor): true times of shape = (bs, max_len)
+            true_features (torch.Tensor): input (aka 'encoded_outpup') of shape = (bs, max_len, in_channels)
+            non_pad_mask (torch.Tensor): non-padding timestamps of shape = (bs, max_len)
+            sim_size (int): simulated times size
 
         Returns:
+        -------
             torch.Tensor of shape = (bs, L, out_channels)
         """
         delta_times, features_kern, dt_mask = self.__conv_matrix_constructor(

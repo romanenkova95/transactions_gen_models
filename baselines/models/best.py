@@ -1,26 +1,14 @@
+"""File with the bestclassifier model."""
+from typing import Optional
 import torch
 
 
 class BestClassifier(torch.nn.Module):
-    """
-    Classification model from the open VTB competition.
-
-    Attributes:
-        input_size: int - number of channels in the input data
-        rnn_units: int - hidden size of the GRU
-        classifier_units: int - output size of the 1st linear layer
-        num_layers: int - number of layers in the GRU
-        bias: bool - whether the GRU uses bias weights
-        dropout: float -  if non-zero, introduces a Dropout layer on
-            the outputs of each GRU layer except the last layer, with dropout
-            probability equal to dropout
-        bidirectional: bool - whether the GRU is bidirectional or not
-        num_classes: int - number of classes in the classification task
-    """
+    """Classification model from the open VTB competition."""
 
     def __init__(
         self,
-        input_size: int = None,
+        input_size: Optional[int] = None,
         rnn_units: int = 128,  # C_out
         classifier_units: int = 64,
         num_layers: int = 1,
@@ -30,6 +18,22 @@ class BestClassifier(torch.nn.Module):
         bidirectional: bool = True,
         num_classes: int = 4,
     ):
+        """Initialize internal module state.
+
+        Args:
+        ----
+            input_size (int): number of channels in the input data
+            rnn_units (int): hidden size of the GRU
+            classifier_units (int): output size of the 1st linear layer
+            num_layers (int): number of layers in the GRU
+            bias (bool): whether the GRU uses bias weights
+            dropout (float):  if non-zero, introduces a Dropout layer on
+                the outputs of each GRU layer except the last layer, with dropout
+                probability equal to dropout
+            bidirectional (bool): whether the GRU is bidirectional or not
+            num_classes (int): number of classes in the classification task
+            batch_first (bool): whether the data is passed batch-first.
+        """
         super().__init__()
 
         self.dropout = torch.nn.Dropout2d(0.5)
@@ -60,6 +64,7 @@ class BestClassifier(torch.nn.Module):
         )
 
     def forward(self, input):
+        """Pass input through the model."""
         embs = input.payload  # (N, L, C)
         dropout_embs = self.dropout(embs)
         states, h_n = self.backbone(dropout_embs)  # (N, L, 2 * C_out), (2, N, C_out)

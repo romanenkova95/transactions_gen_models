@@ -1,22 +1,18 @@
-"""Main coles learning script"""
+"""Main coles learning script."""
 from pathlib import Path
 from typing import Union
 
+import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
-from torch.utils.data import Dataset
-
 from ptls.frames import PtlsDataModule
-
-import torch
-
 from pytorch_lightning import seed_everything
 from pytorch_lightning.utilities.model_helpers import is_overridden
+from torch.utils.data import Dataset
 
-from src.modules import CustomCoLES, VanillaAE, Cotic, TS2Vec
+from src.modules import Cotic, CustomCoLES, TS2Vec, VanillaAE
 from src.utils.create_trainer import create_trainer
 from src.utils.logging_utils import get_logger
-
 
 logger = get_logger(name=__name__)
 
@@ -30,6 +26,7 @@ def learn(
     """Full pipeline for model fitting.
 
     Args:
+    ----
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val and test sets
         backbone_cfg (DictConfig): config with the following fields:

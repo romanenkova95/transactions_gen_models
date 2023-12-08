@@ -1,17 +1,13 @@
-"""
-Custom coles datamodule
-"""
+"""Custom coles datamodule."""
 import torch
-
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import SampleSlices, SampleUniform
 
+
 class CustomColesDataset(ColesDataset):
-    """
-    Custom coles dataset inhereted from ptls coles dataset.
-    """
+    """Custom coles dataset inhereted from ptls coles dataset."""
 
     def __init__(
         self,
@@ -23,20 +19,26 @@ class CustomColesDataset(ColesDataset):
         deterministic: bool,
         *args,
         col_time: str = "event_time",
-        **kwargs
+        **kwargs,
     ):
-        """Overrided initialize method, which is suitable for our tasks.
+        """Initialize internal module state.
 
         Args:
+        ----
             data (list[dict]): transaction dataframe in the ptls format (list of dicts)
             min_len (int): minimal subsequence length
             split_count (int): number of splitting samples
             random_min_seq_len (int): Minimal length of the randomly sampled subsequence
             random_max_seq_len (int): Maximum length of the randomly sampled subsequence
             col_time (str, optional): column name with event time. Defaults to 'event_time'.
+            deterministic (bool): whether to use deterministic sampling.
+            *args: additional arguments, passed to ColesDataset constructor
+            **kwargs: additional arguments, passed to ColesDataset constructor
         """
         if deterministic:
-            splitter = SampleUniform(split_count, (random_min_seq_len + random_max_seq_len) // 2)
+            splitter = SampleUniform(
+                split_count, (random_min_seq_len + random_max_seq_len) // 2
+            )
         else:
             splitter = SampleSlices(split_count, random_min_seq_len, random_max_seq_len)
         super().__init__(
@@ -44,5 +46,5 @@ class CustomColesDataset(ColesDataset):
             splitter,
             col_time,
             *args,
-            **kwargs
+            **kwargs,
         )

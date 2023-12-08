@@ -1,28 +1,14 @@
+"""File with the RNN classifier model."""
 import torch
 
 
 class RNNClassifier(torch.nn.Module):
-    """
-    A simple classification model based on a recurrent neural network.
-
-    Attributes:
-        input_size: int - number of channels in the input data
-        hidden_size: int - hidden size of the GRU
-        num_layers: int - number of layers in the GRU
-        bias: bool - whether the GRU uses bias weights
-        batch_first: bool - if True, then the input and output tensors are provided
-            as (batch, seq, feature) instead of (seq, batch, feature)
-        dropout: float -  if non-zero, introduces a Dropout layer on
-            the outputs of each GRU layer except the last layer, with dropout
-            probability equal to dropout
-        bidirectional: bool - whether the GRU is bidirectional or not
-        num_classes: int - number of classes in the classification task
-    """
+    """A simple classification model based on a recurrent neural network."""
 
     def __init__(
         self,
-        input_size: int = None,
-        hidden_size: int = None,
+        input_size: int,
+        hidden_size: int,
         num_layers: int = 1,
         bias: bool = True,
         batch_first: bool = True,
@@ -30,6 +16,22 @@ class RNNClassifier(torch.nn.Module):
         bidirectional: bool = False,
         num_classes: int = 1,
     ):
+        """Initialize internal state.
+
+        Args:
+        ----
+            input_size (int): number of channels in the input data
+            hidden_size (int): hidden size of the GRU
+            num_layers (int): number of layers in the GRU
+            bias (bool): whether the GRU uses bias weights
+            batch_first (bool): if True, then the input and output tensors are provided
+                as (batch, seq, feature) instead of (seq, batch, feature)
+            dropout (float):  if non-zero, introduces a Dropout layer on
+                the outputs of each GRU layer except the last layer, with dropout
+                probability equal to dropout
+            bidirectional (bool): whether the GRU is bidirectional or not
+            num_classes (int): number of classes in the classification task
+        """
         super().__init__()
 
         self.backbone = torch.nn.GRU(
@@ -51,6 +53,7 @@ class RNNClassifier(torch.nn.Module):
         )
 
     def forward(self, input):
+        """Pass input through the model."""
         # output, (h_n, c_n) = self.backbone(input.payload)
         _, h_n = self.backbone(input.payload)
         batch_size = h_n.shape[-2]

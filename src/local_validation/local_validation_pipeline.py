@@ -1,24 +1,20 @@
-"""Local targets validation script. """
+"""Local targets validation script."""
 
+import warnings
 from pathlib import Path
 from typing import Optional
-import warnings
-from hydra.utils import instantiate, call
-from omegaconf import DictConfig
-
-import pandas as pd
 
 import torch
-
-from pytorch_lightning import seed_everything, Trainer
-from pytorch_lightning.loggers import WandbLogger, CometLogger, LightningLoggerBase
-
+from hydra.utils import call, instantiate
+from omegaconf import DictConfig
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-from src.utils.create_trainer import create_trainer
+from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import CometLogger, WandbLogger
 
+from src.utils.create_trainer import create_trainer
 from src.utils.logging_utils import get_logger
-from src.preprocessing import preprocess
+
 from .local_validation_model import LocalValidationModelBase
 
 
@@ -29,23 +25,32 @@ def local_target_validation(
     cfg_logger: DictConfig,
     encoder_name: str,
     val_name: str,
-    is_deterministic: Optional[bool] = None
+    is_deterministic: Optional[bool] = None,
 ) -> dict[str, float]:
     """Full pipeline for the sequence encoder local validation.
 
     Args:
+    ----
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val & test sets
         cfg_encoder (DictConfig):
             Encoder config (specified in 'config/encoder')
         cfg_validation (DictConfig):
             Validation config (specified in 'config/validation')
+        cfg_logger (DictConfig):
+            The config to use when creating the logger.
         encoder_name (str):
             Name of used encoder (for logging & saving)
         val_name (str):
             Name of validation (for logging & saving)
+        is_deterministic (bool):
+            Flag which allows you to override the default dataset creation behaviour.
+            If True, train & val & test are all deterministic.
+            If False, all of them are shuffled.
+            If None, make train nondeterministic and val/test deterministic.
 
     Returns:
+    -------
         results (dict[str]):
             Metrics on test set.
     """
@@ -67,10 +72,16 @@ def local_target_validation(
 
     train_deterministic = False if is_deterministic is None else is_deterministic
     val_deterministic = True if is_deterministic is None else is_deterministic
-    
-    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=train_deterministic)
-    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=val_deterministic)
-    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=val_deterministic)
+
+    train_dataset = call(
+        cfg_validation["dataset"], data=train, deterministic=train_deterministic
+    )
+    val_dataset = call(
+        cfg_validation["dataset"], data=val, deterministic=val_deterministic
+    )
+    test_dataset = call(
+        cfg_validation["dataset"], data=test, deterministic=val_deterministic
+    )
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],
@@ -79,7 +90,7 @@ def local_target_validation(
         test_data=test_dataset,
     )
 
-    logger.info(f"Training LocalValidationModel")
+    logger.info("Training LocalValidationModel")
 
     valid_model: LocalValidationModelBase = instantiate(
         cfg_validation["module"], backbone=sequence_encoder
