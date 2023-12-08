@@ -1,3 +1,4 @@
+"""Module with the log cosh loss."""
 import torch
 import math
 
@@ -6,6 +7,16 @@ class LogCoshLoss(torch.nn.Module):
     """Custom LogCoshLoss for return time prediction head training."""
 
     def __init__(self, reduction: str = "mean") -> None:
+        """Initialize internal module state.
+
+        Args:
+        ----
+            reduction (str, optional): which reduction to use (mean/sum). Defaults to "mean".
+
+        Raises:
+        ------
+            ValueError: invalid reduction passed.
+        """
         super().__init__()
         if reduction not in ["mean", "sum"]:
             raise ValueError("LogCoshLoss: reduction not in ['mean', 'sum']")

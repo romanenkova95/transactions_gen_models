@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional
+from typing import Any
 from .basic_ds import create_basic_dataset
 from .target_utils import collate_fn_with_targets, TimeDiffTarget
 
@@ -16,6 +16,7 @@ def create_time_diff_dataset(
     """Initialize dataset, which returns tuple of batch & time until next transaction.
 
     Args:
+    ----
         data (Any):
             Data, compatible with ptls.datasets
         deterministic (bool):

@@ -1,7 +1,5 @@
-from typing import Tuple
-
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -12,6 +10,7 @@ class HierarchicalContrastiveLoss(nn.Module):
         """Initlize HierarchicalContrastiveLoss.
 
         Args:
+        ----
             alpha (float) - weighting coefficient
             temporal_unit (int) - start computing temporal component after this level of hierarchy
         """
@@ -25,10 +24,12 @@ class HierarchicalContrastiveLoss(nn.Module):
         """Compute instance-wise component of contrastive loss.
 
         Args:
+        ----
             z1 (torch.Tensor) - embedding of the 1st augmented window
             z2 (torch.Tensor) - embedding of the 2nd augmented window
 
         Returns:
+        -------
             instance-wise component of the loss function
         """
         B = z1.size(0)
@@ -50,10 +51,12 @@ class HierarchicalContrastiveLoss(nn.Module):
         """Compute temporal component of contrastive loss.
 
         Args:
+        ----
             z1 (torch.Tensor) - embedding of the 1st augmented window
             z2 (torch.Tensor) - embedding of the 1st augmented window
 
         Returns:
+        -------
             temporal component of the loss function
         """
         T = z1.size(1)
@@ -75,12 +78,14 @@ class HierarchicalContrastiveLoss(nn.Module):
         """Compute hierarchical contrastive loss for TS2Vec model.
 
         Args:
+        ----
             z1 (torch.Tensor) - embedding of the 1st augmented window
             z2 (torch.Tensor) - embedding of the 2nd augmented window
             alpha (float) - weighting coefficient
             temporal_unit (int) - start computing temporal component after this level of hierarchy
 
         Returns:
+        -------
             value of the loss function
         """
         loss = torch.tensor(0.0, device=z1.device)
@@ -100,13 +105,15 @@ class HierarchicalContrastiveLoss(nn.Module):
             d += 1
         return loss / d
 
-    def forward(self, embeddings: Tuple[Tuple[torch.Tensor], torch.Tensor], _) -> float:
+    def forward(self, embeddings: tuple[tuple[torch.Tensor], torch.Tensor], _) -> float:
         """Compute value of the loss function.
 
         Args:
-            embeddings (Tuple[Tuple[torch.Tensor], torch.Tensor]) - embeddings of 2 windows and time, i.e. output of TS2Vec.shared_step()
+        ----
+            embeddings (tuple[tuple[torch.Tensor], torch.Tensor]) - embeddings of 2 windows and time, i.e. output of TS2Vec.shared_step()
 
         Returns:
+        -------
             value of the loss function
         """
         out1, out2, _ = embeddings

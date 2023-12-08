@@ -9,6 +9,7 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
     """Pretrained network layer which makes representation for single transactions
 
     Args:
+    ----
         path_to_dict (str): Path to state dict of a pretrained RnnSeqEncoder
         **seq_encoder_params: Params for RnnSeqEncoder initialization
     """
@@ -17,7 +18,7 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
         self,
         path_to_dict: Optional[str] = None,
         freeze: bool = True,
-        **seq_encoder_params
+        **seq_encoder_params,
     ):
         super().__init__(**seq_encoder_params)
 

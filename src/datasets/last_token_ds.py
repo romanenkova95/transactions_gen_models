@@ -1,4 +1,4 @@
-"""Last token prediction dataset"""
+"""Last token prediction dataset."""
 from typing import Any
 
 
@@ -18,9 +18,11 @@ def create_last_token_dataset(
     drop_last: bool,
 ):
     """Initialize dataset, which returns tuple of batch & last element of target_seq_col.
+    
     Optionally, drop last elements of sequence columns to prevent data leak.
 
     Args:
+    ----
         data (Any):
             Data, compatible with ptls.datasets
         deterministic (bool):

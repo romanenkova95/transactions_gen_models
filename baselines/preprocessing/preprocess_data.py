@@ -13,10 +13,10 @@ BASE_PTH = Path("/home/COLES/poison/data")
 def split_dataset(
     df_trx, df_target, test_size: float = 0.2, val_size: float = 0.1, seed: int = 142
 ):
-    """
-    Splits the transactional data into train, test and validation.
+    """Splits the transactional data into train, test and validation.
 
     Args:
+    ----
         df_trx: pd.DataFrame - transactional data
         df_target: pd.DataFrame - target data
         test_size: float - the proportion of the dataset to include in the test split
@@ -24,10 +24,12 @@ def split_dataset(
         seed: int - random state of the split
 
     Returns:
+    -------
         (pd.DataFrame, pd.DataFrame, pd.DataFrame) - train, valid and test dataframes
     """
-    test_size, val_size = int(len(df_target) * test_size), int(
-        len(df_target) * val_size
+    test_size, val_size = (
+        int(len(df_target) * test_size),
+        int(len(df_target) * val_size),
     )
 
     df_target_train, df_target_test = train_test_split(
@@ -67,11 +69,11 @@ def df_to_dataset(
     df_target,
     event_time_transformation="dt_to_timestamp",
 ):
-    """
-    Merges target data with train, val and test transactions data.
+    """Merges target data with train, val and test transactions data.
     Transforms dataframes into MemoryMapDataset objects.
 
     Args:
+    ----
         df_trx_train: pd.DataFrame - train dataset with transactional data
         df_trx_valid: pd.DataFrame - validation dataset with transactional data
         df_trx_test: pd.DataFrame - test dataset with transactional data
@@ -80,10 +82,10 @@ def df_to_dataset(
             that is applied to the datetime column.
 
     Returns:
+    -------
         (MemoryMapDataset, MemoryMapDataset, MemoryMapDataset):
             train dataset, validation dataset and test dataset
     """
-
     preprocessor = PandasDataPreprocessor(
         col_id="uid",
         col_event_time="trans_dttm",
@@ -113,13 +115,14 @@ def df_to_dataset(
 
 
 def load_dataset(ds_name: str):
-    """
-    Loads the data.
+    """Loads the data.
 
     Args:
+    ----
         ds_name: str - "age", "default", "churn" or "raif"
 
     Returns:
+    -------
         (MemoryMapDataset, MemoryMapDataset, MemoryMapDataset):
             train dataset, validation dataset and test dataset
     """

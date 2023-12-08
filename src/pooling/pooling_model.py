@@ -1,9 +1,8 @@
 import warnings
-from typing import List, Dict
 import numpy as np
 
 import torch
-import torch.nn as nn
+from torch import nn
 from tqdm import tqdm
 
 from ptls.data_load.padded_batch import PaddedBatch
@@ -12,14 +11,13 @@ from ptls.data_load.feature_dict import FeatureDict
 
 
 class PoolingModel(nn.Module):
-    """
-    PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions
-        representations with pooling of information of different users.
+    """PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions
+    representations with pooling of information of different users.
     """
 
     def __init__(
         self,
-        train_data: List[Dict],
+        train_data: list[dict],
         backbone: nn.Module,
         pooling_type: str = "mean",
         backbone_embd_size: int = None,
@@ -33,7 +31,8 @@ class PoolingModel(nn.Module):
         """Initialize method for PoolingModel.
 
         Args:
-            train_data (List[Dict]): Dataset for calculating embedings
+        ----
+            train_data (list[dict]): Dataset for calculating embedings
             backbone (nn.Module):  Local embeding model
             pooling_type (str): "max", "mean", "attention" or "learnable_attention", type of pooling
             backbone_embd_size (int): Size of local embedings from backbone model
@@ -81,10 +80,12 @@ class PoolingModel(nn.Module):
         """Function for preparing one user's embedings and last times for this embedings.
 
         Args:
-            x (Dict): Data from one user
+        ----
+            x (dict): Data from one user
             device (str): Name of device to use
 
         Return:
+        ------
             embs (np.array): Embeddings of slices of one user
             times (np.array): Times of last transaction in slices of ine user
         """
@@ -103,18 +104,20 @@ class PoolingModel(nn.Module):
         return embs, times
 
     def make_pooled_embegings_dataset(
-        self, train_data: List[Dict], max_users_in_train_dataloader: int, device: str
+        self, train_data: list[dict], max_users_in_train_dataloader: int, device: str
     ) -> dict[int, torch.Tensor]:
         """Creation of pooled embeding dataset. This function for each timestamp get
         sequences in dataset which ends close to this timestamp,
         make local embedding out of them and pool them together
 
         Args:
-            train_data (List[Dict]): data for calculating global embedings
+        ----
+            train_data (list[dict]): data for calculating global embedings
                 from local sequences
             device (str): name of device to use
 
         Return:
+        ------
             embegings_dataset(dict): dictionary containing timestamps and pooling
                 vectors for that timestamps
         """
@@ -143,22 +146,23 @@ class PoolingModel(nn.Module):
         return embegings_dataset
 
     def reshape_time_user_dataset(
-        self, all_times: List, data: List[Dict]
+        self, all_times: list, data: list[dict]
     ) -> dict[int, torch.Tensor]:
-        """Reshaping of time-users-embeddings data from List of users with Dicts
-        with time keys to Dict with time keys and values with concatenated users
+        """Reshaping of time-users-embeddings data from list of users with Dicts
+        with time keys to dict with time keys and values with concatenated users
         embeddings
 
         Args:
-            all_times (List): list of all time points that can be found in data
-            data (List[Dict]): list of users containing the time as a keys and
+        ----
+            all_times (list): list of all time points that can be found in data
+            data (list[dict]): list of users containing the time as a keys and
             embeddings as values
 
         Return:
+        ------
             embegings_dataset(dict): dictionary containing timestamps and pooling
                 vectors for that timestamps
         """
-
         embegings_dataset = {}
         for time in tqdm(all_times):
             embs_for_this_time = []
@@ -183,9 +187,11 @@ class PoolingModel(nn.Module):
         """Local forward method (just pass batch through the backbone).
 
         Args:
+        ----
             batch (PaddedBatch): batch of data
 
         Return:
+        ------
             out (torch.Tensor): embedings of data in batch
         """
         out = self.backbone(batch)
@@ -197,14 +203,15 @@ class PoolingModel(nn.Module):
         """Global forward method ().
 
         Args:
+        ----
             batch (PaddedBatch): batch of data
             batch_of_local_embedings (torch.Tensor): embedings of data in batch
 
         Return:
+        ------
             batch_of_global_poolings (torch.Tensor): global embedings for
                 last times for data in batch
         """
-
         batch_of_global_poolings = []
         for event_time_seq, user_emb in zip(
             batch.payload["event_time"], batch_of_local_embedings
@@ -223,12 +230,13 @@ class PoolingModel(nn.Module):
         """Forward method (makes local and global forward and concatenate them).
 
         Args:
+        ----
             batch (PaddedBatch): batch of data
 
         Return:
+        ------
             out (torch.Tensor): concatenated local and global forward outputs
         """
-
         batch_of_local_embedings = self.local_forward(batch)
         batch_of_global_poolings = self.global_forward(batch, batch_of_local_embedings)
 
@@ -249,9 +257,11 @@ class PoolingModel(nn.Module):
         and return the pooling vector at this timestamp.
 
         Args:
+        ----
             time (int): timepoint for which we are looking for pooling vector
 
         Return:
+        ------
             pooled_vector (torch.Tensor): pooling vector for given timepoint
 
         """

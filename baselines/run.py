@@ -23,8 +23,7 @@ from baselines.preprocessing import load_dataset
 
 
 def train_and_eval():
-    """
-    Trains and evaluates a classification model.
+    """Trains and evaluates a classification model.
     """
     with wandb.init() as run:
         cfg = wandb.config

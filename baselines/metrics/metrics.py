@@ -15,16 +15,17 @@ from torchmetrics import AveragePrecision
 
 
 def val_metrics(df_predict, task="binary", num_classes=2):
-    """
-    Calculates classification metrics on the test dataset.
+    """Calculates classification metrics on the test dataset.
 
     Args:
+    ----
         df_predict: pd.DataFrame object with columns
             ["target", "prob_0000", .., "prob_{num_classes - 1}"]
         task: str - either "binary" or "multiclass"
         num_classes: int - number of classes in the classification task
 
     Returns:
+    -------
         (float, float, float, float, wandb.Image):
             ROC-AUC, Precision-Recall AUC, accuracy (with the threshold that maximizes TPR-FPR),
             F1-score, confusion matrix

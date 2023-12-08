@@ -2,13 +2,11 @@
 #         Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main             #
 ###############################################################################################
 
-import torch
-import torch.nn as nn
-
-import torch.nn.functional as F
 import math
 
-from typing import Tuple
+import torch
+from torch import nn
+import torch.nn.functional as F
 
 
 class ContConv1d(nn.Module):
@@ -26,6 +24,7 @@ class ContConv1d(nn.Module):
         """Initialize Continuous convolution layer.
 
         Args:
+        ----
             kernel (nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
             kernel_size (int) - convolution layer kernel size
             in_channels (int) - features input size
@@ -63,9 +62,11 @@ class ContConv1d(nn.Module):
         """Positional encoding of event sequences.
 
         Args:
+        ----
             time (torch.Tensor) - true event times
 
         Returns:
+        -------
             torch.Tensor with encoded times tensor
         """
         result = time.unsqueeze(-1) / self.position_vec.to(time.device)
@@ -81,10 +82,11 @@ class ContConv1d(nn.Module):
         kernel_size: int,
         dilation: int,
         include_zero_lag: bool,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Returns delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
 
         Args:
+        ----
             times (torch.Tensor) - all times of shape = (bs, max_len)
             features (torch.Tensor) - input of shape = (bs, max_len, in_channels)
             non_pad_mask (torch.Tensor) non-padding timestamps of shape = (bs, max_len)
@@ -155,11 +157,13 @@ class ContConv1d(nn.Module):
         """Neural net layer forward pass.
 
         Args:
+        ----
             times (torch.Tensor) - event times of shape = (bs, L)
             features (torch.Tensor) - event features of shape = (bs, L, in_channels)
             non_pad_mask (torch.Tensor) - mask that indicates non pad values shape = (bs, L)
 
         Returns:
+        -------
             torch.Tensor of shape = (bs, L, out_channels)
         """
         delta_times, features_kern, dt_mask = self.__conv_matrix_constructor(
@@ -185,7 +189,8 @@ class ContConv1d(nn.Module):
 
 class ContConv1dSim(nn.Module):
     """Continuous convolution layer for a sequence with auxiliary (simulated) random timestamps
-    for intensity function calculation."""
+    for intensity function calculation.
+    """
 
     def __init__(
         self, kernel: nn.Module, kernel_size: int, in_channels: int, out_channels: int
@@ -193,6 +198,7 @@ class ContConv1dSim(nn.Module):
         """Initialize Continuous convolutional layer for a sequences with auxiliary simulated times.
 
         Args:
+        ----
             kernel (torch.nn.Module) - Kernel neural net that takes (*,1) as input and returns (*, in_channles, out_channels) as output
             kernel_size (int) - convolution layer kernel size
             in_channels (int) - features input size
@@ -217,9 +223,11 @@ class ContConv1dSim(nn.Module):
         """Positional encoding of event sequences.
 
         Args:
+        ----
             time (torch.Tensor) - true event times
 
         Returns:
+        -------
             torch.Tensor with encoded times tensor
         """
         result = time.unsqueeze(-1) / self.position_vec.to(time.device)
@@ -235,10 +243,11 @@ class ContConv1dSim(nn.Module):
         non_pad_mask: torch.Tensor,
         kernel_size: int,
         sim_size: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Returns delta_times t_i - t_j, where t_j are true events and the number of delta_times per row is kernel_size.
 
         Args:
+        ----
             times (torch.Tensor) - all times of shape = (bs, max_len)
             features (torch.Tensor) - input of shape = (bs, max_len, in_channels)
             non_pad_mask (torch.Tensor) non-padding timestamps of shape = (bs, max_len)
@@ -325,6 +334,7 @@ class ContConv1dSim(nn.Module):
         """Neural net layer forward pass.
 
         Args:
+        ----
             times (torch.Tensor) - all times (prepended with zeros by .__ad_bos) of shape = (bs, (sim_size+1)*(max_len-1)+1)
             true_times (torch.Tensor) true times of shape = (bs, max_len)
             true_features (torch.Tensor) input (aka 'encoded_outpup') of shape = (bs, max_len, in_channels)
@@ -332,6 +342,7 @@ class ContConv1dSim(nn.Module):
             sim_size (int) - simulated times size
 
         Returns:
+        -------
             torch.Tensor of shape = (bs, L, out_channels)
         """
         delta_times, features_kern, dt_mask = self.__conv_matrix_constructor(

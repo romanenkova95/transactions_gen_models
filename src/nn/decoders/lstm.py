@@ -6,7 +6,8 @@ from .base import AbsDecoder
 class LSTMDecoder(AbsDecoder):
     """Simple decoder, based on a seq2seq lstm. Basically a wrapper of nn.LSTM
 
-    Attributes:
+    Attributes
+    ----------
         lstm (nn.LSTM): the LSTM, used by this module.
         output_size (int): the LSTM's output_size.
     """
@@ -46,10 +47,12 @@ class LSTMDecoder(AbsDecoder):
         """Do the forward pass. Arguments same as in nn.LSTM.forward.
 
         Args:
+        ----
             x (Tensor): Input to the LSTM, of shape (batch_size, L, input_size)
-            hx (tp.Optional[tuple[Tensor, Tensor]], optional): Tuple of (hidden_state, cell_state). Defaults to None.
+            hx (tp.Optional[tuple[Tensor, Tensor]], optional): tuple of (hidden_state, cell_state). Defaults to None.
 
         Returns:
+        -------
             Tensor: LSTM output of shape (batch_size, L, output_size).
         """
         return self.lstm(x, hx)[0]

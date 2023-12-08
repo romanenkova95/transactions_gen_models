@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class Kernel(nn.Module):
@@ -16,6 +16,7 @@ class Kernel(nn.Module):
         """Initialize Kernel network.
 
         Args:
+        ----
             hidden1 (int) - 1st hidden layer size
             hidden2 (int) - 2nd hidden layer size
             hidden3 (int) - 3rd hidden layer size
@@ -39,9 +40,11 @@ class Kernel(nn.Module):
         """Copy kernel network.
 
         Args:
+        ----
             in_channels (int) - number of input channels in a copied kernel
 
         Returns:
+        -------
             identical kernel network with a new number of input channels
         """
         args = self.args.copy()
@@ -52,9 +55,11 @@ class Kernel(nn.Module):
         """Forwsrd pass of a network.
 
         Args:
+        ----
             x (torch.Tensor) - input tensor
 
         Returns:
+        -------
             out (torch.Tensor) - output tensor
         """
         shape = list(x.shape)[:-1]

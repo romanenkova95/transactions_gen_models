@@ -2,10 +2,10 @@ import torch
 
 
 class BestClassifier(torch.nn.Module):
-    """
-    Classification model from the open VTB competition.
+    """Classification model from the open VTB competition.
 
-    Attributes:
+    Attributes
+    ----------
         input_size: int - number of channels in the input data
         rnn_units: int - hidden size of the GRU
         classifier_units: int - output size of the 1st linear layer

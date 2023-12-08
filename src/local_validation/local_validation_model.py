@@ -2,17 +2,15 @@
 from typing import Callable, Optional
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
 import pytorch_lightning as pl
-from torchmetrics import Metric, MetricCollection
+from torchmetrics import MetricCollection
 
 from ptls.data_load.padded_batch import PaddedBatch
 
 
 class LocalValidationModelBase(pl.LightningModule):
-    """
-    PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions representations.
+    """PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions representations.
     """
 
     def __init__(
@@ -28,6 +26,7 @@ class LocalValidationModelBase(pl.LightningModule):
         """Initialize LocalValidationModel with pretrained backbone model and 2-layer linear prediction head.
 
         Args:
+        ----
             backbone (nn.Module) - backbone model for transactions representations.
             pred_head (nn.Module) - prediction head for target prediction.
             loss (Callable) - the loss to optimize while training. Called with (preds, targets).
@@ -68,6 +67,7 @@ class LocalValidationModelBase(pl.LightningModule):
         """Do forward pass through the local validation model.
 
         Args:
+        ----
             inputs (PaddedBatch) - inputs if ptls format (no sampling)
 
         Returns a tuple of:
@@ -84,11 +84,13 @@ class LocalValidationModelBase(pl.LightningModule):
         """Generalized shared_step for model-learning with targets. Overload if neccessary
 
         Args:
+        ----
             batch (tuple[PaddedBatch, torch.Tensor]):
-                Tuple of PaddedBatch (passed to forward) & targets
+                tuple of PaddedBatch (passed to forward) & targets
             batch_idx (int): ignored
 
         Returns:
+        -------
             tuple[torch.Tensor, torch.Tensor]: preds, target
         """
         inputs, target = batch

@@ -3,10 +3,10 @@ import torch
 
 
 class CNNClassifier(torch.nn.Module):
-    """
-    A classification model based on sequential 1d-convlutions.
+    """A classification model based on sequential 1d-convlutions.
 
-    Attributes:
+    Attributes
+    ----------
         in_channels: int - number of channels in the input data
         kernel_size: int - size of the convolving kernel
         stride: int - stride of the convolution

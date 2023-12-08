@@ -7,8 +7,7 @@ from ptls.frames.coles import CoLESModule
 
 
 class CustomCoLES(CoLESModule):
-    """
-    Custom coles module inhereted from ptls coles module.
+    """Custom coles module inhereted from ptls coles module.
     """
 
     def __init__(
@@ -20,6 +19,7 @@ class CustomCoLES(CoLESModule):
         """Overrided initialize method, which is suitable for our tasks
 
         Args:
+        ----
             optimizer_partial (DictConfig with Callable):
                 Partial initialized torch optimizer (with parameters)
             lr_scheduler_partial (DictConfig with Callable):

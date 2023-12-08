@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Dict
+from typing import Optional
 from omegaconf import DictConfig
 from hydra.utils import instantiate
 
@@ -25,6 +25,7 @@ class Cotic(ABSModule):
         """Initalize Cotic module.
 
         Args:
+        ----
             encoder (DictConfig) - config for continuous convolutional sequence encoder instantiation
             head (DictConfig) - config custom prediction head for Cotic model instantiation
             loss (DictConfig) - config for module with Cotic losses instantiation
@@ -54,12 +55,13 @@ class Cotic(ABSModule):
         self.head_start = head_start
 
     def shared_step(
-        self, batch: Tuple[PaddedBatch, torch.Tensor]
-    ) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor, Tuple[torch.Tensor]]]:
+        self, batch: tuple[PaddedBatch, torch.Tensor]
+    ) -> tuple[tuple[torch.Tensor], tuple[torch.Tensor, tuple[torch.Tensor]]]:
         """Shared training/validation/testing step.
 
         Args:
-            batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+        ----
+            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
 
         Retruns a tuple of:
             inputs - inputs for CCNN model: (event_times, event_types), for loss & metric computation
@@ -73,9 +75,12 @@ class Cotic(ABSModule):
         inputs = self.seq_encoder._extract_times_and_features(
             batch[0]
         )  # format is (event_times, event_types)
-        outputs = encoded_output, (
-            pred_times,
-            pred_types,
+        outputs = (
+            encoded_output,
+            (
+                pred_times,
+                pred_types,
+            ),
         )  # format is (encoded_output, (pred_times, pred_types))
 
         ll_loss, type_loss, time_loss = self._loss.compute_loss(
@@ -87,17 +92,18 @@ class Cotic(ABSModule):
         return (inputs, outputs), (ll_loss, type_loss, time_loss)
 
     def training_step(
-        self, batch: Tuple[PaddedBatch, torch.Tensor], _
-    ) -> Dict[str, float]:
+        self, batch: tuple[PaddedBatch, torch.Tensor], _
+    ) -> dict[str, float]:
         """Training step of the module.
 
         Args:
-            batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+        ----
+            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
 
         Returns:
+        -------
             dict with train loss
         """
-
         (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("train_ll_loss", ll_loss, prog_bar=True)
@@ -113,17 +119,18 @@ class Cotic(ABSModule):
         return {"loss": ll_loss}
 
     def validation_step(
-        self, batch: Tuple[PaddedBatch, torch.Tensor], _
-    ) -> Dict[str, float]:
+        self, batch: tuple[PaddedBatch, torch.Tensor], _
+    ) -> dict[str, float]:
         """Training step of the module.
 
         Args:
-            batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+        ----
+            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
 
         Returns:
+        -------
             dict with val loss
         """
-
         (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("val_ll_loss", ll_loss, prog_bar=True)
@@ -138,11 +145,12 @@ class Cotic(ABSModule):
 
         return {"loss": ll_loss}
 
-    def test_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> None:
+    def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], _) -> None:
         """Test step of the module.
 
         Args:
-            batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+        ----
+            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
         """
         if self.head_start is not None:
             (inputs, outputs), _ = self.shared_step(batch)
@@ -154,23 +162,23 @@ class Cotic(ABSModule):
         if self.head_start is not None and self.current_epoch >= self.head_start:
             return_time_metric, event_type_metric = self.train_metrics.compute()
 
-            self.log(f"val_return_time_metric", return_time_metric, prog_bar=True)
-            self.log(f"val_event_type_metric", event_type_metric, prog_bar=True)
+            self.log("val_return_time_metric", return_time_metric, prog_bar=True)
+            self.log("val_event_type_metric", event_type_metric, prog_bar=True)
 
     def validation_epoch_end(self, _) -> None:
         """Compute and log metrics for a validation epoch."""
         if self.head_start is not None and self.current_epoch >= self.head_start:
             return_time_metric, event_type_metric = self.val_metrics.compute()
 
-            self.log(f"val_return_time_metric", return_time_metric, prog_bar=True)
-            self.log(f"val_event_type_metric", event_type_metric, prog_bar=True)
+            self.log("val_return_time_metric", return_time_metric, prog_bar=True)
+            self.log("val_event_type_metric", event_type_metric, prog_bar=True)
 
     def test_epoch_end(self, _) -> None:
         """Compute and log metrics for a test epoch."""
         return_time_metric, event_type_metric = self.test_metrics.compute()
 
-        self.log(f"test_return_time_metric", return_time_metric, prog_bar=True)
-        self.log(f"test_event_type_metric", event_type_metric, prog_bar=True)
+        self.log("test_return_time_metric", return_time_metric, prog_bar=True)
+        self.log("test_event_type_metric", event_type_metric, prog_bar=True)
 
     def lr_scheduler_step(self, scheduler, *args, **kwargs):
         """Overwrite method as to fix bug in our PyTorch version."""

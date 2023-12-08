@@ -1,5 +1,3 @@
-from typing import List
-
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -19,6 +17,7 @@ class SamePadConv(nn.Module):
         """Initalize SamePadConv.
 
         Args:
+        ----
             in_channels (int) - input size
             out_channels (int) - output size
             kernel_size (int) - convolutional kernel size
@@ -42,9 +41,11 @@ class SamePadConv(nn.Module):
         """Convolve input tensor.
 
         Args:
+        ----
             x (torch.Tensor) - input tensor
 
         Returns:
+        -------
             conv(x)
         """
         out = self.conv(x)
@@ -67,6 +68,7 @@ class ConvBlock(nn.Module):
         """Initalize ConvBlock.
 
         Args:
+        ----
             in_channels (int) - input size
             out_channels (int) - output size
             kernel_size (int) - convolutional kernel size
@@ -90,9 +92,11 @@ class ConvBlock(nn.Module):
         """Forward pass throught the block.
 
         Args:
+        ----
             x (torch.Tensor) - input
 
         Returns:
+        -------
             output of the block
         """
         residual = x if self.projector is None else self.projector(x)
@@ -106,10 +110,11 @@ class ConvBlock(nn.Module):
 class DilatedConvEncoder(nn.Module):
     """Dilated 1D convolutional sequence encoder."""
 
-    def __init__(self, in_channels: int, channels: List[int], kernel_size: int) -> None:
+    def __init__(self, in_channels: int, channels: list[int], kernel_size: int) -> None:
         """Initialize DilatedConvEncoder.
 
         Args:
+        ----
             in_channels (int) - input size
             channels (List[int]) - list of hidden sizes (num of channels for each convolution)
             kernel_size (int) - kernel size
@@ -132,9 +137,11 @@ class DilatedConvEncoder(nn.Module):
         """Forward pass throught the model.
 
         Args:
+        ----
             x (torch.Tensor) - input
 
         Returns:
+        -------
             output = encoded input
         """
         return self.net(x)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Optional, Union
 from omegaconf import DictConfig
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 
@@ -31,7 +31,8 @@ class GPTModule(VanillaAE):
      - a macro-averaged multiclass auroc score on mcc codes
      - an r2-score on amounts
 
-     Attributes:
+    Attributes
+    ----------
         amount_loss_weight (float):
             Normalized loss weight for the transaction amount MSE loss.
         mcc_loss_weight (float):
@@ -39,7 +40,8 @@ class GPTModule(VanillaAE):
         lr (float):
             The learning rate, extracted from the optimizer_config.
 
-    Notes:
+    Notes
+    -----
         amount_loss_weight, mcc_loss_weight are normalized so that amount_loss_weight + mcc_loss_weight = 1.
         This is done to remove one hyperparameter. Loss gradient size can be managed separately through lr.
 
@@ -59,6 +61,7 @@ class GPTModule(VanillaAE):
         """Initialize GPTModule internal state.
 
         Args:
+        ----
             loss_weights (dict):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
@@ -101,11 +104,13 @@ class GPTModule(VanillaAE):
         """Generalized function to do a train/val/test step.
 
         Args:
+        ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
             batch_idx (int): ignored
 
         Returns:
+        -------
             STEP_OUTPUT:
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
@@ -168,11 +173,13 @@ class GPTContrastiveModule(VanillaAE):
     Logs train/val/test losses:
      - QuerySoftmaxLoss
 
-     Attributes:
+    Attributes
+    ----------
         lr (float):
             The learning rate, extracted from the optimizer_config.
 
-    Notes:
+    Notes
+    -----
         Loss gradient size can be managed separately through lr.
 
     """
@@ -191,6 +198,7 @@ class GPTContrastiveModule(VanillaAE):
         """Initialize GPTContrastiveModule internal state.
 
         Args:
+        ----
             encoder (DictConfig):
                 SeqEncoderContainer dictconfig to be used as an encoder.
             optimizer (DictConfig):
@@ -261,11 +269,13 @@ class GPTContrastiveModule(VanillaAE):
         """Generalized function to do a train/val/test step.
 
         Args:
+        ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
             batch_idx (int): ignored
 
         Returns:
+        -------
             loss: computed value of the loss function
         """
         mask = batch.seq_len_mask.bool()[:, 1:]

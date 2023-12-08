@@ -31,9 +31,11 @@ class MLMModule(VanillaAE):
         """Mask the mcc-codes of given batch & pass them through encoder and decoder
 
         Args:
+        ----
             batch (PaddedBatch): input batch
 
         Returns:
+        -------
             Tensor, Tensor, Union[Tensor, PaddedBatch], Tensor:
                 Same as VanillaAE
         """

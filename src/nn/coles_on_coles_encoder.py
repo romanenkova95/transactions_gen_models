@@ -8,13 +8,12 @@ from ptls.nn import RnnEncoder, TrxEncoder
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.frames.coles.split_strategy import AbsSplit, SampleSlices
 
-import torch.nn as nn
-
 from .pretrained_seq_encoder import PretrainedRnnSeqEncoder
 
 
 def is_seq_feature(k: str, x):
     """Check is value sequential feature
+
     Parameters
     ----------
     k:
@@ -38,8 +37,7 @@ def is_seq_feature(k: str, x):
 
 
 class CoLESonCoLESEncoder(nn.Module):
-    """
-    Coles on coles embeddings model
+    """Coles on coles embeddings model
     """
 
     def __init__(
@@ -56,9 +54,10 @@ class CoLESonCoLESEncoder(nn.Module):
         training_splitter: Optional[AbsSplit] = None,
         is_reduce_sequence: bool = True,
     ) -> None:
-        """
-        Model for training CoLES on CoLES embeddings obtained via seq2vec strategy.
+        """Model for training CoLES on CoLES embeddings obtained via seq2vec strategy.
+
         Args:
+        ----
             trx_encoder:
                 TrxEncoder of the first encoder.
             frozen_enc_type:

@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.nn.seq_encoder.abs_seq_encoder import AbsSeqEncoder
@@ -27,6 +27,7 @@ class ConvEncoder(AbsSeqEncoder):
         """Initialize ConvEncoder.
 
         Args:
+        ----
             kernel_size (int) - kernel size
             hidden_size (int) - hidden size (aka embedding dim for this backbone)
             input_size (int or None) - input size (if None, use output size of TrxEncoder)
@@ -53,9 +54,11 @@ class ConvEncoder(AbsSeqEncoder):
         """Encode input batch of sequences.
 
         Args:
+        ----
             x (PaddedBatch) - batch of input sequences (ptls format)
 
         Returns:
+        -------
             output of encoder
         """
         # conv encoder
@@ -84,6 +87,7 @@ class ConvSeqEncoder(SeqEncoderContainer):
         """Initialize ConvSeqEncoder.
 
         Args:
+        ----
             trx_encoder (TrxEncoder or None) - transactions encoder
             input_size (int or None) - input size (output size of feature embeddings)
             is_reduce_sequence (bool) - if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'

@@ -9,7 +9,8 @@ class LSTMCellDecoder(AbsDecoder):
     """An NLP-style LSTM-based decoder.
     Restores a sequence of embeddings from a single embedding
 
-    Attributes:
+    Attributes
+    ----------
         cell (nn.LSTMCell):
             The lstm cell, used by this module.
         projector (nn.Sequential(nn.Linear, nn.Relu)):
@@ -28,6 +29,7 @@ class LSTMCellDecoder(AbsDecoder):
         """Initializes LSTMCellDecoder's internal state.
 
         Args:
+        ----
             input_size (int):
                 Input size of the lstmcell.
             hidden_size (int):
@@ -67,6 +69,7 @@ class LSTMCellDecoder(AbsDecoder):
         """Runs the forward pass.
 
         Args:
+        ----
             input (Tensor):
                 Input embedding, of size (batch_size, input_size).
             L (int):
@@ -75,6 +78,7 @@ class LSTMCellDecoder(AbsDecoder):
                 Optionally, LSTMCell hidden & cell states. Defaults to None.
 
         Returns:
+        -------
             Tensor: Generated sequence, of shape (batch_size, L, output_size).
         """
         B = input.shape[0]

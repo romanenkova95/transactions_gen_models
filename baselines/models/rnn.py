@@ -2,10 +2,10 @@ import torch
 
 
 class RNNClassifier(torch.nn.Module):
-    """
-    A simple classification model based on a recurrent neural network.
+    """A simple classification model based on a recurrent neural network.
 
-    Attributes:
+    Attributes
+    ----------
         input_size: int - number of channels in the input data
         hidden_size: int - hidden size of the GRU
         num_layers: int - number of layers in the GRU

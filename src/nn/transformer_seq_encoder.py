@@ -14,7 +14,7 @@ class TransformerSeqEncoder(TransformerSeqEncoder_):
         trx_encoder: DictConfig,
         hidden_size=1024,
         is_reduce_sequence=True,
-        **seq_encoder_params
+        **seq_encoder_params,
     ):
         trx_encoder_instance: TrxEncoder = instantiate(
             trx_encoder, linear_projection_size=hidden_size
@@ -24,5 +24,5 @@ class TransformerSeqEncoder(TransformerSeqEncoder_):
             trx_encoder=trx_encoder_instance,
             input_size=None,
             is_reduce_sequence=is_reduce_sequence,
-            **seq_encoder_params
+            **seq_encoder_params,
         )

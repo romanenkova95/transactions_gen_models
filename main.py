@@ -1,3 +1,5 @@
+"""File with main startup script."""
+
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -22,10 +24,28 @@ logger = get_logger(name=__name__)
 
 @hydra.main(version_base=None, config_path="config", config_name="master.yaml")
 def main(cfg: DictConfig) -> None:
+    """Hydra entrypoint.
+
+    Args:
+    ----
+        cfg (DictConfig): hydra config.
+    """
     run(cfg)
 
 
 def run(cfg: DictConfig):
+    """Run the pipeline without hydra config, by passing it as an argument.
+
+    Useful when running tests.
+
+    Args:
+    ----
+        cfg (DictConfig): Hydra config
+
+    Raises:
+    ------
+        ValueError: No config was provided (cfg is None).
+    """
     if not cfg:
         raise ValueError(
             "Empty or no config! Please run with --config-name argument with valid config name"

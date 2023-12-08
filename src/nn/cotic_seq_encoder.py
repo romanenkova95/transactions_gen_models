@@ -1,7 +1,7 @@
-from typing import Tuple, Optional
+from typing import Optional
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from ptls.nn.seq_encoder.abs_seq_encoder import AbsSeqEncoder
@@ -26,6 +26,7 @@ class CoticEncoder(AbsSeqEncoder):
         """Continous convoluitonal sequence encoder for COTIC model.
 
         Args:
+        ----
             input_size (int) - input size for CCNN (output size of feature embeddings)
             hidden_size (int) - size of the output embeddings of the encoder
             num_types (int) - number of event types in in the dataset
@@ -58,10 +59,12 @@ class CoticEncoder(AbsSeqEncoder):
         """Forward pass through the model.
 
         Args:
+        ----
             times (torch.Tensor) - timestamps (extracted from PaddedBatch)
             features (torch.Tensor) - event type features (extracted from PaddedBatch) and passed through nn.Embedding
 
         Returns:
+        -------
             torch.Tensor with model output
         """
         out = self.feature_extractor(event_times, event_types)  # B x Co x T
@@ -88,6 +91,7 @@ class CoticSeqEncoder(SeqEncoderContainer):
         """Pytorch-lifestream container wrapper for Continous convoluitonal sequence encoder.
 
         Args:
+        ----
             trx_encoder (TrxEncoder=None) - we do not use TrxEncoder in this model as we need to keep initial times and features
             input_size (int) - input size for CCNN (output size of feature embeddings)
             is_reduce_sequence (bool) - if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
@@ -105,13 +109,14 @@ class CoticSeqEncoder(SeqEncoderContainer):
         self.col_time = col_time
         self.col_type = col_type
 
-    def _extract_times_and_features(self, x: PaddedBatch) -> Tuple[torch.Tensor]:
+    def _extract_times_and_features(self, x: PaddedBatch) -> tuple[torch.Tensor]:
         """Extract event times and types from the input in ptls format.
 
         Args:
+        ----
             x (PaddedBatch) - input batch of data
 
-        Returns a Tuple of:
+        Returns a tuple of:
             * torch.Tensor containing event times
             * torch.Tensor containing event types
         """
@@ -122,10 +127,13 @@ class CoticSeqEncoder(SeqEncoderContainer):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the model.
+
         Args:
+        ----
             x (PaddedBatch) - input batch from CoticDataset (i.e. ColesDataset with NoSplit())
 
         Returns:
+        -------
             torch.Tensor with model output
         """
         event_times, event_types = self._extract_times_and_features(x)

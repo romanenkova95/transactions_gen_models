@@ -1,3 +1,4 @@
+"""Module for the simple dataset, which randomly crops user sequences."""
 from typing import Any, Callable, Optional
 from ptls.data_load.datasets.augmentation_dataset import AugmentationDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
@@ -6,6 +7,8 @@ from ptls.data_load.utils import collate_feature_dict
 
 
 class RandomCropDataset(AugmentationDataset):
+    """Simple dataset, which randomly crops user sequences."""
+    
     def __init__(
         self,
         data: Any,
@@ -14,9 +17,10 @@ class RandomCropDataset(AugmentationDataset):
         f_augmentations: Optional[list] = None,
         collate_fn: Optional[Callable] = None,
     ):
-        """Initialize dataset
+        """Initialize dataset.
 
         Args:
+        ----
             data (Any):
                 Data, compatible with ptls.datasets
             random_min_seq_len (int):

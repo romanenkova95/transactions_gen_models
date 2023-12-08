@@ -11,6 +11,7 @@ class DropRare(FrequencyEncoder):
         """Initialize DropRare transform
 
         Args:
+        ----
             col_name_original (str): original column name
             k (int): amount of categories to keep (excluding padding token)
         """

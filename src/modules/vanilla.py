@@ -42,7 +42,8 @@ class VanillaAE(LightningModule):
      - a macro-averaged multiclass auroc score on mcc codes
      - an r2-score on amounts
 
-     Attributes:
+    Attributes
+    ----------
         out_amount (nn.Linear):
             A linear layer, which restores the transaction amounts.
         out_mcc (nn.Linear):
@@ -56,7 +57,8 @@ class VanillaAE(LightningModule):
         ae_output_size (int):
             The output size of the decoder.
 
-    Notes:
+    Notes
+    -----
         amount_loss_weight, mcc_loss_weight are normalized so that amount_loss_weight + mcc_loss_weight = 1.
         This is done to remove one hyperparameter. Loss gradient size can be managed separately through lr.
 
@@ -78,6 +80,7 @@ class VanillaAE(LightningModule):
         """Initialize VanillaAE internal state.
 
         Args:
+        ----
             loss_weights (dict):
                 A dictionary with keys "amount" and "mcc", mapping them to the corresponding loss weights
             encoder (SeqEncoderContainer):
@@ -181,10 +184,12 @@ class VanillaAE(LightningModule):
         to get the respective targets.
 
         Args:
+        ----
             batch (PaddedBatch): Input batch of raw transactional data.
             L (int): Optionally, specify length of decoded sequence
 
         Returns:
+        -------
             tuple[Tensor, Tensor]:
                 tuple of tensors:
                     - Predicted mcc logits, shape (B, L, mcc_vocab_size + 1)
@@ -193,6 +198,7 @@ class VanillaAE(LightningModule):
                     - Pad mask
 
         Notes:
+        -----
             The padding elements, determined by the padding mask of the input PaddedBatch,
             are zeroed out to prevent gradient flow.
 
@@ -226,6 +232,7 @@ class VanillaAE(LightningModule):
         """Calculate the losses, weigh them with respective weights
 
         Args:
+        ----
             mcc_pred (Tensor): Predicted mcc logits, (B, L, mcc_vocab_size).
             amount_pred (Tensor): Predicted amounts, (B, L).
             mcc_target (Tensor): target mcc codes.
@@ -233,6 +240,7 @@ class VanillaAE(LightningModule):
             mask (Tensor): mask of non-padding elements
 
         Returns:
+        -------
             Dictionary of losses, with keys loss, loss_mcc, loss_amt.
         """
         mcc_loss = self.mcc_criterion(mcc_pred[mask], mcc_target[mask])
@@ -254,11 +262,13 @@ class VanillaAE(LightningModule):
         """Generalized function to do a train/val/test step.
 
         Args:
+        ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
             batch_idx (int): ignored
 
         Returns:
+        -------
             STEP_OUTPUT:
                 if stage == "train", returns total loss.
                 else returns a dictionary of metrics.
@@ -321,11 +331,13 @@ class VanillaAE(LightningModule):
         """Run the predict step: forward pass for the input batch, and trim padding in output.
 
         Args:
+        ----
             batch (PaddedBatch): input padded batch
             batch_idx (int): ignored
             dataloader_idx (int, optional): ignored
 
         Returns:
+        -------
             tuple[list[Tensor], list[Tensor]]:
                 - list of predicted mcc logits, (B, L_i, mcc_vocab_size)
                 - list of predicted amounts, (B, L_i)

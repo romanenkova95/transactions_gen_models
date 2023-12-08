@@ -2,10 +2,8 @@
 #          Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main            #
 ###############################################################################################
 
-from typing import Tuple
-
 import torch
-import torch.nn as nn
+from torch import nn
 
 from .cont_cnn_layers import ContConv1d, ContConv1dSim
 
@@ -23,6 +21,7 @@ class CCNN(nn.Module):
         """Initialize CCNN class.
 
         Args:
+        ----
             in_channels (int) - number of input channels
             kernel_size (int) - size of the kernel for 1D-convolutions
             nb_filters (int) - number of filters for 1D-convolutions
@@ -75,10 +74,11 @@ class CCNN(nn.Module):
         event_times: torch.Tensor,
         event_types: torch.Tensor,
         lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor]:
+    ) -> tuple[torch.Tensor]:
         """Add zeros as the 1st elements of all times sequences, encode corresponding event types with 'max_type + 1'.
 
         Args:
+        ----
             event_times (torch.Tensor) - true event times, shape = (batch_size, seq_len)
             event_types (torch.Tensor) - true event types, shape = (batch_size, seq_len)
             lengths (torch.Tensor) - lengths of event sequences (=number of non-padding event times)
@@ -102,10 +102,10 @@ class CCNN(nn.Module):
     def forward(
         self, event_times: torch.Tensor, event_types: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Forward pass that computes self.convs and return encoder output
+        """Forward pass that computes self.convs and return encoder output
 
         Args:
+        ----
             event_times (torch.Tensor) - torch.Tensor, shape = (bs, L) event times
             event_types (torch.Tensor) - torch.Tensor, shape = (bs, L) event types
             lengths (torch.Tensor) - torch.Tensor, shape = (bs,) sequence lengths
@@ -138,6 +138,7 @@ class CCNN(nn.Module):
         """Pass encoded_ouput (aka hidden state) through the 'final' layers block to obtain intensities.
 
         Args:
+        ----
             times (torch.Tensor) - 'full' times (prepended with zeros by .__add_bos)
             true_times (torch.Tensor) - true event times for a batch of sequenecs
             true_features (torch.Tensor) - hidden state, output of the core continuous convolutional block (aka 'encoded_output')
@@ -145,6 +146,7 @@ class CCNN(nn.Module):
             sim_size (int) - number of samples for MC estimation of the integral part of log-likelihood
 
         Returns:
+        -------
             torch.Tensor with intensities
         """
         out = self.final_list[0](

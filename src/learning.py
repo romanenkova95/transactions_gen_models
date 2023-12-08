@@ -1,4 +1,4 @@
-"""Main coles learning script"""
+"""Main coles learning script."""
 from pathlib import Path
 from typing import Union
 
@@ -30,6 +30,7 @@ def learn(
     """Full pipeline for model fitting.
 
     Args:
+    ----
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val and test sets
         backbone_cfg (DictConfig): config with the following fields:

@@ -1,7 +1,7 @@
 """BinaryLocalVal class: local validation with binary targets."""
 
 from torch import Tensor
-import torch.nn as nn
+from torch import nn
 from torchmetrics import MetricCollection
 
 from torchmetrics.classification import (
@@ -15,8 +15,7 @@ from .local_validation_model import LocalValidationModelBase
 
 
 class BinaryLocalVal(LocalValidationModelBase):
-    """
-    Module for local validation of backbone on the task of predicting a binary target.
+    """Module for local validation of backbone on the task of predicting a binary target.
     """
 
     def __init__(
@@ -29,6 +28,7 @@ class BinaryLocalVal(LocalValidationModelBase):
         """Initialize EventType model with pretrained backbone model and 1-layer linear prediction head.
 
         Args:
+        ----
             backbone (nn.Module) - backbone model for transactions representations
             backbone_embd_size (int) - output dim of backbone
             freeze_backbone (bool) - whether to freeze backbone model

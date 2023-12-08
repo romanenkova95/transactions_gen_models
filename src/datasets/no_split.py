@@ -1,6 +1,8 @@
+"""Module which contains the Coles dataset with a NoSplit splitter."""
+
 import torch
 
-from typing import List, Dict, Optional
+from typing import Optional
 
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import NoSplit
@@ -10,28 +12,29 @@ from ptls.data_load.iterable_processing import SeqLenFilter
 
 
 class NoSplitDataset(ColesDataset):
-    """
-    Custom coles dataset inhereted from ptls coles dataset.
-    """
+    """Custom coles dataset inhereted from ptls coles dataset."""
 
     def __init__(
         self,
-        data: List[Dict[str, torch.Tensor]],
+        data: list[dict[str, torch.Tensor]],
         *args,
         min_len: Optional[int] = None,
         max_len: Optional[int] = None,
         deterministic: Optional[bool] = None,
         col_time: str = "event_time",
-        **kwargs
+        **kwargs,
     ):
-        """Overrided initialize method, which is suitable for our tasks.
+        """Initialize module internal state.
 
         Args:
+        ----
             data (list[dict]): transaction dataframe in the ptls format (list of dicts)
             min_len (int): minimal subsequence length
             max_len (int): maximal subsequence length
             deterministic: should be None, use for consistency
             col_time (str, optional): column name with event time. Defaults to 'event_time'.
+            *args: additional arguments to pass to the parent ColesDataset class.
+            **kwargs: additional arguments to pass to the parent ColesDataset class.
         """
         super().__init__(
             MemoryMapDataset(
@@ -40,5 +43,5 @@ class NoSplitDataset(ColesDataset):
             NoSplit(),
             col_time,
             *args,
-            **kwargs
+            **kwargs,
         )

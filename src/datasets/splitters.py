@@ -1,11 +1,12 @@
+"""The module for different splitters to use with the CoLES dataset."""
+
 from ptls.frames.coles.split_strategy import AbsSplit
 import numpy as np
-from typing import List
 
 
 class TimeCLSampler(AbsSplit):
-    """
-    TimeCL sampler implementation, ptls-style.
+    """TimeCL sampler implementation, ptls-style.
+    
     For details, see Algorithm 1 from the paper:
         http://mesl.ucsd.edu/pubs/Ranak_AAAI2023_PrimeNet.pdf
     Args:
@@ -24,15 +25,26 @@ class TimeCLSampler(AbsSplit):
         rlambda: float,
         split_count: int,
     ) -> None:
+        """Initialize internal module state.
+
+        Args:
+            min_len (int): minimum length of fragment after split.
+            max_len (int): maximum length of fragment after split.
+            llambda (float): minimum lambda (fraction of dense points sampled).
+            rlambda (float): maximum lambda (fraction of dense points sampled).
+            split_count (int): number of splits per user.
+        """
         self.min_len = min_len
         self.max_len = max_len
         self.llambda = llambda
         self.rlambda = rlambda
         self.split_count = split_count
 
-    def split(self, dates: np.ndarray) -> List[list]:
+    def split(self, dates: np.ndarray) -> list[list]:
         """Create list of subsequences indexes.
+
         Args:
+        ----
             dates (np.array): array of timestamps with transactions datetimes
         Returns:
             list(np.arrays): list of indexes, corresponding to subsequences
@@ -62,9 +74,10 @@ class TimeCLSampler(AbsSplit):
         lengths = np.random.randint(self.min_len, max_len, size=self.split_count)
         lambdas = np.random.uniform(self.llambda, self.rlambda, size=self.split_count)
 
-        n_dense, n_sparse = np.floor(lengths * lambdas).astype(int), np.ceil(
-            lengths * (1 - lambdas)
-        ).astype(int)
+        n_dense, n_sparse = (
+            np.floor(lengths * lambdas).astype(int),
+            np.ceil(lengths * (1 - lambdas)).astype(int),
+        )
 
         idxs = [
             list(
@@ -88,8 +101,7 @@ class TimeCLSampler(AbsSplit):
 
 
 class SampleLength(AbsSplit):
-    """
-    A sampler that cuts only first N transactions.
+    """A sampler that cuts only first N transactions.
     """
 
     def __init__(self, length):

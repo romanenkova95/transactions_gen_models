@@ -1,4 +1,4 @@
-"""Init module. """
+"""Init module."""
 
 from .categorical import CategoricalLocalVal
 from .numeric import NumericLocalVal

@@ -1,4 +1,4 @@
-"""Local targets validation script. """
+"""Local targets validation script."""
 
 from pathlib import Path
 from typing import Optional
@@ -6,19 +6,16 @@ import warnings
 from hydra.utils import instantiate, call
 from omegaconf import DictConfig
 
-import pandas as pd
-
 import torch
 
-from pytorch_lightning import seed_everything, Trainer
-from pytorch_lightning.loggers import WandbLogger, CometLogger, LightningLoggerBase
+from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import WandbLogger, CometLogger
 
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from src.utils.create_trainer import create_trainer
 
 from src.utils.logging_utils import get_logger
-from src.preprocessing import preprocess
 from .local_validation_model import LocalValidationModelBase
 
 
@@ -34,6 +31,7 @@ def local_target_validation(
     """Full pipeline for the sequence encoder local validation.
 
     Args:
+    ----
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val & test sets
         cfg_encoder (DictConfig):
@@ -46,6 +44,7 @@ def local_target_validation(
             Name of validation (for logging & saving)
 
     Returns:
+    -------
         results (dict[str]):
             Metrics on test set.
     """
@@ -85,7 +84,7 @@ def local_target_validation(
         test_data=test_dataset,
     )
 
-    logger.info(f"Training LocalValidationModel")
+    logger.info("Training LocalValidationModel")
 
     valid_model: LocalValidationModelBase = instantiate(
         cfg_validation["module"], backbone=sequence_encoder

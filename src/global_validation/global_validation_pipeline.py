@@ -31,6 +31,7 @@ def global_target_validation(
     """Full pipeline for the sequence encoder validation.
 
     Args:
+    ----
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val & test sets
         cfg_encoder (DictConfig):
@@ -39,6 +40,7 @@ def global_target_validation(
             Validation config (specified in 'config/validation')
 
     Returns:
+    -------
         results (dict):      dict with test metrics
     """
     logger = get_logger(name=__name__)
@@ -95,20 +97,20 @@ def embed_data(
     batch_size: int = 64,
     device: str = "cuda",
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Returns embeddings of sequences and corresponding targets.
+    """Returns embeddings of sequences and corresponding targets.
 
     Args:
+    ----
         seq_encoder (nn.Module): Pretrained sequence encoder
         dataset (list):          Dataset
         batch_size (int):        How many sequences are processed in a batch
         device (str):            Device
 
     Returns:
+    -------
         features (np.array): Array of shape (n, embedding_dim) with embeddings of sequences
         targets (np.array):  Array of shape (n,) with targets of sequences
     """
-
     seq_encoder.to(device)
     seq_encoder.eval()
 
@@ -138,10 +140,10 @@ def eval_embeddings(
     test_labels: torch.Tensor,
     model_config: DictConfig,
 ) -> dict[str, float]:
-    """
-    Trains and evaluates a simple classifier on the embedded data.
+    """Trains and evaluates a simple classifier on the embedded data.
 
     Args:
+    ----
         train_embeds (torch.Tensor): Embeddings of sequences from train set
         train_labels (torch.Tensor): Labels of sequences from train set
         test_embeds (torch.Tensor):  Embeddings of sequences from test set
@@ -149,6 +151,7 @@ def eval_embeddings(
         model_config (DictConfig):   Config of the model to be fitted
 
     Returns:
+    -------
         results (dict): Dictionary with test metrics values
     """
     nunique = len(np.unique(train_labels))

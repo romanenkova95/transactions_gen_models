@@ -1,3 +1,4 @@
+"""Module with function for creating the basic dataset."""
 from typing import Any, Optional, Callable
 
 from ptls.data_load.datasets.memory_dataset import MemoryMapDataset
@@ -18,9 +19,10 @@ def create_basic_dataset(
     f_augmentations: Optional[list[Callable]] = None,
     collate_fn: Optional[Callable] = None,
 ):
-    """Initialize dataset
+    """Initialize dataset.
 
     Args:
+    ----
         data (Any):
             Data, compatible with ptls.datasets
         deterministic (bool):

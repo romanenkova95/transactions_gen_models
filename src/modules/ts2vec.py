@@ -1,31 +1,32 @@
-from typing import Optional, Union, Tuple
-from omegaconf import DictConfig
-from hydra.utils import instantiate
+from typing import Optional, Union
 
-import torch
 import numpy as np
-
-from ptls.frames.abs_module import ABSModule
+import torch
+from hydra.utils import instantiate
+from omegaconf import DictConfig
 from ptls.data_load.padded_batch import PaddedBatch
+from ptls.frames.abs_module import ABSModule
 from ptls.nn.head import Head
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-
 from torchmetrics import MeanMetric
+
 from src.losses import HierarchicalContrastiveLoss
 
 
 def generate_continuous_mask(
-    B: int, T: int, n: Union[int, float] = 5, l: Union[int, float] = 0.1
+    B: int, T: int, n: Union[int, float] = 5, lmask: Union[int, float] = 0.1
 ) -> torch.Tensor:
     """Generate continuous mask for time window augmentation.
 
     Args:
+    ----
         B (int) - batch size
         T (int) - series lengths (num of timestamps)
         n (int or float) - number (or share) of steps for masking
         l (int or float) - number (or share) of maximum masking length
 
     Returns:
+    -------
         torch.Tensor with boolean mask for sequences augmentation
     """
     res = torch.full((B, T), True, dtype=torch.bool)
@@ -33,14 +34,14 @@ def generate_continuous_mask(
         n = int(n * T)
     n = max(min(n, T // 2), 1)
 
-    if isinstance(l, float):
-        l = int(l * T)
-    l = max(l, 1)
+    if isinstance(lmask, float):
+        lmask = int(lmask * T)
+    lmask = max(lmask, 1)
 
     for i in range(B):
         for _ in range(n):
-            t = np.random.randint(T - l + 1)
-            res[i, t : t + l] = False
+            t = np.random.randint(T - lmask + 1)
+            res[i, t : t + lmask] = False
     return res
 
 
@@ -48,11 +49,13 @@ def generate_binomial_mask(B: int, T: int, p: float = 0.5) -> torch.Tensor:
     """Generate binomial mask for time window augmentation.
 
     Args:
+    ----
         B (int) - batch size
         T (int) - series lengths (num of timestamps)
         p (float) - masking probability
 
     Returns:
+    -------
         torch.Tensor with boolean mask for sequences augmentation
     """
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
@@ -62,11 +65,13 @@ def take_per_row(inputs: torch.Tensor, indx: np.array, num_elem: int) -> torch.T
     """Takes 'num_elem' from each row of 'A', starting from the indices provided in the 'indx'.
 
     Args:
+    ----
         inputs (torch.Tensor) - original tensor with data
         indx (np.array) - array of indices to be taken
         num_elem (int) - number of element to be taken from each row
 
     Returns:
+    -------
         subset of initial sequences data
     """
     all_indx = indx[:, None] + np.arange(num_elem)
@@ -77,10 +82,12 @@ def mask_input(inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """Mask input using the given boolean mask.
 
     Args:
+    ----
         inputs (torch.Tensor) - input sequences
         mask (torch.Tensor) - boolean mask
 
     Returns:
+    -------
         masked input sequences
     """
     shape = inputs.size()
@@ -118,6 +125,7 @@ class TS2Vec(ABSModule):
         """Initialize TS2Vec module.
 
         Args:
+        ----
             encoder (DictConfig) - config for TS2Vec sequence encoder instantiation
             optimizer_partial (DictConfig) - config for optimizer instantiation (ptls format)
             lr_scheduler_partial (DictConfig) - config for lr scheduler instantiation (ptls format)
@@ -128,7 +136,6 @@ class TS2Vec(ABSModule):
             col_time (str) - name of the column containing timestamps
             mask_mode (str) - type of mask to be generated & used
         """
-
         self.save_hyperparameters()
         enc: SeqEncoderContainer = instantiate(encoder)
 
@@ -160,10 +167,11 @@ class TS2Vec(ABSModule):
 
     def shared_step(
         self, x: PaddedBatch, y: Optional[torch.Tensor]
-    ) -> Tuple[Tuple[torch.Tensor], Optional[torch.Tensor]]:
+    ) -> tuple[tuple[torch.Tensor], Optional[torch.Tensor]]:
         """Shared training/validation/testing step.
 
         Args:
+        ----
             x (PaddedBatch) - input sequences in ptls format
             y (torch.Tensor) - labels as provided by the dataloader
 
@@ -210,12 +218,13 @@ class TS2Vec(ABSModule):
         return (out1, out2, t), y
 
     def validation_step(
-        self, batch: Tuple[PaddedBatch, Optional[torch.Tensor]], _
+        self, batch: tuple[PaddedBatch, Optional[torch.Tensor]], _
     ) -> None:
         """Validation step of the model.
 
         Args:
-            batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into TS2Vec sequence encoder and labels
+        ----
+            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into TS2Vec sequence encoder and labels
         """
         y_h, y = self.shared_step(*batch)
         loss = self._loss(y_h, y)
@@ -223,7 +232,7 @@ class TS2Vec(ABSModule):
 
     def validation_epoch_end(self, _) -> None:
         """Log loss for a validation epoch."""
-        self.log(f"valid_loss", self.valid_loss, prog_bar=True)
+        self.log("valid_loss", self.valid_loss, prog_bar=True)
 
     @property
     def is_requires_reduced_sequence(self) -> bool:

@@ -1,3 +1,4 @@
+"""Module which contains the universal preprocess function."""
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
@@ -9,15 +10,19 @@ from ptls.preprocessing.base import ColTransformer
 
 
 def preprocess(cfg: DictConfig) -> tuple[list[dict], list[dict], list[dict]]:
-    """Preprocess data according to given config. Caches function result using joblib to cache directory
+    """Preprocess data according to given config.
+
+    Caches function result using joblib to cache directory.
 
     Args:
+    ----
         cfg (dict): loaded OmegaConf config, converted to dict for compatibility with joblib. Needs fields:
             - source: .parquet file to read the dataframe from
             - transforms: sequence of ColTransformer/scikit-learn transforms of the pandas dataframe
         Other fields are allowed and ignored.
 
     Returns:
+    -------
         tuple[list[dict], list[dict], list[dict]]:
             train/val/test FeatureDicts, compatible with ptls
     """
