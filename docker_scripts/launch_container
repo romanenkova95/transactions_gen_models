@@ -10,7 +10,6 @@ docker run \
 	--name ${CONTAINER_NAME} \
 	--rm -it --init \
 	--gpus all \
-	-p ${PORT}:${PORT} \
 	-v /home/${USER}/${SRC}:/app \
 	--gpus all \
 	${DOCKER_NAME} bash
