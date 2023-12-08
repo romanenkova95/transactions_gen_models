@@ -7,9 +7,10 @@ import torch.nn.functional as F
 
 class HierarchicalContrastiveLoss(nn.Module):
     """Hierarchical Contrastive Loss for TS2Vec model."""
+
     def __init__(self, alpha: float, temporal_unit: int) -> None:
         """Initlize HierarchicalContrastiveLoss.
-        
+
         Args:
             alpha (float) - weighting coefficient
             temporal_unit (int) - start computing temporal component after this level of hierarchy
@@ -22,24 +23,24 @@ class HierarchicalContrastiveLoss(nn.Module):
     @staticmethod
     def instance_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> float:
         """Compute instance-wise component of contrastive loss.
-        
+
         Args:
             z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 2nd augmented window 
-        
+            z2 (torch.Tensor) - embedding of the 2nd augmented window
+
         Returns:
-            instance-wise component of the loss function 
+            instance-wise component of the loss function
         """
         B = z1.size(0)
         if B == 1:
-            return z1.new_tensor(0., requires_grad=True)
+            return z1.new_tensor(0.0, requires_grad=True)
         z = torch.cat([z1, z2], dim=0)  # 2B x T x C
         z = z.transpose(0, 1)  # T x 2B x C
         sim = torch.matmul(z, z.transpose(1, 2))  # T x 2B x 2B
-        logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # T x 2B x (2B-1)
+        logits = torch.tril(sim, diagonal=-1)[:, :, :-1]  # T x 2B x (2B-1)
         logits += torch.triu(sim, diagonal=1)[:, :, 1:]
         logits = -F.log_softmax(logits, dim=-1)
-        
+
         i = torch.arange(B, device=z1.device)
         loss = (logits[:, i, B + i - 1].mean() + logits[:, B + i, i].mean()) / 2
         return loss
@@ -47,46 +48,42 @@ class HierarchicalContrastiveLoss(nn.Module):
     @staticmethod
     def temporal_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> float:
         """Compute temporal component of contrastive loss.
-        
+
         Args:
             z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 1st augmented window 
-        
+            z2 (torch.Tensor) - embedding of the 1st augmented window
+
         Returns:
-            temporal component of the loss function 
+            temporal component of the loss function
         """
         T = z1.size(1)
         if T == 1:
-            return z1.new_tensor(0., requires_grad=True)
+            return z1.new_tensor(0.0, requires_grad=True)
         z = torch.cat([z1, z2], dim=1)  # B x 2T x C
         sim = torch.matmul(z, z.transpose(1, 2))  # B x 2T x 2T
-        logits = torch.tril(sim, diagonal=-1)[:, :, :-1]    # B x 2T x (2T - 1)
+        logits = torch.tril(sim, diagonal=-1)[:, :, :-1]  # B x 2T x (2T - 1)
         logits += torch.triu(sim, diagonal=1)[:, :, 1:]
         logits = -F.log_softmax(logits, dim=-1)
-        
+
         t = torch.arange(T, device=z1.device)
         loss = (logits[:, t, T + t - 1].mean() + logits[:, T + t, t].mean()) / 2
         return loss
 
     def hierarchical_contrastive_loss(
-        self,
-        z1: torch.Tensor,
-        z2: torch.Tensor,
-        alpha: float,
-        temporal_unit: int
+        self, z1: torch.Tensor, z2: torch.Tensor, alpha: float, temporal_unit: int
     ) -> float:
         """Compute hierarchical contrastive loss for TS2Vec model.
-        
+
         Args:
             z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 2nd augmented window 
+            z2 (torch.Tensor) - embedding of the 2nd augmented window
             alpha (float) - weighting coefficient
             temporal_unit (int) - start computing temporal component after this level of hierarchy
-        
+
         Returns:
             value of the loss function
         """
-        loss = torch.tensor(0., device=z1.device)
+        loss = torch.tensor(0.0, device=z1.device)
         d = 0
         while z1.size(1) > 1:
             if alpha != 0:
@@ -105,13 +102,14 @@ class HierarchicalContrastiveLoss(nn.Module):
 
     def forward(self, embeddings: Tuple[Tuple[torch.Tensor], torch.Tensor], _) -> float:
         """Compute value of the loss function.
-        
+
         Args:
             embeddings (Tuple[Tuple[torch.Tensor], torch.Tensor]) - embeddings of 2 windows and time, i.e. output of TS2Vec.shared_step()
-            
+
         Returns:
-            value of the loss function 
+            value of the loss function
         """
         out1, out2, _ = embeddings
-        return self.hierarchical_contrastive_loss(out1, out2, self.alpha, self.temporal_unit)
-    
+        return self.hierarchical_contrastive_loss(
+            out1, out2, self.alpha, self.temporal_unit
+        )

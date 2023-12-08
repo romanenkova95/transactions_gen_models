@@ -29,7 +29,7 @@ def local_target_validation(
     cfg_logger: DictConfig,
     encoder_name: str,
     val_name: str,
-    is_deterministic: Optional[bool] = None
+    is_deterministic: Optional[bool] = None,
 ) -> dict[str, float]:
     """Full pipeline for the sequence encoder local validation.
 
@@ -67,10 +67,16 @@ def local_target_validation(
 
     train_deterministic = False if is_deterministic is None else is_deterministic
     val_deterministic = True if is_deterministic is None else is_deterministic
-    
-    train_dataset = call(cfg_validation["dataset"], data=train, deterministic=train_deterministic)
-    val_dataset = call(cfg_validation["dataset"], data=val, deterministic=val_deterministic)
-    test_dataset = call(cfg_validation["dataset"], data=test, deterministic=val_deterministic)
+
+    train_dataset = call(
+        cfg_validation["dataset"], data=train, deterministic=train_deterministic
+    )
+    val_dataset = call(
+        cfg_validation["dataset"], data=val, deterministic=val_deterministic
+    )
+    test_dataset = call(
+        cfg_validation["dataset"], data=test, deterministic=val_deterministic
+    )
 
     datamodule: PtlsDataModule = instantiate(
         cfg_validation["datamodule"],

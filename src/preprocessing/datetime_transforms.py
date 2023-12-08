@@ -32,7 +32,7 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
         col_name_original (str) - source column name
         is_drop_original_col (bool) - when target and original columns are different manage original col deletion.
     """
-    
+
     def __init__(
         self,
         col_name_original: str,
@@ -44,10 +44,9 @@ class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
             col_name_target=col_name_target,  # type: ignore
             is_drop_original_col=is_drop_original_col,
         )
-    
+
     def fit(self, x: pd.DataFrame) -> "CustomDatetimeNormalization":
-        """Record minimum timestamp
-        """
+        """Record minimum timestamp"""
         super().fit(x)
         self.min_timestamp = int(x[self.col_name_original].min().timestamp())
         return self
@@ -69,7 +68,9 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
     keeping according to ```keep``` parameter ("first"/"last"/False).
     """
 
-    def __init__(self, index_cols: list[str], keep: Literal["first", "last", False]) -> None:
+    def __init__(
+        self, index_cols: list[str], keep: Literal["first", "last", False]
+    ) -> None:
         """Initialize DropDuplicates transform
 
         Args:
@@ -89,7 +90,7 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
             raise ValueError(
                 f"Columns mismatch! {self.index_cols} is not subset of {x.columns}"
             )
-        
+
         return self
 
     def transform(self, x: pd.DataFrame) -> pd.DataFrame:

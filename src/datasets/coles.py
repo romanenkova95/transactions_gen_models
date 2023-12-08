@@ -8,6 +8,7 @@ from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
 from ptls.frames.coles.split_strategy import SampleSlices, SampleUniform
 
+
 class CustomColesDataset(ColesDataset):
     """
     Custom coles dataset inhereted from ptls coles dataset.
@@ -36,7 +37,9 @@ class CustomColesDataset(ColesDataset):
             col_time (str, optional): column name with event time. Defaults to 'event_time'.
         """
         if deterministic:
-            splitter = SampleUniform(split_count, (random_min_seq_len + random_max_seq_len) // 2)
+            splitter = SampleUniform(
+                split_count, (random_min_seq_len + random_max_seq_len) // 2
+            )
         else:
             splitter = SampleSlices(split_count, random_min_seq_len, random_max_seq_len)
         super().__init__(

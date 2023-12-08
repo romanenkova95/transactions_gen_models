@@ -28,7 +28,7 @@ class PoolingModel(nn.Module):
         max_seq_length: int = 1000,
         max_embs_per_user: int = 1000,
         init_device: str = "cuda",
-        freeze: bool = True
+        freeze: bool = True,
     ) -> None:
         """Initialize method for PoolingModel.
 
@@ -46,7 +46,7 @@ class PoolingModel(nn.Module):
             max_embs_per_user (int): How many datapoints to take from one user
             in self.embegings_dataset preparation
             init_device (str): Name of device to use during initialization
-            freeze (bool): Flag 
+            freeze (bool): Flag
         """
         super().__init__()
 
@@ -214,7 +214,7 @@ class PoolingModel(nn.Module):
             )
             batch_of_global_poolings.append(local_pooled_emb)
         batch_of_global_poolings = torch.stack(batch_of_global_poolings)
-        
+
         batch_of_global_poolings = batch_of_global_poolings
 
         return batch_of_global_poolings

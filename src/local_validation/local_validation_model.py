@@ -43,7 +43,7 @@ class LocalValidationModelBase(pl.LightningModule):
         if freeze_backbone:
             for param in self.backbone.parameters():
                 param.requires_grad = False
-                
+
         self.freeze_backbone = freeze_backbone
 
         self.lr = learning_rate
@@ -54,12 +54,14 @@ class LocalValidationModelBase(pl.LightningModule):
         self.test_metrics = metrics.clone("Test")
         self.metric_name = "val_loss"
         self.postproc = postproc or nn.Identity()
-        
-    def train(self, mode: bool = True): # override train to disable training when frozen
+
+    def train(
+        self, mode: bool = True
+    ):  # override train to disable training when frozen
         super().train(mode)
         if self.freeze_backbone:
             self.backbone.eval()
-            
+
         return self
 
     def forward(self, inputs: PaddedBatch) -> tuple[torch.Tensor]:

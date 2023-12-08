@@ -7,6 +7,7 @@ class AbsDecoder(nn.Module):
     Properties:
         output_size (int): size of the channel dimension of the decoder output.
     """
+
     def __init__(self, output_size: Optional[int] = None) -> None:
         super().__init__()
         if output_size:
@@ -17,7 +18,9 @@ class AbsDecoder(nn.Module):
         if hasattr(self, "_output_size"):
             return self._output_size
         else:
-            raise NotImplementedError("Output size wasn't provided on init, and wasn't implemented in child")
+            raise NotImplementedError(
+                "Output size wasn't provided on init, and wasn't implemented in child"
+            )
 
     def forward(self, x, *args, **kwargs):
         return x

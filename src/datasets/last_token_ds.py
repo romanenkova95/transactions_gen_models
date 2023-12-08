@@ -15,7 +15,7 @@ def create_last_token_dataset(
     window_size: int,
     window_step: int,
     target_seq_col: str,
-    drop_last: bool
+    drop_last: bool,
 ):
     """Initialize dataset, which returns tuple of batch & last element of target_seq_col.
     Optionally, drop last elements of sequence columns to prevent data leak.

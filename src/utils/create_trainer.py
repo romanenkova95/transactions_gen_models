@@ -22,7 +22,9 @@ def create_trainer(
                 raise ValueError(f"Metric name required for {callback}")
 
             callback_instance = instantiate(
-                callback, monitor=metric_name, mode="min" if "loss" in metric_name else "max"
+                callback,
+                monitor=metric_name,
+                mode="min" if "loss" in metric_name else "max",
             )
         else:
             callback_instance = instantiate(callback)
@@ -31,7 +33,9 @@ def create_trainer(
 
     if checkpointing and metric_name:
         instantiated_callbacks.append(
-            ModelCheckpoint(monitor=metric_name, mode="min" if "loss" in metric_name else "max")
+            ModelCheckpoint(
+                monitor=metric_name, mode="min" if "loss" in metric_name else "max"
+            )
         )
 
     # Instantiate logger

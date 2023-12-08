@@ -85,7 +85,7 @@ class CategoricalLocalVal(LocalValidationModelBase):
         """Override shared_step to clip mcc_code values to [0, num_types]
 
         Args:
-            batch (tuple[PaddedBatch, torch.Tensor]): Tuple of paddedbatch & target 
+            batch (tuple[PaddedBatch, torch.Tensor]): Tuple of paddedbatch & target
             batch_idx (int): ignored
 
         Returns:

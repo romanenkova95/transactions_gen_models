@@ -4,18 +4,20 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+
 class SamePadConv(nn.Module):
     """1D-convolution preserving sequence length."""
+
     def __init__(
-        self, 
-        in_channels: int, 
-        out_channels: int, 
-        kernel_size: int, 
-        dilation: int = 1, 
-        groups: int = 1
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int = 1,
+        groups: int = 1,
     ) -> None:
         """Initalize SamePadConv.
-        
+
         Args:
             in_channels (int) - input size
             out_channels (int) - output size
@@ -27,19 +29,21 @@ class SamePadConv(nn.Module):
         self.receptive_field = (kernel_size - 1) * dilation + 1
         padding = self.receptive_field // 2
         self.conv = nn.Conv1d(
-            in_channels, out_channels, kernel_size,
+            in_channels,
+            out_channels,
+            kernel_size,
             padding=padding,
             dilation=dilation,
-            groups=groups
+            groups=groups,
         )
         self.remove = 1 if self.receptive_field % 2 == 0 else 0
-        
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Convolve input tensor.
-        
-        Args:  
+
+        Args:
             x (torch.Tensor) - input tensor
-        
+
         Returns:
             conv(x)
         """
@@ -47,37 +51,47 @@ class SamePadConv(nn.Module):
         if self.remove > 0:
             out = out[:, :, : -self.remove]
         return out
-    
+
+
 class ConvBlock(nn.Module):
     """Block of dilated convolutions."""
+
     def __init__(
-        self, 
+        self,
         in_channels: int,
-        out_channels: int, 
-        kernel_size: int, 
-        dilation: int, 
-        final: bool = False
+        out_channels: int,
+        kernel_size: int,
+        dilation: int,
+        final: bool = False,
     ) -> None:
         """Initalize ConvBlock.
-        
+
         Args:
             in_channels (int) - input size
             out_channels (int) - output size
             kernel_size (int) - convolutional kernel size
-            dilation (int) - dilation factor 
+            dilation (int) - dilation factor
             final (bool) - indicates if the block is the last one
         """
         super().__init__()
-        self.conv1 = SamePadConv(in_channels, out_channels, kernel_size, dilation=dilation)
-        self.conv2 = SamePadConv(out_channels, out_channels, kernel_size, dilation=dilation)
-        self.projector = nn.Conv1d(in_channels, out_channels, 1) if in_channels != out_channels or final else None
-    
+        self.conv1 = SamePadConv(
+            in_channels, out_channels, kernel_size, dilation=dilation
+        )
+        self.conv2 = SamePadConv(
+            out_channels, out_channels, kernel_size, dilation=dilation
+        )
+        self.projector = (
+            nn.Conv1d(in_channels, out_channels, 1)
+            if in_channels != out_channels or final
+            else None
+        )
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass throught the block.
-        
+
         Args:
             x (torch.Tensor) - input
-            
+
         Returns:
             output of the block
         """
@@ -88,34 +102,38 @@ class ConvBlock(nn.Module):
         x = self.conv2(x)
         return x + residual
 
+
 class DilatedConvEncoder(nn.Module):
     """Dilated 1D convolutional sequence encoder."""
+
     def __init__(self, in_channels: int, channels: List[int], kernel_size: int) -> None:
         """Initialize DilatedConvEncoder.
-        
+
         Args:
             in_channels (int) - input size
             channels (List[int]) - list of hidden sizes (num of channels for each convolution)
             kernel_size (int) - kernel size
         """
         super().__init__()
-        self.net = nn.Sequential(*[
-            ConvBlock(
-                channels[i-1] if i > 0 else in_channels,
-                channels[i],
-                kernel_size=kernel_size,
-                dilation=2**i,
-                final=(i == len(channels)-1)
-            )
-            for i in range(len(channels))
-        ])
-        
+        self.net = nn.Sequential(
+            *[
+                ConvBlock(
+                    channels[i - 1] if i > 0 else in_channels,
+                    channels[i],
+                    kernel_size=kernel_size,
+                    dilation=2**i,
+                    final=(i == len(channels) - 1),
+                )
+                for i in range(len(channels))
+            ]
+        )
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass throught the model.
-        
+
         Args:
             x (torch.Tensor) - input
-            
+
         Returns:
             output = encoded input
         """

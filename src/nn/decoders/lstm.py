@@ -10,6 +10,7 @@ class LSTMDecoder(AbsDecoder):
         lstm (nn.LSTM): the LSTM, used by this module.
         output_size (int): the LSTM's output_size.
     """
+
     def __init__(
         self,
         input_size: int,
@@ -18,8 +19,7 @@ class LSTMDecoder(AbsDecoder):
         num_layers: int = 1,
         bidirectional: bool = False,
     ):
-        """Initialize the LSTMDecoder class. All arguments are passed to nn.LSTM as-is.
-        """
+        """Initialize the LSTMDecoder class. All arguments are passed to nn.LSTM as-is."""
         super().__init__()
         self.lstm = nn.LSTM(
             input_size=input_size,
@@ -29,7 +29,7 @@ class LSTMDecoder(AbsDecoder):
             bidirectional=bidirectional,
             batch_first=True,
         )
-        
+
         self.proj_size = proj_size
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional
@@ -37,7 +37,10 @@ class LSTMDecoder(AbsDecoder):
 
     @property
     def output_size(self):
-        return self.proj_size or self.hidden_size * (self.bidirectional + 1) * self.num_layers
+        return (
+            self.proj_size
+            or self.hidden_size * (self.bidirectional + 1) * self.num_layers
+        )
 
     def forward(self, x: Tensor, hx: tp.Optional[tuple[Tensor, Tensor]] = None):
         """Do the forward pass. Arguments same as in nn.LSTM.forward.

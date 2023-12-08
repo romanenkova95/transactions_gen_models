@@ -5,6 +5,7 @@ from torchmetrics import MeanSquaredError, MetricCollection, R2Score
 from .local_validation_model import LocalValidationModelBase
 from src.losses import LogCoshLoss
 
+
 class NumericLocalVal(LocalValidationModelBase):
     """
     PytorchLightningModule for local validation of backbone model (e.g. CoLES)
@@ -17,7 +18,7 @@ class NumericLocalVal(LocalValidationModelBase):
         backbone_embd_size: int,
         freeze_backbone: bool = True,
         learning_rate: float = 1e-3,
-        loss_type: Literal["mse", "logcosh"] = "logcosh"
+        loss_type: Literal["mse", "logcosh"] = "logcosh",
     ) -> None:
         """Initialize model with pretrained backbone model and 1-layer linear prediction head.
 
@@ -27,10 +28,7 @@ class NumericLocalVal(LocalValidationModelBase):
             freeze_backbone (bool) - whether to freeze backbone model
             learning_rate (float) - learning rate for prediction head training
         """
-        pred_head = nn.Sequential(
-            nn.Linear(backbone_embd_size, 1),
-            nn.Flatten(0, -1)
-        )
+        pred_head = nn.Sequential(nn.Linear(backbone_embd_size, 1), nn.Flatten(0, -1))
 
         metrics = MetricCollection(
             {
@@ -38,11 +36,8 @@ class NumericLocalVal(LocalValidationModelBase):
                 "MSE": MeanSquaredError(),
             }
         )
-        
-        loss_dict = {
-            "mse": nn.MSELoss(),
-            "logcosh": LogCoshLoss()
-        }
+
+        loss_dict = {"mse": nn.MSELoss(), "logcosh": LogCoshLoss()}
 
         super().__init__(
             backbone=backbone,

@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import logging
@@ -38,16 +39,16 @@ def run(cfg: DictConfig):
     lightning_logger_name = hydra_cfg.runtime.choices.get("logger", "tensorboard")
     if lightning_logger_name == "wandb":
         wandb.init(
-            project="macro_micro_coles", 
-            config=OmegaConf.to_container(cfg), # type: ignore
-            tags=[preproc_name, backbone_name, *val_names]
+            project="macro_micro_coles",
+            config=OmegaConf.to_container(cfg),  # type: ignore
+            tags=[preproc_name, backbone_name, *val_names],
         )
     # CometML TODO (optionally): add experiment tagging
 
     data = preprocess(cfg["preprocessing"])
     seed = seed_everything(cfg.get("seed"))
     experiment_name = f"{backbone_name}_{preproc_name}_{seed}"
-    
+
     if cfg["pretrain"]:
         logger.info(f"Experiment {experiment_name}...")
         learn(
@@ -58,16 +59,16 @@ def run(cfg: DictConfig):
         )
 
     for val_name, cfg_validation in cfg.get("validation", {}).items():
-        reset_seed() # get seed from os.environ["PL_GLOBAL_SEED"]
+        reset_seed()  # get seed from os.environ["PL_GLOBAL_SEED"]
         logger.info(f"{val_name} validation for {experiment_name}")
         if val_name.startswith("global_target"):
             res = global_target_validation(
-                data=data, 
-                cfg_encoder=cfg["backbone"]["encoder"], 
-                cfg_validation=cfg_validation, 
-                encoder_name=experiment_name
+                data=data,
+                cfg_encoder=cfg["backbone"]["encoder"],
+                cfg_validation=cfg_validation,
+                encoder_name=experiment_name,
             )
-            
+
             res = {"global_target" + k: v for k, v in res.items()}
         else:
             res = local_target_validation(
@@ -77,15 +78,15 @@ def run(cfg: DictConfig):
                 cfg_logger=cfg["logger"],
                 encoder_name=experiment_name,
                 val_name=val_name,
-                is_deterministic=cfg["backbone"].get("val_deterministic")
+                is_deterministic=cfg["backbone"].get("val_deterministic"),
             )
 
         print(res)
         if lightning_logger_name == "wandb":
             wandb.log(res)
-        
+
         # CometML TODO (optionally): add global validation logging
-            
+
     if lightning_logger_name == "wandb":
         wandb.finish()
 

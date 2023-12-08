@@ -20,9 +20,9 @@ class CustomCoLES(CoLESModule):
         """Overrided initialize method, which is suitable for our tasks
 
         Args:
-            optimizer_partial (DictConfig with Callable): 
+            optimizer_partial (DictConfig with Callable):
                 Partial initialized torch optimizer (with parameters)
-            lr_scheduler_partial (DictConfig with Callable): 
+            lr_scheduler_partial (DictConfig with Callable):
                 Partial initialized torch lr scheduler (with parameters)
             encoder (DictConfig with SeqEncoderContainer): Ptls sequence encoder
                 (including sequence encoder and single transaction encoder)
@@ -34,5 +34,5 @@ class CustomCoLES(CoLESModule):
             optimizer_partial=instantiate(optimizer_partial, _partial_=True),
             lr_scheduler_partial=instantiate(lr_scheduler_partial, _partial_=True),
         )
-        
+
         self.encoder = enc

@@ -11,6 +11,7 @@ from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 class Cotic(ABSModule):
     """Cotic module in ptls format."""
+
     def __init__(
         self,
         encoder: DictConfig,
@@ -34,14 +35,14 @@ class Cotic(ABSModule):
         """
         self.save_hyperparameters()
         enc: SeqEncoderContainer = instantiate(encoder)
-        
+
         super().__init__(
             seq_encoder=enc,
             loss=instantiate(loss),
             optimizer_partial=instantiate(optimizer_partial, _partial_=True),
             lr_scheduler_partial=instantiate(lr_scheduler_partial, _partial_=True),
         )
-        
+
         self.encoder = enc
 
         self.train_metrics = instantiate(metrics)
@@ -56,10 +57,10 @@ class Cotic(ABSModule):
         self, batch: Tuple[PaddedBatch, torch.Tensor]
     ) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor, Tuple[torch.Tensor]]]:
         """Shared training/validation/testing step.
-        
+
         Args:
             batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
-            
+
         Retruns a tuple of:
             inputs - inputs for CCNN model: (event_times, event_types), for loss & metric computation
             outputs - outputs of the model: (encoded_outputs, (pred_times, pred_types))
@@ -76,7 +77,7 @@ class Cotic(ABSModule):
             pred_times,
             pred_types,
         )  # format is (encoded_output, (pred_times, pred_types))
-        
+
         ll_loss, type_loss, time_loss = self._loss.compute_loss(
             model=self.seq_encoder.seq_encoder.feature_extractor,
             inputs=inputs,
@@ -85,16 +86,18 @@ class Cotic(ABSModule):
 
         return (inputs, outputs), (ll_loss, type_loss, time_loss)
 
-    def training_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> Dict[str, float]:
+    def training_step(
+        self, batch: Tuple[PaddedBatch, torch.Tensor], _
+    ) -> Dict[str, float]:
         """Training step of the module.
-        
+
         Args:
             batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
-        
+
         Returns:
             dict with train loss
         """
-        
+
         (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("train_ll_loss", ll_loss, prog_bar=True)
@@ -109,16 +112,18 @@ class Cotic(ABSModule):
 
         return {"loss": ll_loss}
 
-    def validation_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> Dict[str, float]:
+    def validation_step(
+        self, batch: Tuple[PaddedBatch, torch.Tensor], _
+    ) -> Dict[str, float]:
         """Training step of the module.
-        
+
         Args:
             batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
-        
+
         Returns:
             dict with val loss
         """
-        
+
         (inputs, outputs), (ll_loss, type_loss, time_loss) = self.shared_step(batch)
 
         self.log("val_ll_loss", ll_loss, prog_bar=True)
@@ -135,7 +140,7 @@ class Cotic(ABSModule):
 
     def test_step(self, batch: Tuple[PaddedBatch, torch.Tensor], _) -> None:
         """Test step of the module.
-        
+
         Args:
             batch (Tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
         """

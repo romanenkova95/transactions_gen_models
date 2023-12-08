@@ -9,12 +9,13 @@ from hydra.core.hydra_config import HydraConfig
 
 TEST_SEED = 473284789
 
+
 class TestBackbones(unittest.TestCase):
     def setUp(self):
         os.environ["FAST_DEV_RUN"] = "True"
         os.environ["WANDB_MODE"] = "disabled"
         logging.disable(logging.CRITICAL)
-        
+
     def tearDown(self) -> None:
         saved_test_models = Path("/app/saved_models/").glob(f"*{TEST_SEED}*")
         for file in saved_test_models:
@@ -23,14 +24,16 @@ class TestBackbones(unittest.TestCase):
     def run_with_config(self, backbones, preprocessings, validations):
         for backbone in backbones:
             for preprocessing in preprocessings:
-                with self.subTest(f"{backbone}_{preprocessing}"), initialize("../config", version_base=None):
+                with self.subTest(f"{backbone}_{preprocessing}"), initialize(
+                    "../config", version_base=None
+                ):
                     cfg = compose(
                         "master.yaml",
                         overrides=[
                             f"backbone={backbone}",
                             f"preprocessing={preprocessing}",
                             f"validation={validations}",
-                            f"seed={TEST_SEED}"
+                            f"seed={TEST_SEED}",
                         ],
                         return_hydra_config=True,
                     )
@@ -41,21 +44,21 @@ class TestBackbones(unittest.TestCase):
     def test_run_config(self):
         self.run_with_config(
             backbones=[
-                "ae_nlp_pretrained", 
+                "ae_nlp_pretrained",
                 "ae_nlp_from_scratch",
                 "ae_nlp_frozen",
-                "coles_churn", 
-                "coles_emb_churn", 
-                "mlm", 
+                "coles_churn",
+                "coles_emb_churn",
+                "mlm",
                 # "cotic", # doesn't run on a small GPU
                 "ts2vec_churn",
                 "coles_timecl_churn",
-                "seq2vec_coles_emb_churn"
-
+                "seq2vec_coles_emb_churn",
             ],
             preprocessings=["default", "churn"],
             validations=["local_target", "event_time", "event_type", "global_target"],
         )
+
 
 if __name__ == "__main__":
     unittest.main()

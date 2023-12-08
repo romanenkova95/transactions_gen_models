@@ -17,7 +17,7 @@ class LogCoshLoss(torch.nn.Module):
         return torch.where(
             torch.abs(x) > 10,
             torch.abs(x),
-            x + torch.nn.functional.softplus(-2.0 * x) - math.log(2.0)
+            x + torch.nn.functional.softplus(-2.0 * x) - math.log(2.0),
         )
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:

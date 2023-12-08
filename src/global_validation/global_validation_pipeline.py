@@ -23,26 +23,26 @@ from src.preprocessing import preprocess
 
 
 def global_target_validation(
-    data: tuple[list[dict], list[dict], list[dict]], 
+    data: tuple[list[dict], list[dict], list[dict]],
     cfg_encoder: DictConfig,
     cfg_validation: DictConfig,
-    encoder_name: str
-    ) -> dict:
-    """Full pipeline for the sequence encoder validation. 
+    encoder_name: str,
+) -> dict:
+    """Full pipeline for the sequence encoder validation.
 
     Args:
         data (tuple[list[dict], list[dict], list[dict]]):
             train, val & test sets
         cfg_encoder (DictConfig):
             encoder config (specified in 'config/encoder')
-        cfg_validation (DictConfig): 
+        cfg_validation (DictConfig):
             Validation config (specified in 'config/validation')
-    
+
     Returns:
         results (dict):      dict with test metrics
     """
     logger = get_logger(name=__name__)
-    
+
     train, val, test = data
     logger.info("Instantiating the sequence encoder")
 
@@ -57,7 +57,9 @@ def global_target_validation(
     logger.info("Processing train sequences")
 
     # get representations of sequences from train + val part
-    embeddings, targets = embed_data(sequence_encoder, train + val, **cfg_validation["embed_data"])
+    embeddings, targets = embed_data(
+        sequence_encoder, train + val, **cfg_validation["embed_data"]
+    )
     N = len(embeddings)
     indices = np.arange(N)
 
@@ -65,14 +67,15 @@ def global_target_validation(
 
     # get representations of sequences from test part
     embeddings_test, targets_test = embed_data(
-        sequence_encoder,
-        test,
-        **cfg_validation["embed_data"]
+        sequence_encoder, test, **cfg_validation["embed_data"]
     )
 
     # bootstrap sample
     bootstrap_inds = np.random.choice(indices, size=N, replace=True)
-    embeddings_train, targets_train = embeddings[bootstrap_inds], targets[bootstrap_inds]
+    embeddings_train, targets_train = (
+        embeddings[bootstrap_inds],
+        targets[bootstrap_inds],
+    )
 
     # evaluate trained model
     metrics = eval_embeddings(
@@ -80,18 +83,18 @@ def global_target_validation(
         targets_train,
         embeddings_test,
         targets_test,
-        cfg_validation["model"]
+        cfg_validation["model"],
     )
 
     return metrics
 
 
 def embed_data(
-        seq_encoder: torch.nn.Module,
-        dataset:     list[dict],
-        batch_size:  int = 64,
-        device:      str = "cuda",
-    ) -> tuple[np.ndarray, np.ndarray]:
+    seq_encoder: torch.nn.Module,
+    dataset: list[dict],
+    batch_size: int = 64,
+    device: str = "cuda",
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Returns embeddings of sequences and corresponding targets.
 
@@ -129,42 +132,42 @@ def embed_data(
 
 
 def eval_embeddings(
-        train_embeds: torch.Tensor,
-        train_labels: torch.Tensor,
-        test_embeds:  torch.Tensor,
-        test_labels:  torch.Tensor,
-        model_config: DictConfig
-    ) -> dict[str, float]:
+    train_embeds: torch.Tensor,
+    train_labels: torch.Tensor,
+    test_embeds: torch.Tensor,
+    test_labels: torch.Tensor,
+    model_config: DictConfig,
+) -> dict[str, float]:
     """
     Trains and evaluates a simple classifier on the embedded data.
 
     Args:
-        train_embeds (torch.Tensor): Embeddings of sequences from train set 
-        train_labels (torch.Tensor): Labels of sequences from train set 
-        test_embeds (torch.Tensor):  Embeddings of sequences from test set 
+        train_embeds (torch.Tensor): Embeddings of sequences from train set
+        train_labels (torch.Tensor): Labels of sequences from train set
+        test_embeds (torch.Tensor):  Embeddings of sequences from test set
         test_labels (torch.Tensor):  Labels of sequences from test set
         model_config (DictConfig):   Config of the model to be fitted
 
     Returns:
-        results (dict): Dictionary with test metrics values 
+        results (dict): Dictionary with test metrics values
     """
     nunique = len(np.unique(train_labels))
     if nunique > 2:
         objective = "multiclass"
         lgbm_metric = "multi_error"
         metrics = {
-            "AUROC": AUROC(task="multiclass", num_classes=nunique), 
-            "PR-AUC": AveragePrecision(task="multiclass", num_classes=nunique), 
-            "Accuracy": Accuracy(task="multiclass", num_classes=nunique), 
+            "AUROC": AUROC(task="multiclass", num_classes=nunique),
+            "PR-AUC": AveragePrecision(task="multiclass", num_classes=nunique),
+            "Accuracy": Accuracy(task="multiclass", num_classes=nunique),
             "F1Score": F1Score(task="multiclass", num_classes=nunique),
         }
     else:
         objective = "binary"
         lgbm_metric = "accuracy"
         metrics = {
-            "AUROC": AUROC(task="binary"), 
-            "PR-AUC": AveragePrecision(task="binary"), 
-            "Accuracy": Accuracy(task="binary"), 
+            "AUROC": AUROC(task="binary"),
+            "PR-AUC": AveragePrecision(task="binary"),
+            "Accuracy": Accuracy(task="binary"),
             "F1Score": F1Score(task="binary"),
         }
 
@@ -179,8 +182,7 @@ def eval_embeddings(
     results = {}
     for name, metric in metrics.items():
         results[name] = metric(
-            torch.Tensor(y_pred_test),
-            torch.LongTensor(test_labels)
+            torch.Tensor(y_pred_test), torch.LongTensor(test_labels)
         ).item()
 
     return results

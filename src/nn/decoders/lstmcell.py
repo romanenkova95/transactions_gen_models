@@ -6,13 +6,13 @@ from .lstm import LSTMDecoder
 
 
 class LSTMCellDecoder(AbsDecoder):
-    """An NLP-style LSTM-based decoder. 
+    """An NLP-style LSTM-based decoder.
     Restores a sequence of embeddings from a single embedding
 
     Attributes:
-        cell (nn.LSTMCell): 
+        cell (nn.LSTMCell):
             The lstm cell, used by this module.
-        projector (nn.Sequential(nn.Linear, nn.Relu)): 
+        projector (nn.Sequential(nn.Linear, nn.Relu)):
             The linear layer, used to reshape lstmcell's outputted hidden state to match input_size.
         lstm (nn.LSTM):
             The LSTM, used for any layers other than the first one
@@ -23,37 +23,34 @@ class LSTMCellDecoder(AbsDecoder):
     """
 
     def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        num_layers: int = 1,
-        proj_size: int = 0
+        self, input_size: int, hidden_size: int, num_layers: int = 1, proj_size: int = 0
     ) -> None:
         """Initializes LSTMCellDecoder's internal state.
 
         Args:
-            input_size (int): 
+            input_size (int):
                 Input size of the lstmcell.
-            hidden_size (int): 
+            hidden_size (int):
                 Hidden size of the lstmcell.
-            num_layers (int, optional): 
+            num_layers (int, optional):
                 Number of lstm layers. Defaults to 1. If >1, adds num_layers-1 nn.LSTM layers after nn.LSTMCell.
-            proj_size (int, optional): 
+            proj_size (int, optional):
             Relevant if num_layers > 1. Sets the proj_size of appended nn.LSTM layers. Defaults to 0.
         """
         super().__init__()
         self.cell = nn.LSTMCell(input_size, hidden_size)
-        self.projector = nn.Sequential(
-            nn.Linear(hidden_size, input_size),
-            nn.ReLU()
-        )
+        self.projector = nn.Sequential(nn.Linear(hidden_size, input_size), nn.ReLU())
 
-        self.lstm = LSTMDecoder(
-            input_size=hidden_size,
-            hidden_size=hidden_size,
-            proj_size=proj_size,
-            num_layers=num_layers - 1
-        ) if num_layers > 1 else nn.Identity()
+        self.lstm = (
+            LSTMDecoder(
+                input_size=hidden_size,
+                hidden_size=hidden_size,
+                proj_size=proj_size,
+                num_layers=num_layers - 1,
+            )
+            if num_layers > 1
+            else nn.Identity()
+        )
 
         self.hidden_size = hidden_size
 
@@ -64,15 +61,17 @@ class LSTMCellDecoder(AbsDecoder):
         else:
             return self.hidden_size
 
-    def forward(self, input: Tensor, L: int, hx: Optional[tuple[Tensor, Tensor]] = None) -> Tensor:
+    def forward(
+        self, input: Tensor, L: int, hx: Optional[tuple[Tensor, Tensor]] = None
+    ) -> Tensor:
         """Runs the forward pass.
 
         Args:
-            input (Tensor): 
+            input (Tensor):
                 Input embedding, of size (batch_size, input_size).
-            L (int): 
+            L (int):
                 Length of desired sequence.
-            hx (Optional[tuple[Tensor, Tensor]], optional): 
+            hx (Optional[tuple[Tensor, Tensor]], optional):
                 Optionally, LSTMCell hidden & cell states. Defaults to None.
 
         Returns:

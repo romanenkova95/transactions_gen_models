@@ -143,17 +143,20 @@ class VanillaAE(LightningModule):
         )
 
         MetricsType = dict[Literal["mcc", "amount"], MetricCollection]
+
         def make_metrics(stage: str) -> MetricsType:
-            return nn.ModuleDict({
-                "mcc": MetricCollection(
-                    AUROC(**multiclass_args, average="weighted"),
-                    F1Score(**multiclass_args, average="micro"),
-                    AveragePrecision(**multiclass_args, average="weighted"),
-                    Accuracy(**multiclass_args, average="micro"),
-                    prefix=stage
-                ),
-                "amount": MetricCollection(R2Score(), prefix=stage),
-            }) # type: ignore
+            return nn.ModuleDict(
+                {
+                    "mcc": MetricCollection(
+                        AUROC(**multiclass_args, average="weighted"),
+                        F1Score(**multiclass_args, average="micro"),
+                        AveragePrecision(**multiclass_args, average="weighted"),
+                        Accuracy(**multiclass_args, average="micro"),
+                        prefix=stage,
+                    ),
+                    "amount": MetricCollection(R2Score(), prefix=stage),
+                }
+            )  # type: ignore
 
         self.train_metrics: MetricsType = make_metrics("train")
         self.val_metrics: MetricsType = make_metrics("val")
@@ -162,12 +165,12 @@ class VanillaAE(LightningModule):
     @property
     def metric_name(self):
         return "val_loss"
-    
-    def train(self, mode: bool = True): # eval encoder if needed
+
+    def train(self, mode: bool = True):  # eval encoder if needed
         super().train(mode)
         if self.freeze_enc:
             self.encoder.eval()
-            
+
         return self
 
     def forward(
@@ -263,13 +266,15 @@ class VanillaAE(LightningModule):
         batch.payload["mcc_code"] = torch.clip(
             batch.payload["mcc_code"], 0, self.num_types - 1
         )
-        
+
         mcc_pred, amount_pred, _, nonpad_mask = self(
             batch
         )  # (B * S, L, MCC_N), (B * S, L)
         mcc_target = batch.payload["mcc_code"]
         amount_target: Tensor = batch.payload["amount"]
-        amount_target = amount_target.abs().log1p() * amount_target.sign()  # Logarithmize targets
+        amount_target = (
+            amount_target.abs().log1p() * amount_target.sign()
+        )  # Logarithmize targets
 
         loss_dict = self._calculate_losses(
             mcc_pred, amount_pred, mcc_target, amount_target, nonpad_mask
@@ -290,10 +295,10 @@ class VanillaAE(LightningModule):
             on_epoch=True,
             batch_size=batch.seq_feature_shape[0],
         )
-        
+
         for metric in metrics.values():
             self.log_dict(
-                metric, # type: ignore
+                metric,  # type: ignore
                 on_step=False,
                 on_epoch=True,
                 batch_size=batch.seq_feature_shape[0],
@@ -331,7 +336,7 @@ class VanillaAE(LightningModule):
         amount_pred: Tensor  # (B, L)
         mcc_pred, amount_pred, _, _ = self(batch, self.reconstruction_len)
         if self.reconstruction_len:
-            return mcc_pred, amount_pred.sign()*(amount_pred.abs().exp() - 1)
+            return mcc_pred, amount_pred.sign() * (amount_pred.abs().exp() - 1)
         else:
             lens_mask = batch.seq_len_mask.bool()
             lens = batch.seq_lens.tolist()
@@ -339,7 +344,9 @@ class VanillaAE(LightningModule):
             mcc_pred_trim = mcc_pred[lens_mask]
             amount_pred_trim = amount_pred[lens_mask]
 
-            return mcc_pred_trim.split(lens), (amount_pred_trim.sign()*(amount_pred_trim.abs().exp() - 1)).split(lens)
+            return mcc_pred_trim.split(lens), (
+                amount_pred_trim.sign() * (amount_pred_trim.abs().exp() - 1)
+            ).split(lens)
 
     def configure_optimizers(self):
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())

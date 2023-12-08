@@ -50,7 +50,7 @@ class GPTModule(VanillaAE):
         loss_weights: dict[Literal["amount", "mcc"], float],
         encoder: DictConfig,
         optimizer: DictConfig,
-        num_types: Optional[int], 
+        num_types: Optional[int],
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         encoder_weights: Optional[str] = None,
@@ -81,7 +81,7 @@ class GPTModule(VanillaAE):
             loss_weights=loss_weights,
             encoder=encoder,
             optimizer=optimizer,
-            num_types=num_types, 
+            num_types=num_types,
             scheduler=scheduler,
             scheduler_config=scheduler_config,
             encoder_weights=encoder_weights,
@@ -120,8 +120,10 @@ class GPTModule(VanillaAE):
         amount_pred = self.amount_head(embeddings)[:, :-1].squeeze(-1)
 
         mcc_target = batch.payload["mcc_code"][:, 1:]
-        amount_target = batch.payload["amount"][:, 1:]  
-        amount_target = amount_target.abs().log1p() * amount_target.sign() # Logarithmize targets
+        amount_target = batch.payload["amount"][:, 1:]
+        amount_target = (
+            amount_target.abs().log1p() * amount_target.sign()
+        )  # Logarithmize targets
 
         nonpad_mask = batch.seq_len_mask[:, 1:].bool()
 
@@ -144,17 +146,17 @@ class GPTModule(VanillaAE):
             on_epoch=True,
             batch_size=batch.seq_feature_shape[0],
         )
-        
+
         for metric in metrics.values():
             self.log_dict(
-                metric, # type: ignore
+                metric,  # type: ignore
                 on_step=False,
                 on_epoch=True,
                 batch_size=batch.seq_feature_shape[0],
             )
 
         return loss_dict["loss"]
-    
+
     def predict_step(
         self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
     ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
@@ -178,7 +180,7 @@ class GPTContrastiveModule(VanillaAE):
     def __init__(
         self,
         encoder: DictConfig,
-        optimizer: DictConfig, 
+        optimizer: DictConfig,
         scheduler: Optional[DictConfig] = None,
         scheduler_config: Optional[dict] = None,
         encoder_weights: Optional[str] = None,
@@ -204,11 +206,13 @@ class GPTContrastiveModule(VanillaAE):
                 temperature parameter of `QuerySoftmaxLoss`
         """
         super(VanillaAE, self).__init__()
-        
+
         self.save_hyperparameters()
 
         self.encoder: SeqEncoderContainer = instantiate(encoder)
-        self.head = nn.Linear(self.encoder.embedding_size, self.encoder.trx_encoder.output_size)
+        self.head = nn.Linear(
+            self.encoder.embedding_size, self.encoder.trx_encoder.output_size
+        )
 
         self.optimizer_dictconfig = optimizer
         self.scheduler_dictconfig = scheduler
@@ -235,8 +239,16 @@ class GPTContrastiveModule(VanillaAE):
         mn = 1 - torch.eye(mask_num, device=mask.device)
         neg_ix = torch.multinomial(mn, self.hparams.neg_count)
 
-        b_ix = torch.arange(mask.size(0), device=mask.device).view(-1, 1).expand_as(mask)[mask][neg_ix]
-        t_ix = torch.arange(mask.size(1), device=mask.device).view(1, -1).expand_as(mask)[mask][neg_ix]
+        b_ix = (
+            torch.arange(mask.size(0), device=mask.device)
+            .view(-1, 1)
+            .expand_as(mask)[mask][neg_ix]
+        )
+        t_ix = (
+            torch.arange(mask.size(1), device=mask.device)
+            .view(1, -1)
+            .expand_as(mask)[mask][neg_ix]
+        )
         return b_ix, t_ix
 
     def shared_step(
@@ -264,10 +276,10 @@ class GPTContrastiveModule(VanillaAE):
 
         target = x_trx[mask].unsqueeze(1)  # N, 1, H
         predict = out[mask].unsqueeze(1)  # N, 1, H
-        
+
         neg_ix = self.get_neg_ix(mask)
         negative = out[neg_ix[0], neg_ix[1]]  # N, nneg, H
-        
+
         loss = self.loss_fn(target, predict, negative)
 
         self.log_dict(
