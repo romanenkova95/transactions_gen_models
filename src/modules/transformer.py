@@ -1,5 +1,5 @@
+"""The main logic of the MLM model."""
 import torch
-
 from ptls.data_load import PaddedBatch
 
 from .vanilla import VanillaAE
@@ -7,6 +7,7 @@ from .vanilla import VanillaAE
 
 class MLMModule(VanillaAE):
     """Masked Language Model (MLM) from [ROBERTA](https://arxiv.org/abs/1907.11692).
+    
     Out of replace_proba tokens:
      - Mask 80% with token=num_tokens - 1;
      - replace 10% with random tokens;
@@ -22,13 +23,21 @@ class MLMModule(VanillaAE):
     """
 
     def __init__(self, replace_proba: float = 0.1, **kwargs):
+        """Initialize module internal state.
+
+        Args:
+        ----
+            replace_proba (float, optional): 
+                the fraction of tokens to consider in masking & loss & metrics. Defaults to 0.1.
+            **kwargs: passed to VanillaAE.
+        """
         super().__init__(**kwargs)
         self.save_hyperparameters()
         self.replace_proba = replace_proba
         self.mask_token = self.num_types
 
     def forward(self, batch: PaddedBatch):
-        """Mask the mcc-codes of given batch & pass them through encoder and decoder
+        """Mask the mcc-codes of given batch & pass them through encoder and decoder.
 
         Args:
         ----
@@ -56,6 +65,7 @@ class MLMModule(VanillaAE):
         return mcc_preds, amount_preds, latent_embs, aug_mask
 
     def get_aug_tokens(self, aug_tokens):
+        """Augment the given tokens, according to the 80%-10%-10% rule."""
         shuffled_tokens = aug_tokens[torch.randperm(aug_tokens.shape[0])]
         rand = torch.rand_like(aug_tokens, dtype=torch.float32)
 
@@ -66,6 +76,7 @@ class MLMModule(VanillaAE):
         )
 
     def configure_optimizers(self):
+        """Configure optimizers."""
         optimizer: torch.optim.Optimizer = super().configure_optimizers()  # type: ignore
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,

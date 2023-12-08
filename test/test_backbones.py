@@ -1,27 +1,41 @@
+"""File with all the different tests we run."""
+import logging
 import os
 import unittest
-
-import logging
-from main import run
 from pathlib import Path
-from hydra import initialize, compose
+
+from hydra import compose, initialize
 from hydra.core.hydra_config import HydraConfig
+
+from main import run
 
 TEST_SEED = 473284789
 
 
 class TestBackbones(unittest.TestCase):
+    """The backbone testing case."""
+    
     def setUp(self):
+        """Set up some testing environment variables."""
         os.environ["FAST_DEV_RUN"] = "True"
         os.environ["WANDB_MODE"] = "disabled"
         logging.disable(logging.CRITICAL)
 
     def tearDown(self) -> None:
+        """Remove all files, created during testing."""
         saved_test_models = Path("/app/saved_models/").glob(f"*{TEST_SEED}*")
         for file in saved_test_models:
             file.unlink()
 
     def run_with_config(self, backbones, preprocessings, validations):
+        """Run the pipeline with the specified backbones, preprocessings and validations.
+
+        Args:
+        ----
+            backbones (list[str]): the backbones to test.
+            preprocessings (list[str]): the preprocessings to test the backbones on.
+            validations (list[str]): the validations to run for each backbone.
+        """
         for backbone in backbones:
             for preprocessing in preprocessings:
                 with self.subTest(f"{backbone}_{preprocessing}"), initialize(
@@ -42,6 +56,7 @@ class TestBackbones(unittest.TestCase):
                     run(cfg)
 
     def test_run_config(self):
+        """The general test case, to test all backbones on all datasets, with all validations enabled."""
         self.run_with_config(
             backbones=[
                 "ae_nlp_pretrained",

@@ -2,10 +2,9 @@
 from typing import Literal, Optional
 
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
-
 from ptls.preprocessing.base import ColTransformer
 from ptls.preprocessing.pandas.col_transformer import ColTransformerPandasMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def time_normalization(x: pd.Series, min_timestamp: int) -> pd.Series:
@@ -13,8 +12,8 @@ def time_normalization(x: pd.Series, min_timestamp: int) -> pd.Series:
 
     Args:
     ----
-        x (pd.Series) - input datetime column
-        min_timestamp (int) - minimum datetime in the dataframe (in Unix timestamp format)
+        x (pd.Series): input datetime column
+        min_timestamp (int): minimum datetime in the dataframe (in Unix timestamp format)
 
     Returns:
     -------
@@ -27,13 +26,7 @@ def time_normalization(x: pd.Series, min_timestamp: int) -> pd.Series:
 
 
 class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
-    """Converts datetime column fraction of days since the earliest transaction in the dataframe.
-
-    Args:
-    ----
-        col_name_original (str) - source column name
-        is_drop_original_col (bool) - when target and original columns are different manage original col deletion.
-    """
+    """Converts datetime column fraction of days since the earliest transaction in the dataframe."""
 
     def __init__(
         self,
@@ -135,4 +128,4 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
         -------
             pd.DataFrame: the transformed data.
         """
-        return x.drop_duplicates(subset=self.index_cols, keep=self.keep)
+        return x.drop_duplicates(subset=self.index_cols, keep=self.keep) # type: ignore

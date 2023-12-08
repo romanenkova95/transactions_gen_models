@@ -1,6 +1,4 @@
-###############################################################################################
-#          Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main            #
-###############################################################################################
+"""Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main."""
 
 import torch
 from torch import nn
@@ -9,6 +7,8 @@ from .cont_cnn_layers import ContConv1d, ContConv1dSim
 
 
 class CCNN(nn.Module):
+    """The CCNN class for COTIC."""
+    
     def __init__(
         self,
         in_channels: int,
@@ -22,12 +22,12 @@ class CCNN(nn.Module):
 
         Args:
         ----
-            in_channels (int) - number of input channels
-            kernel_size (int) - size of the kernel for 1D-convolutions
-            nb_filters (int) - number of filters for 1D-convolutions
-            nb_layers (int) - number of continuous convolutional layers
-            num_types (int) - number of event types in the dataset
-            kernel (nn.Module) - kernel model (e.g. MLP)
+            in_channels (int): number of input channels
+            kernel_size (int): size of the kernel for 1D-convolutions
+            nb_filters (int): number of filters for 1D-convolutions
+            nb_layers (int): number of continuous convolutional layers
+            num_types (int): number of event types in the dataset
+            kernel (nn.Module): kernel model (e.g. MLP)
         """
         super().__init__()
 
@@ -46,7 +46,7 @@ class CCNN(nn.Module):
         self.convs = nn.ModuleList(
             [
                 ContConv1d(
-                    kernel.recreate(self.in_channels[i]),
+                    kernel.recreate(self.in_channels[i]), # type: ignore
                     kernel_size,
                     self.in_channels[i],
                     nb_filters,
@@ -61,7 +61,7 @@ class CCNN(nn.Module):
         self.final_list = nn.ModuleList(
             [
                 ContConv1dSim(
-                    kernel.recreate(self.nb_filters), 1, nb_filters, nb_filters
+                    kernel.recreate(self.nb_filters), 1, nb_filters, nb_filters # type: ignore
                 ),
                 nn.LeakyReLU(0.1),
                 nn.Linear(nb_filters, num_types),
@@ -74,19 +74,20 @@ class CCNN(nn.Module):
         event_times: torch.Tensor,
         event_types: torch.Tensor,
         lengths: torch.Tensor,
-    ) -> tuple[torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Add zeros as the 1st elements of all times sequences, encode corresponding event types with 'max_type + 1'.
 
         Args:
         ----
-            event_times (torch.Tensor) - true event times, shape = (batch_size, seq_len)
-            event_types (torch.Tensor) - true event types, shape = (batch_size, seq_len)
-            lengths (torch.Tensor) - lengths of event sequences (=number of non-padding event times)
+            event_times (torch.Tensor): true event times, shape = (batch_size, seq_len)
+            event_types (torch.Tensor): true event types, shape = (batch_size, seq_len)
+            lengths (torch.Tensor): lengths of event sequences (=number of non-padding event times)
 
-        Returns a tuple of
-            * event_times (torch.Tensor) - new event times
-            * event_types (torch.Tensor) - new event types
-            * lengths (torch.Tensor) - lengths, increased by 1
+        Returns:
+        -------
+            * event_times (torch.Tensor): new event times
+            * event_types (torch.Tensor): new event types
+            * lengths (torch.Tensor): lengths, increased by 1
         """
         bs, _ = event_times.shape
 
@@ -102,13 +103,13 @@ class CCNN(nn.Module):
     def forward(
         self, event_times: torch.Tensor, event_types: torch.Tensor
     ) -> torch.Tensor:
-        """Forward pass that computes self.convs and return encoder output
+        """Forward pass that computes self.convs and return encoder output.
 
         Args:
         ----
-            event_times (torch.Tensor) - torch.Tensor, shape = (bs, L) event times
-            event_types (torch.Tensor) - torch.Tensor, shape = (bs, L) event types
-            lengths (torch.Tensor) - torch.Tensor, shape = (bs,) sequence lengths
+            event_times (torch.Tensor): torch.Tensor, shape = (bs, L) event times
+            event_types (torch.Tensor): torch.Tensor, shape = (bs, L) event types
+            lengths (torch.Tensor): torch.Tensor, shape = (bs,) sequence lengths
         """
         lengths = torch.sum(event_types.ne(0).type(torch.float), dim=1).long()
 
@@ -139,11 +140,11 @@ class CCNN(nn.Module):
 
         Args:
         ----
-            times (torch.Tensor) - 'full' times (prepended with zeros by .__add_bos)
-            true_times (torch.Tensor) - true event times for a batch of sequenecs
-            true_features (torch.Tensor) - hidden state, output of the core continuous convolutional block (aka 'encoded_output')
-            non_pad_mask (torch.Tensor) - boolean mask encoding true event times (not padding values)
-            sim_size (int) - number of samples for MC estimation of the integral part of log-likelihood
+            times (torch.Tensor): 'full' times (prepended with zeros by .__add_bos)
+            true_times (torch.Tensor): true event times for a batch of sequenecs
+            true_features (torch.Tensor): hidden state, output of the core continuous convolutional block (aka 'encoded_output')
+            non_pad_mask (torch.Tensor): boolean mask encoding true event times (not padding values)
+            sim_size (int): number of samples for MC estimation of the integral part of log-likelihood
 
         Returns:
         -------
@@ -152,6 +153,6 @@ class CCNN(nn.Module):
         out = self.final_list[0](
             times, true_times, true_features, non_pad_mask, sim_size
         )
-        for layer in self.final_list[1:]:
+        for layer in self.final_list[1:]: # type: ignore
             out = layer(out)
         return out

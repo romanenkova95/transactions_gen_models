@@ -1,14 +1,12 @@
 """Module which contains the Coles dataset with a NoSplit splitter."""
 
-import torch
-
 from typing import Optional
 
-from ptls.frames.coles import ColesDataset
-from ptls.frames.coles.split_strategy import NoSplit
-
+import torch
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
+from ptls.frames.coles import ColesDataset
+from ptls.frames.coles.split_strategy import NoSplit
 
 
 class NoSplitDataset(ColesDataset):

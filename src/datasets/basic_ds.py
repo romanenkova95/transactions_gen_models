@@ -1,5 +1,5 @@
 """Module with function for creating the basic dataset."""
-from typing import Any, Optional, Callable
+from typing import Any, Callable, Optional
 
 from ptls.data_load.datasets.memory_dataset import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter

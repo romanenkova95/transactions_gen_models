@@ -1,8 +1,8 @@
+"""Module with metrics for COTIC."""
 from abc import ABC
 
 import torch
 import torch.nn.functional as F
-
 from torchmetrics.classification import MulticlassAccuracy
 from torchmetrics.regression import MeanAbsoluteError
 
@@ -34,7 +34,7 @@ class CoticMetrics(ABC):
         self.clear_values()
 
     def clear_values(self):
-        """Clears stored metrics values."""
+        """Clear stored metrics values."""
         self.__return_time_target = torch.Tensor([])
         self.__event_type_target = torch.Tensor([])
         self.__return_time_preds = torch.Tensor([])
@@ -48,7 +48,7 @@ class CoticMetrics(ABC):
 
         Args:
         ----
-            inputs (tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
+            inputs (tuple or torch.Tensor): input batch in the form of (event_times, event_types)
 
         Returns:
         -------
@@ -67,7 +67,7 @@ class CoticMetrics(ABC):
 
         Args:
         ----
-            inputs (tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
+            inputs (tuple or torch.Tensor): input batch in the form of (event_times, event_types)
 
         Returns:
         -------
@@ -86,8 +86,8 @@ class CoticMetrics(ABC):
 
         Args:
         ----
-            inputs (tuple or torch.Tensor) - input batch in the form of (event_times, event_types)
-            outputs (tuple or torch.Tensor) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+            inputs (tuple or torch.Tensor): input batch in the form of (event_times, event_types)
+            outputs (tuple or torch.Tensor): model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
         Returns:
         -------
@@ -99,15 +99,15 @@ class CoticMetrics(ABC):
 
     @staticmethod
     def get_event_type_predicted(
-        inputs: tuple[torch.Tensor],
-        outputs: tuple[torch.Tensor],
+        inputs: tuple[torch.Tensor, torch.Tensor],
+        outputs:  tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]],
     ) -> torch.Tensor:
         """Get event type predictions from model outputs.
 
         Args:
         ----
-            inputs (tuple of torch.Tensors) - input batch in the form of (event_times, event_types)
-            outputs (tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+            inputs (tuple of torch.Tensors): input batch in the form of (event_times, event_types)
+            outputs (tuple of torch.Tensors): model output in the form (encoded_output, (event_time_preds, return_time_preds))
 
         Returns:
         -------
@@ -117,13 +117,13 @@ class CoticMetrics(ABC):
         mask = inputs[1].ne(0)[:, 1:]
         return event_type_prediction[mask, :]
 
-    def update(self, inputs: tuple[torch.Tensor], outputs: tuple[torch.Tensor]) -> None:
+    def update(self, inputs: tuple[torch.Tensor, torch.Tensor], outputs: tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]) -> None:
         """Compute predictions and targets for a batch and store values.
 
         Args:
         ----
-            inputs (tuple of torch.Tensors) - input batch in the form of (event_times, event_types)
-            outputs (tuple of torch.Tensors) - model output in the form (encoded_output, (event_time_preds, return_time_preds))
+            inputs (tuple of torch.Tensors): input batch in the form of (event_times, event_types)
+            outputs (tuple of torch.Tensors): model output in the form (encoded_output, (event_time_preds, return_time_preds))
         """
         step_return_time_target = self.get_return_time_target(inputs)
         step_event_type_target = self.get_event_type_target(inputs)
@@ -157,7 +157,7 @@ class CoticMetrics(ABC):
             ]
         )
 
-    def compute(self) -> tuple[float]:
+    def compute(self) -> tuple[float, float]:
         """Compute metrics for the set of stored predictions and targets.
 
         Returns

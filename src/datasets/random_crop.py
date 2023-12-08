@@ -1,8 +1,8 @@
 """Module for the simple dataset, which randomly crops user sequences."""
 from typing import Any, Callable, Optional
-from ptls.data_load.datasets.augmentation_dataset import AugmentationDataset
-from ptls.data_load.iterable_processing import SeqLenFilter
+
 from ptls.data_load.augmentations import RandomSlice
+from ptls.data_load.datasets.augmentation_dataset import AugmentationDataset
 from ptls.data_load.utils import collate_feature_dict
 
 

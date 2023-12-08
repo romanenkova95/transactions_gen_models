@@ -1,24 +1,14 @@
+"""The file for the classifier, based on a CNN."""
 import numpy as np
 import torch
 
 
 class CNNClassifier(torch.nn.Module):
-    """A classification model based on sequential 1d-convlutions.
-
-    Attributes
-    ----------
-        in_channels: int - number of channels in the input data
-        kernel_size: int - size of the convolving kernel
-        stride: int - stride of the convolution
-        dilation: int - spacing between kernel elements
-        bias: bool - if True, adds a learnable bias to the output
-        num_classes: int - number of classes in the classification task
-        sequence_length: int - length of each sequence of transactions
-    """
+    """A classification model based on sequential 1d-convlutions."""
 
     def __init__(
         self,
-        in_channels: int = None,
+        in_channels: int,
         kernel_size: int = 1,
         stride: int = 1,
         dilation: int = 1,
@@ -26,6 +16,18 @@ class CNNClassifier(torch.nn.Module):
         num_classes: int = 2,
         sequence_length: int = 300,
     ):
+        """Initialize internal state.
+
+        Args:
+        ----
+            in_channels: int - number of channels in the input data
+            kernel_size: int - size of the convolving kernel
+            stride: int - stride of the convolution
+            dilation: int - spacing between kernel elements
+            bias: bool - if True, adds a learnable bias to the output
+            num_classes: int - number of classes in the classification task
+            sequence_length: int - length of each sequence of transactions
+        """
         super().__init__()
 
         self.sequence_length = sequence_length
@@ -53,6 +55,7 @@ class CNNClassifier(torch.nn.Module):
         )
 
     def forward(self, input):
+        """Pass input through the model."""
         inp = torch.transpose(input.payload, 1, 2)  # (N, L, C) -> (N, C, L)
         length = inp.shape[-1]
         inp = torch.nn.functional.pad(inp, pad=(0, self.sequence_length - length))

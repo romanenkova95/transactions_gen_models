@@ -1,23 +1,21 @@
 """CategoricalLocalVal class: local validation with categorical targets."""
 
-from ptls.data_load.padded_batch import PaddedBatch
 import torch
+from ptls.data_load.padded_batch import PaddedBatch
 from torch import nn
 from torchmetrics import MetricCollection
-
 from torchmetrics.classification import (
     MulticlassAccuracy,
     MulticlassAUROC,
-    MulticlassF1Score,
     MulticlassAveragePrecision,
+    MulticlassF1Score,
 )
 
 from .local_validation_model import LocalValidationModelBase
 
 
 class CategoricalLocalVal(LocalValidationModelBase):
-    """Module for local validation of backbone on the task of predicting a categorical target.
-    """
+    """Module for local validation of backbone on the task of predicting a categorical target."""
 
     def __init__(
         self,
@@ -32,12 +30,12 @@ class CategoricalLocalVal(LocalValidationModelBase):
 
         Args:
         ----
-            backbone (nn.Module) - backbone model for transactions representations
-            backbone_embd_size (int) - output dim of backbone
-            num_types (int) - number of possible event types (MCC-codes) for 'event_time' validation mode
-            pad_value (int) - MCC-code corresponding to padding
-            freeze_backbone (bool) - whether to freeze backbone model
-            learning_rate (float) - learning rate for prediction head training
+            backbone (nn.Module): backbone model for transactions representations
+            backbone_embd_size (int): output dim of backbone
+            num_types (int): number of possible event types (MCC-codes) for 'event_time' validation mode
+            pad_value (int): MCC-code corresponding to padding
+            freeze_backbone (bool): whether to freeze backbone model
+            learning_rate (float): learning rate for prediction head training
         """
         pred_head = nn.Sequential(nn.Linear(backbone_embd_size, num_types))
 
@@ -82,7 +80,7 @@ class CategoricalLocalVal(LocalValidationModelBase):
     def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Override shared_step to clip mcc_code values to [0, num_types]
+        """Override shared_step to clip mcc_code values to [0, num_types].
 
         Args:
         ----

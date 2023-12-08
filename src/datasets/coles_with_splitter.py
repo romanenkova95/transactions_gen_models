@@ -1,12 +1,9 @@
 """Module with the coles dataset, which includes a splitter."""
 import torch
-
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter
 from ptls.frames.coles import ColesDataset
-from ptls.frames.coles.split_strategy import SampleUniform
-
-from ptls.frames.coles.split_strategy import AbsSplit
+from ptls.frames.coles.split_strategy import AbsSplit, SampleUniform
 
 
 class CustomColesDatasetWithSplitter(ColesDataset):

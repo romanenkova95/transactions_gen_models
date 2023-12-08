@@ -1,3 +1,4 @@
+"""The init file, for less cluttered imports."""
 from .ccnn import CCNN
-from .kernels import Kernel
 from .head import PredictionHead
+from .kernels import Kernel

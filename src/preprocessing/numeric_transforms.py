@@ -1,6 +1,7 @@
 """Module with transforms of numeric columns."""
 
 from typing import Optional
+
 import pandas as pd
 from ptls.preprocessing.base import ColTransformer
 from ptls.preprocessing.pandas.col_transformer import ColTransformerPandasMixin
@@ -15,7 +16,8 @@ class DropQuantile(ColTransformerPandasMixin, ColTransformer):
         Args:
         ----
             col_name_original (str): original column name
-            q (float): drop all values larger than this quantile.
+            q_min (float): drop all values, smaller than this quantile.
+            q_max (float): drop all values larger than this quantile.
         """
         super().__init__(col_name_original)
         self.q_min = q_min
@@ -58,7 +60,7 @@ class ToType(ColTransformerPandasMixin, ColTransformer):
                 name of column to be transformed
             col_name_target (str):
                 name of transformed column to be appended, defaults to col_name_original
-            is_drop_original (bool):
+            is_drop_original_col (bool):
                 whether to drop original column after transformation, defaults to True
         """
         super().__init__(col_name_original, col_name_target, is_drop_original_col)  # type: ignore

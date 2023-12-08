@@ -1,3 +1,4 @@
+"""The module with the main TS2Vec logic."""
 from typing import Optional, Union
 
 import numpy as np
@@ -20,10 +21,10 @@ def generate_continuous_mask(
 
     Args:
     ----
-        B (int) - batch size
-        T (int) - series lengths (num of timestamps)
-        n (int or float) - number (or share) of steps for masking
-        l (int or float) - number (or share) of maximum masking length
+        B (int): batch size
+        T (int): series lengths (num of timestamps)
+        n (int or float): number (or share) of steps for masking
+        lmask (int or float): number (or share) of maximum masking length
 
     Returns:
     -------
@@ -50,9 +51,9 @@ def generate_binomial_mask(B: int, T: int, p: float = 0.5) -> torch.Tensor:
 
     Args:
     ----
-        B (int) - batch size
-        T (int) - series lengths (num of timestamps)
-        p (float) - masking probability
+        B (int): batch size
+        T (int): series lengths (num of timestamps)
+        p (float): masking probability
 
     Returns:
     -------
@@ -61,14 +62,14 @@ def generate_binomial_mask(B: int, T: int, p: float = 0.5) -> torch.Tensor:
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T))).to(torch.bool)
 
 
-def take_per_row(inputs: torch.Tensor, indx: np.array, num_elem: int) -> torch.Tensor:
-    """Takes 'num_elem' from each row of 'A', starting from the indices provided in the 'indx'.
+def take_per_row(inputs: torch.Tensor, indx: np.ndarray, num_elem: int) -> torch.Tensor:
+    """Take 'num_elem' from each row of 'A', starting from the indices provided in the 'indx'.
 
     Args:
     ----
-        inputs (torch.Tensor) - original tensor with data
-        indx (np.array) - array of indices to be taken
-        num_elem (int) - number of element to be taken from each row
+        inputs (torch.Tensor): original tensor with data
+        indx (np.array): array of indices to be taken
+        num_elem (int): number of element to be taken from each row
 
     Returns:
     -------
@@ -78,13 +79,13 @@ def take_per_row(inputs: torch.Tensor, indx: np.array, num_elem: int) -> torch.T
     return inputs[torch.arange(all_indx.shape[0])[:, None], all_indx]
 
 
-def mask_input(inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+def mask_input(inputs: torch.Tensor, mask_mode: str) -> torch.Tensor:
     """Mask input using the given boolean mask.
 
     Args:
     ----
-        inputs (torch.Tensor) - input sequences
-        mask (torch.Tensor) - boolean mask
+        inputs (torch.Tensor): input sequences
+        mask_mode (str): mask mode
 
     Returns:
     -------
@@ -92,17 +93,19 @@ def mask_input(inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """
     shape = inputs.size()
 
-    if mask == "binomial":
+    if mask_mode == "binomial":
         mask = generate_binomial_mask(shape[0], shape[1]).to(inputs.device)
-    elif mask == "continuous":
+    elif mask_mode == "continuous":
         mask = generate_continuous_mask(shape[0], shape[1]).to(inputs.device)
-    elif mask == "all_true":
+    elif mask_mode == "all_true":
         mask = inputs.new_full((shape[0], shape[1]), True, dtype=torch.bool)
-    elif mask == "all_false":
+    elif mask_mode == "all_false":
         mask = inputs.new_full((shape[0], shape[1]), False, dtype=torch.bool)
-    elif mask == "mask_last":
+    elif mask_mode == "mask_last":
         mask = inputs.new_full((shape[0], shape[1]), True, dtype=torch.bool)
         mask[:, -1] = False
+    else:
+        raise ValueError("Invalid mask mode passed!")
 
     inputs[~mask] = 0
 
@@ -110,7 +113,7 @@ def mask_input(inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
 
 
 class TS2Vec(ABSModule):
-    """The TS2Vec model"""
+    """The TS2Vec model."""
 
     def __init__(
         self,
@@ -126,65 +129,66 @@ class TS2Vec(ABSModule):
 
         Args:
         ----
-            encoder (DictConfig) - config for TS2Vec sequence encoder instantiation
-            optimizer_partial (DictConfig) - config for optimizer instantiation (ptls format)
-            lr_scheduler_partial (DictConfig) - config for lr scheduler instantiation (ptls format)
-            head (DictConfig or None) - if not None, use this head after the backbone model,
+            encoder (DictConfig): config for TS2Vec sequence encoder instantiation
+            optimizer_partial (DictConfig): config for optimizer instantiation (ptls format)
+            lr_scheduler_partial (DictConfig): config for lr scheduler instantiation (ptls format)
+            head (DictConfig or None): if not None, use this head after the backbone model,
                                         else use ptls.nn.head.Head(use_norm_encoder=True)
-            loss: (DictConfig or None) - if not None, contains DictConfig for TS2Vec loss instantiation, else use default loss,
+            loss: (DictConfig or None): if not None, contains DictConfig for TS2Vec loss instantiation, else use default loss,
                                          else use src.losses.HierarchicalContrastiveLoss with default hyper-parameters
-            col_time (str) - name of the column containing timestamps
-            mask_mode (str) - type of mask to be generated & used
+            col_time (str): name of the column containing timestamps
+            mask_mode (str): type of mask to be generated & used
         """
         self.save_hyperparameters()
         enc: SeqEncoderContainer = instantiate(encoder)
 
         if head is None:
-            head = Head(use_norm_encoder=True)
+            head_instance = Head(use_norm_encoder=True)
         else:
-            head = instantiate(head)
+            head_instance = instantiate(head)
 
         if loss is None:
-            loss = HierarchicalContrastiveLoss(alpha=0.5, temporal_unit=0)
+            loss_instance = HierarchicalContrastiveLoss(alpha=0.5, temporal_unit=0) # type: ignore
         else:
-            loss = instantiate(loss)
+            loss_instance = instantiate(loss)
 
-        self.temporal_unit = loss.temporal_unit
+        self.temporal_unit = loss.temporal_unit # type: ignore
         self.mask_mode = mask_mode
 
         super().__init__(
             seq_encoder=enc,
-            loss=loss,
+            loss=loss_instance,
             optimizer_partial=instantiate(optimizer_partial, _partial_=True),
             lr_scheduler_partial=instantiate(lr_scheduler_partial, _partial_=True),
         )
 
         self.encoder = enc
-        self._head = head
+        self._head = head_instance
         self.valid_loss = MeanMetric()
 
         self.col_time = col_time
 
     def shared_step(
-        self, x: PaddedBatch, y: Optional[torch.Tensor]
-    ) -> tuple[tuple[torch.Tensor], Optional[torch.Tensor]]:
+        self, batch: PaddedBatch, y: Optional[torch.Tensor]
+    ) -> tuple[tuple[torch.Tensor, torch.Tensor, torch.Tensor], Optional[torch.Tensor]]:
         """Shared training/validation/testing step.
 
         Args:
         ----
-            x (PaddedBatch) - input sequences in ptls format
-            y (torch.Tensor) - labels as provided by the dataloader
+            batch (PaddedBatch): input sequences in ptls format.
+            y (torch.Tensor): labels as provided by the dataloader
 
-        Returns a tuple of:
+        Returns:
+        -------
             * (embedding of the 1st augmented window, embedding of the 2nd augmented window, timestamps)
             * original labels as provided by the dataloader
         """
-        trx_encoder = self._seq_encoder.trx_encoder
-        seq_encoder = self._seq_encoder.seq_encoder
+        trx_encoder = self._seq_encoder.trx_encoder # type: ignore
+        seq_encoder = self._seq_encoder.seq_encoder # type: ignore
 
-        seq_lens = x.seq_lens
-        t = x.payload[self.col_time]
-        x = trx_encoder(x).payload
+        seq_lens = batch.seq_lens
+        t = batch.payload[self.col_time]
+        x: torch.Tensor = trx_encoder(batch).payload
 
         ts_l = x.size(1)
         crop_l = np.random.randint(low=2 ** (self.temporal_unit + 1), high=ts_l + 1)
@@ -193,7 +197,7 @@ class TS2Vec(ABSModule):
         crop_eleft = np.random.randint(crop_left + 1)
         crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
         crop_offset = np.random.randint(
-            low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0)
+            low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0) 
         )
 
         input1 = take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft)
@@ -202,13 +206,13 @@ class TS2Vec(ABSModule):
         t = take_per_row(t, crop_offset + crop_eleft, crop_right - crop_eleft)
         t = t[:, -crop_l:]
 
-        input1_masked = mask_input(input1, self.mask_mode)
-        input2_masked = mask_input(input2, self.mask_mode)
+        input1_masked = mask_input(input1, self.mask_mode) 
+        input2_masked = mask_input(input2, self.mask_mode) 
 
-        out1 = seq_encoder(PaddedBatch(input1_masked, seq_lens)).payload
+        out1 = seq_encoder(PaddedBatch(input1_masked, seq_lens)).payload # type: ignore
         out1 = out1[:, -crop_l:]
 
-        out2 = seq_encoder(PaddedBatch(input2_masked, seq_lens)).payload
+        out2 = seq_encoder(PaddedBatch(input2_masked, seq_lens)).payload # type: ignore
         out2 = out2[:, :crop_l]
 
         if self._head is not None:
@@ -220,14 +224,14 @@ class TS2Vec(ABSModule):
     def validation_step(
         self, batch: tuple[PaddedBatch, Optional[torch.Tensor]], _
     ) -> None:
-        """Validation step of the model.
+        """Run the validation step of the model.
 
         Args:
         ----
-            batch (tuple[PaddedBatch, torch.Tensor]) padded batch that is fed into TS2Vec sequence encoder and labels
+            batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into TS2Vec sequence encoder and labels
         """
         y_h, y = self.shared_step(*batch)
-        loss = self._loss(y_h, y)
+        loss = self._loss(y_h, y) # type: ignore
         self.valid_loss(loss)
 
     def validation_epoch_end(self, _) -> None:

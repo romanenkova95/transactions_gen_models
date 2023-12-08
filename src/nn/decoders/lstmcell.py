@@ -1,12 +1,16 @@
+"""File with the LSTM NLP-style decoder."""
 from typing import Optional
+
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
+
 from .base import AbsDecoder
 from .lstm import LSTMDecoder
 
 
 class LSTMCellDecoder(AbsDecoder):
     """An NLP-style LSTM-based decoder.
+    
     Restores a sequence of embeddings from a single embedding
 
     Attributes
@@ -26,7 +30,7 @@ class LSTMCellDecoder(AbsDecoder):
     def __init__(
         self, input_size: int, hidden_size: int, num_layers: int = 1, proj_size: int = 0
     ) -> None:
-        """Initializes LSTMCellDecoder's internal state.
+        """Initialize LSTMCellDecoder's internal state.
 
         Args:
         ----
@@ -37,7 +41,7 @@ class LSTMCellDecoder(AbsDecoder):
             num_layers (int, optional):
                 Number of lstm layers. Defaults to 1. If >1, adds num_layers-1 nn.LSTM layers after nn.LSTMCell.
             proj_size (int, optional):
-            Relevant if num_layers > 1. Sets the proj_size of appended nn.LSTM layers. Defaults to 0.
+                Relevant if num_layers > 1. Sets the proj_size of appended nn.LSTM layers. Defaults to 0.
         """
         super().__init__()
         self.cell = nn.LSTMCell(input_size, hidden_size)
@@ -58,6 +62,7 @@ class LSTMCellDecoder(AbsDecoder):
 
     @property
     def output_size(self) -> int:
+        """The size of the output embeddings."""
         if isinstance(self.lstm, AbsDecoder):
             return self.lstm.output_size
         else:
@@ -66,7 +71,7 @@ class LSTMCellDecoder(AbsDecoder):
     def forward(
         self, input: Tensor, L: int, hx: Optional[tuple[Tensor, Tensor]] = None
     ) -> Tensor:
-        """Runs the forward pass.
+        """Run the forward pass.
 
         Args:
         ----

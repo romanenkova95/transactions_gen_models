@@ -1,9 +1,9 @@
 """Module for the deterministic dataset, which yields sliding window slices from users."""
 
-from torch.utils.data import IterableDataset
 from ptls.data_load import AugmentationChain
 from ptls.data_load.feature_dict import FeatureDict
 from ptls.data_load.utils import collate_feature_dict
+from torch.utils.data import IterableDataset
 
 
 class SlidingWindowDataset(IterableDataset, FeatureDict):

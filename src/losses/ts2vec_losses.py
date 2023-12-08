@@ -1,6 +1,8 @@
+"""Losses for the TS2Vec module."""
+
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class HierarchicalContrastiveLoss(nn.Module):
@@ -11,8 +13,8 @@ class HierarchicalContrastiveLoss(nn.Module):
 
         Args:
         ----
-            alpha (float) - weighting coefficient
-            temporal_unit (int) - start computing temporal component after this level of hierarchy
+            alpha (float): weighting coefficient
+            temporal_unit (int): start computing temporal component after this level of hierarchy
         """
         super().__init__()
 
@@ -20,13 +22,13 @@ class HierarchicalContrastiveLoss(nn.Module):
         self.temporal_unit = temporal_unit
 
     @staticmethod
-    def instance_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> float:
+    def instance_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> torch.Tensor:
         """Compute instance-wise component of contrastive loss.
 
         Args:
         ----
-            z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 2nd augmented window
+            z1 (torch.Tensor): embedding of the 1st augmented window
+            z2 (torch.Tensor): embedding of the 2nd augmented window
 
         Returns:
         -------
@@ -47,13 +49,13 @@ class HierarchicalContrastiveLoss(nn.Module):
         return loss
 
     @staticmethod
-    def temporal_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> float:
+    def temporal_contrastive_loss(z1: torch.Tensor, z2: torch.Tensor) -> torch.Tensor:
         """Compute temporal component of contrastive loss.
 
         Args:
         ----
-            z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 1st augmented window
+            z1 (torch.Tensor): embedding of the 1st augmented window
+            z2 (torch.Tensor): embedding of the 1st augmented window
 
         Returns:
         -------
@@ -74,15 +76,15 @@ class HierarchicalContrastiveLoss(nn.Module):
 
     def hierarchical_contrastive_loss(
         self, z1: torch.Tensor, z2: torch.Tensor, alpha: float, temporal_unit: int
-    ) -> float:
+    ) -> torch.Tensor:
         """Compute hierarchical contrastive loss for TS2Vec model.
 
         Args:
         ----
-            z1 (torch.Tensor) - embedding of the 1st augmented window
-            z2 (torch.Tensor) - embedding of the 2nd augmented window
-            alpha (float) - weighting coefficient
-            temporal_unit (int) - start computing temporal component after this level of hierarchy
+            z1 (torch.Tensor): embedding of the 1st augmented window
+            z2 (torch.Tensor): embedding of the 2nd augmented window
+            alpha (float): weighting coefficient
+            temporal_unit (int): start computing temporal component after this level of hierarchy
 
         Returns:
         -------
@@ -105,12 +107,12 @@ class HierarchicalContrastiveLoss(nn.Module):
             d += 1
         return loss / d
 
-    def forward(self, embeddings: tuple[tuple[torch.Tensor], torch.Tensor], _) -> float:
+    def forward(self, embeddings: tuple[torch.Tensor, torch.Tensor, torch.Tensor], _) -> torch.Tensor:
         """Compute value of the loss function.
 
         Args:
         ----
-            embeddings (tuple[tuple[torch.Tensor], torch.Tensor]) - embeddings of 2 windows and time, i.e. output of TS2Vec.shared_step()
+            embeddings (tuple[torch.Tensor, torch.Tensor, torch.Tensor]): embeddings of 2 windows and time, i.e. output of TS2Vec.shared_step()
 
         Returns:
         -------

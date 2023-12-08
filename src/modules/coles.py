@@ -1,14 +1,12 @@
-"""CoLES model"""
-from omegaconf import DictConfig
+"""CoLES model."""
 from hydra.utils import instantiate
-
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from omegaconf import DictConfig
 from ptls.frames.coles import CoLESModule
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
 
 class CustomCoLES(CoLESModule):
-    """Custom coles module inhereted from ptls coles module.
-    """
+    """Custom coles module inhereted from ptls coles module."""
 
     def __init__(
         self,
@@ -16,7 +14,7 @@ class CustomCoLES(CoLESModule):
         lr_scheduler_partial: DictConfig,
         encoder: DictConfig,
     ) -> None:
-        """Overrided initialize method, which is suitable for our tasks
+        """Override initialize method, which is suitable for our tasks.
 
         Args:
         ----

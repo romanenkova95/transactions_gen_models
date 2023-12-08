@@ -1,12 +1,10 @@
 """Module which contains the universal preprocess function."""
-from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
-
-from joblib import Memory
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
+from hydra.utils import instantiate
+from joblib import Memory
+from omegaconf import DictConfig, OmegaConf
 from ptls.preprocessing.base import ColTransformer
+from sklearn.model_selection import train_test_split
 
 
 def preprocess(cfg: DictConfig) -> tuple[list[dict], list[dict], list[dict]]:

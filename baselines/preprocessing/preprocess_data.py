@@ -1,3 +1,4 @@
+"""File with tools for data preprocessing."""
 import random
 from pathlib import Path
 
@@ -13,7 +14,7 @@ BASE_PTH = Path("/home/COLES/poison/data")
 def split_dataset(
     df_trx, df_target, test_size: float = 0.2, val_size: float = 0.1, seed: int = 142
 ):
-    """Splits the transactional data into train, test and validation.
+    """Split the transactional data into train, test and validation.
 
     Args:
     ----
@@ -69,7 +70,8 @@ def df_to_dataset(
     df_target,
     event_time_transformation="dt_to_timestamp",
 ):
-    """Merges target data with train, val and test transactions data.
+    """Merge target data with train, val and test transactions data.
+    
     Transforms dataframes into MemoryMapDataset objects.
 
     Args:
@@ -99,7 +101,7 @@ def df_to_dataset(
     df_data_valid = preprocessor.transform(df_trx_valid)
     df_data_test = preprocessor.transform(df_trx_test)
 
-    df_data_train = pd.merge(df_data_train, df_target, on="uid")
+    df_data_train = pd.merge(df_data_train, df_target, on="uid") # type: ignore
     df_data_valid = pd.merge(df_data_valid, df_target, on="uid")
     df_data_test = pd.merge(df_data_test, df_target, on="uid")
 
@@ -115,7 +117,7 @@ def df_to_dataset(
 
 
 def load_dataset(ds_name: str):
-    """Loads the data.
+    """Load the data.
 
     Args:
     ----
@@ -215,7 +217,7 @@ def load_dataset(ds_name: str):
             }
         )
 
-    df_trx_train, df_trx_valid, df_trx_test = split_dataset(df_trx, df_target)
+    df_trx_train, df_trx_valid, df_trx_test = split_dataset(df_trx, df_target) # type: ignore
 
     dttm_transformation = "none" if ds_name == "age" else "dt_to_timestamp"
 
@@ -223,6 +225,6 @@ def load_dataset(ds_name: str):
         df_trx_train,
         df_trx_valid,
         df_trx_test,
-        df_target,
+        df_target, # type: ignore
         event_time_transformation=dttm_transformation,
     )

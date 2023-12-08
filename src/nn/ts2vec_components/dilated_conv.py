@@ -1,6 +1,7 @@
+"""File with the definition of custom convolutions for TS2Vec."""
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class SamePadConv(nn.Module):
@@ -14,15 +15,15 @@ class SamePadConv(nn.Module):
         dilation: int = 1,
         groups: int = 1,
     ) -> None:
-        """Initalize SamePadConv.
+        """Init SamePadConv.
 
         Args:
         ----
-            in_channels (int) - input size
-            out_channels (int) - output size
-            kernel_size (int) - convolutional kernel size
-            dilation (int) - dilation factor
-            groups (int) - controls the connections between inputs and outputs (stndard parameter of nn.Conv1d)
+            in_channels (int): input size
+            out_channels (int): output size
+            kernel_size (int): convolutional kernel size
+            dilation (int): dilation factor
+            groups (int): controls the connections between inputs and outputs (stndard parameter of nn.Conv1d)
         """
         super().__init__()
         self.receptive_field = (kernel_size - 1) * dilation + 1
@@ -42,7 +43,7 @@ class SamePadConv(nn.Module):
 
         Args:
         ----
-            x (torch.Tensor) - input tensor
+            x (torch.Tensor): input tensor
 
         Returns:
         -------
@@ -65,15 +66,15 @@ class ConvBlock(nn.Module):
         dilation: int,
         final: bool = False,
     ) -> None:
-        """Initalize ConvBlock.
+        """Init ConvBlock.
 
         Args:
         ----
-            in_channels (int) - input size
-            out_channels (int) - output size
-            kernel_size (int) - convolutional kernel size
-            dilation (int) - dilation factor
-            final (bool) - indicates if the block is the last one
+            in_channels (int): input size
+            out_channels (int): output size
+            kernel_size (int): convolutional kernel size
+            dilation (int): dilation factor
+            final (bool): indicates if the block is the last one
         """
         super().__init__()
         self.conv1 = SamePadConv(
@@ -93,7 +94,7 @@ class ConvBlock(nn.Module):
 
         Args:
         ----
-            x (torch.Tensor) - input
+            x (torch.Tensor): input
 
         Returns:
         -------
@@ -115,9 +116,9 @@ class DilatedConvEncoder(nn.Module):
 
         Args:
         ----
-            in_channels (int) - input size
-            channels (List[int]) - list of hidden sizes (num of channels for each convolution)
-            kernel_size (int) - kernel size
+            in_channels (int): input size
+            channels (List[int]): list of hidden sizes (num of channels for each convolution)
+            kernel_size (int): kernel size
         """
         super().__init__()
         self.net = nn.Sequential(
@@ -138,7 +139,7 @@ class DilatedConvEncoder(nn.Module):
 
         Args:
         ----
-            x (torch.Tensor) - input
+            x (torch.Tensor): input
 
         Returns:
         -------

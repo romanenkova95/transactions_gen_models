@@ -1,15 +1,17 @@
+"""Main logic for the classic autoencoder method."""
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
-from omegaconf import DictConfig
-from pytorch_lightning.utilities.types import STEP_OUTPUT
-from pytorch_lightning import LightningModule
-from sklearn import multiclass
 
 import torch
-from torch import nn, Tensor
-
 from hydra.utils import instantiate
+from omegaconf import DictConfig
+from ptls.data_load import PaddedBatch
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from pytorch_lightning import LightningModule
+from pytorch_lightning.utilities.types import STEP_OUTPUT, LRSchedulerTypeUnion
+from sklearn import multiclass
+from torch import Tensor, nn
 from torchmetrics import (
     AUROC,
     Accuracy,
@@ -20,12 +22,8 @@ from torchmetrics import (
     MultitaskWrapper,
     R2Score,
 )
-from torchmetrics.functional import auroc, f1_score, r2_score, average_precision
+from torchmetrics.functional import auroc, average_precision, f1_score, r2_score
 
-from ptls.data_load import PaddedBatch
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-
-from pytorch_lightning.utilities.types import LRSchedulerTypeUnion
 from src.nn.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
 
@@ -34,6 +32,7 @@ logger = get_logger(name=__name__)
 
 class VanillaAE(LightningModule):
     """A vanilla autoencoder, without masking, just encodes target sequence and then restores it.
+    
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -167,9 +166,11 @@ class VanillaAE(LightningModule):
 
     @property
     def metric_name(self):
+        """The name of the metric to monitor."""
         return "val_loss"
 
-    def train(self, mode: bool = True):  # eval encoder if needed
+    def train(self, mode: bool = True):
+        """Set encoder to eval if it's supposed to be frozen."""
         super().train(mode)
         if self.freeze_enc:
             self.encoder.eval()
@@ -180,6 +181,7 @@ class VanillaAE(LightningModule):
         self, batch: PaddedBatch, L: Optional[int] = None
     ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
+        
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
         to get the respective targets.
 
@@ -229,7 +231,7 @@ class VanillaAE(LightningModule):
         amount_target: Tensor,
         mask: Tensor,
     ) -> dict[str, Tensor]:
-        """Calculate the losses, weigh them with respective weights
+        """Calculate the losses, weigh them with respective weights.
 
         Args:
         ----
@@ -265,7 +267,9 @@ class VanillaAE(LightningModule):
         ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
-            batch_idx (int): ignored
+            batch_idx (int): ignored.
+            *args: ignored.
+            **kwargs: ignored.
 
         Returns:
         -------
@@ -317,12 +321,15 @@ class VanillaAE(LightningModule):
         return loss_dict["loss"]
 
     def training_step(self, *args, **kwargs) -> STEP_OUTPUT:
+        """Run the training step of this model."""
         return self.shared_step("train", *args, **kwargs)
 
     def validation_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
+        """Run the validation step of this model."""
         return self.shared_step("val", *args, **kwargs)
 
     def test_step(self, *args, **kwargs) -> Union[STEP_OUTPUT, None]:
+        """Run the test step of this model."""
         return self.shared_step("test", *args, **kwargs)
 
     def predict_step(
@@ -361,6 +368,7 @@ class VanillaAE(LightningModule):
             ).split(lens)
 
     def configure_optimizers(self):
+        """Configure the optimizers from the configs given in init."""
         optimizer = instantiate(self.optimizer_dictconfig, params=self.parameters())
 
         if self.scheduler_dictconfig:
@@ -378,4 +386,5 @@ class VanillaAE(LightningModule):
     def lr_scheduler_step(
         self, scheduler: LRSchedulerTypeUnion, optimizer_idx: int, metric
     ) -> None:
+        """Return the super method just for lightning to think it's overriden."""
         return super().lr_scheduler_step(scheduler, optimizer_idx, metric)

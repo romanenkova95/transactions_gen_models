@@ -1,14 +1,16 @@
+"""File with the preprocessing transforms for categorical columns."""
 import pandas as pd
 from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 
 
 class DropRare(FrequencyEncoder):
     """Encode categories frequency-wise, and keep only top-k most frequent categories.
+    
     To be used after frequency encoder to drop the rarest mcc codes.
     """
 
     def __init__(self, col_name_original: str, k: int):
-        """Initialize DropRare transform
+        """Initialize DropRare transform.
 
         Args:
         ----
@@ -20,5 +22,6 @@ class DropRare(FrequencyEncoder):
         self.k = k
 
     def transform(self, x: pd.DataFrame):
+        """Apply the transformation, keeping only non-rare transactions."""
         x = super().transform(x)
         return x[x[self.col_name_original] < self.k]

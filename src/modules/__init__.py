@@ -1,6 +1,7 @@
-from .vanilla import VanillaAE
-from .transformer import MLMModule
+"""Init module."""
 from .coles import CustomCoLES
-from .gpt import GPTModule, GPTContrastiveModule
 from .cotic import Cotic
+from .gpt import GPTContrastiveModule, GPTModule
+from .transformer import MLMModule
 from .ts2vec import TS2Vec
+from .vanilla import VanillaAE

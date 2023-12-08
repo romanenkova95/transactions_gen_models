@@ -1,12 +1,12 @@
+"""The file with the class for creating pretrained seq encoders and loading weights."""
 from typing import Optional
 
 import torch
-
 from ptls.nn import RnnSeqEncoder
 
 
 class PretrainedRnnSeqEncoder(RnnSeqEncoder):
-    """Pretrained network layer which makes representation for single transactions
+    """Pretrained network layer which makes representation for single transactions.
 
     Args:
     ----
@@ -20,6 +20,16 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
         freeze: bool = True,
         **seq_encoder_params,
     ):
+        """Initialize internal module state.
+
+        Args:
+        ----
+            path_to_dict (Optional[str], optional): 
+                the path to load the weights from. Defaults to None, in which case doesn't load.
+            freeze (bool, optional): 
+                whether to freeze the weights. Defaults to True.
+            **seq_encoder_params: passed to RnnSeqEncoder.
+        """
         super().__init__(**seq_encoder_params)
 
         if path_to_dict is not None:
@@ -33,10 +43,11 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
 
     @property
     def output_size(self) -> int:
-        """Returns embedding size of a single transaction"""
+        """Return embedding size of a single transaction."""
         return self.embedding_size
 
-    def train(self, mode: bool = True):  # override to disable training when frozen
+    def train(self, mode: bool = True):
+        """Disable training when frozen."""
         if self.freeze:
             mode = False
 

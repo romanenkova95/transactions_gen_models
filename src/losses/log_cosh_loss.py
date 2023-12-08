@@ -1,6 +1,7 @@
 """Module with the log cosh loss."""
-import torch
 import math
+
+import torch
 
 
 class LogCoshLoss(torch.nn.Module):

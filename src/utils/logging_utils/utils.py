@@ -1,4 +1,4 @@
-"""Logging utils module"""
+"""Logging utils module."""
 import logging
 from typing import Optional
 
@@ -6,7 +6,7 @@ from typing import Optional
 def get_logger(
     log_level: int = logging.INFO, name: Optional[str] = None
 ) -> logging.Logger:
-    """Method for the logger initializing (unique for each module).
+    """Initialize logger (unique for each module).
 
     Args:
     ----

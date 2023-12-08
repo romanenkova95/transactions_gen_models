@@ -1,8 +1,10 @@
-from ast import literal_eval
+"""File with the logic of trainer creation."""
 import os
+from ast import literal_eval
 from typing import Optional
-from omegaconf import DictConfig
+
 from hydra.utils import instantiate
+from omegaconf import DictConfig
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 
@@ -13,6 +15,27 @@ def create_trainer(
     checkpointing: bool = True,
     **kwargs,
 ):
+    """Create trainer, handling early stopping, some nice defaults, etc.
+
+    Args:
+    ----
+        logger (Optional[DictConfig], optional): 
+            the loggger to use. Defaults to None, to use TB.
+        metric_name (Optional[str], optional): 
+            the metric name to monitor with EarlyStopping. Defaults to None.
+        checkpointing (bool, optional): 
+            whether to use checkpointing. Defaults to True.
+        **kwargs:
+            additional kwargs, passed when initializing the pl Trainer.
+
+    Raises:
+    ------
+        ValueError: no metric name provided, but found early stopping.
+
+    Returns:
+    -------
+        Trainer: resulting lightning trainer.
+    """
     # Instantiate callbacks
     instantiated_callbacks = []
     for callback in kwargs.pop("callbacks", []):

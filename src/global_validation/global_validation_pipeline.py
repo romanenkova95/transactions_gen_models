@@ -1,25 +1,21 @@
-"""Global target validation script"""
-from pathlib import Path
+"""Global target validation script."""
 import warnings
+from pathlib import Path
+
+import numpy as np
+import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
-
-import pandas as pd
-import numpy as np
-
-import torch
-
 from ptls.data_load.utils import collate_feature_dict
-
 from torchmetrics.classification import (
-    F1Score,
     AUROC,
-    AveragePrecision,
     Accuracy,
+    AveragePrecision,
+    F1Score,
 )
 
-from src.utils.logging_utils import get_logger
 from src.preprocessing import preprocess
+from src.utils.logging_utils import get_logger
 
 
 def global_target_validation(
@@ -38,6 +34,8 @@ def global_target_validation(
             encoder config (specified in 'config/encoder')
         cfg_validation (DictConfig):
             Validation config (specified in 'config/validation')
+        encoder_name (str):
+            The name of encoder to use when loading weights.
 
     Returns:
     -------
@@ -97,7 +95,7 @@ def embed_data(
     batch_size: int = 64,
     device: str = "cuda",
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Returns embeddings of sequences and corresponding targets.
+    """Embed sequences, and return them along with the corresponding targets.
 
     Args:
     ----
@@ -134,20 +132,20 @@ def embed_data(
 
 
 def eval_embeddings(
-    train_embeds: torch.Tensor,
-    train_labels: torch.Tensor,
-    test_embeds: torch.Tensor,
-    test_labels: torch.Tensor,
+    train_embeds: np.ndarray,
+    train_labels: np.ndarray,
+    test_embeds: np.ndarray,
+    test_labels: np.ndarray,
     model_config: DictConfig,
 ) -> dict[str, float]:
     """Trains and evaluates a simple classifier on the embedded data.
 
     Args:
     ----
-        train_embeds (torch.Tensor): Embeddings of sequences from train set
-        train_labels (torch.Tensor): Labels of sequences from train set
-        test_embeds (torch.Tensor):  Embeddings of sequences from test set
-        test_labels (torch.Tensor):  Labels of sequences from test set
+        train_embeds (np.ndarray): Embeddings of sequences from train set
+        train_labels (np.ndarray): Labels of sequences from train set
+        test_embeds (np.ndarray):  Embeddings of sequences from test set
+        test_labels (np.ndarray):  Labels of sequences from test set
         model_config (DictConfig):   Config of the model to be fitted
 
     Returns:

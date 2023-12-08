@@ -1,15 +1,16 @@
 """EventTimeLocalVal class: time difference local validation."""
 from typing import Literal
+
 from torch import nn
 from torchmetrics import MeanSquaredError, MetricCollection, R2Score
-from .local_validation_model import LocalValidationModelBase
+
 from src.losses import LogCoshLoss
+
+from .local_validation_model import LocalValidationModelBase
 
 
 class NumericLocalVal(LocalValidationModelBase):
-    """PytorchLightningModule for local validation of backbone model (e.g. CoLES)
-    on the task of predicting a numeric target.
-    """
+    """PytorchLightningModule for local validation of backbone model (e.g. CoLES) on the task of predicting a numeric target."""
 
     def __init__(
         self,
@@ -23,10 +24,11 @@ class NumericLocalVal(LocalValidationModelBase):
 
         Args:
         ----
-            backbone (nn.Module) - backbone model for transactions representations
-            backbone_embd_size (int) - output dim of backbone
-            freeze_backbone (bool) - whether to freeze backbone model
-            learning_rate (float) - learning rate for prediction head training
+            backbone (nn.Module): backbone model for transactions representations
+            backbone_embd_size (int): output dim of backbone
+            freeze_backbone (bool): whether to freeze backbone model
+            learning_rate (float): learning rate for prediction head training
+            loss_type (Literal["mse", "logcosh"]): type of loss to use.
         """
         pred_head = nn.Sequential(nn.Linear(backbone_embd_size, 1), nn.Flatten(0, -1))
 

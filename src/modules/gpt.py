@@ -1,35 +1,33 @@
+"""The file with the main logic for the GPT model."""
 from pathlib import Path
 from typing import Literal, Optional, Union
-from omegaconf import DictConfig
-from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 import torch
-from torch import nn, Tensor
-
 from hydra.utils import instantiate
-
+from omegaconf import DictConfig
 from ptls.data_load import PaddedBatch
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-
 from ptls.frames.bert.losses.query_soft_max import QuerySoftmaxLoss
+from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from pytorch_lightning.utilities.types import STEP_OUTPUT
+from torch import Tensor, nn
 
 from src.utils.logging_utils import get_logger
 
 from .vanilla import VanillaAE
-
 
 logger = get_logger(name=__name__)
 
 
 class GPTModule(VanillaAE):
     """A module for GPT-like training, just encodes the sequence and predicts its shifted version.
+    
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
     and train/val/test metrics:
      - a macro-averaged multiclass f1-score on mcc codes
      - a macro-averaged multiclass auroc score on mcc codes
-     - an r2-score on amounts
+     - an r2-score on amounts.
 
     Attributes
     ----------
@@ -84,7 +82,7 @@ class GPTModule(VanillaAE):
             loss_weights=loss_weights,
             encoder=encoder,
             optimizer=optimizer,
-            num_types=num_types,
+            num_types=num_types, # type: ignore
             scheduler=scheduler,
             scheduler_config=scheduler_config,
             encoder_weights=encoder_weights,
@@ -92,6 +90,7 @@ class GPTModule(VanillaAE):
         )
 
     def forward(self, x):
+        """Encode the data in x."""
         return self.encoder(x)
 
     def shared_step(
@@ -107,7 +106,9 @@ class GPTModule(VanillaAE):
         ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
-            batch_idx (int): ignored
+            batch_idx (int): ignored.
+            *args: ignored.
+            **kwargs: ignored.
 
         Returns:
         -------
@@ -165,13 +166,15 @@ class GPTModule(VanillaAE):
     def predict_step(
         self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
     ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
+        """Run self on input batch."""
         return self(batch)
 
 
 class GPTContrastiveModule(VanillaAE):
     """A module for GPT-like contrastive training, just encodes the sequence and predicts the embeddings of its shifted version.
+    
     Logs train/val/test losses:
-     - QuerySoftmaxLoss
+     - QuerySoftmaxLoss.
 
     Attributes
     ----------
@@ -212,6 +215,10 @@ class GPTContrastiveModule(VanillaAE):
                 negative count for `QuerySoftmaxLoss`
             temperature (float):
                 temperature parameter of `QuerySoftmaxLoss`
+            encoder_weights (Optional[str]): 
+                optionally, supply a path to the weights to load into the encoder.
+            freeze_enc (optional[bool]):
+                Whether to freeze the encoder model.
         """
         super(VanillaAE, self).__init__()
 
@@ -237,15 +244,17 @@ class GPTContrastiveModule(VanillaAE):
         self.loss_fn = QuerySoftmaxLoss(temperature, reduce=True)
 
     def forward(self, x):
+        """Encode the data in x."""
         return self.encoder(x)
 
     def get_neg_ix(self, mask):
         """Sample from predicts, where `mask == True`, without self element.
+        
         sample from predicted tokens from batch
         """
         mask_num = mask.int().sum()
         mn = 1 - torch.eye(mask_num, device=mask.device)
-        neg_ix = torch.multinomial(mn, self.hparams.neg_count)
+        neg_ix = torch.multinomial(mn, self.hparams.neg_count) # type: ignore
 
         b_ix = (
             torch.arange(mask.size(0), device=mask.device)
@@ -272,7 +281,9 @@ class GPTContrastiveModule(VanillaAE):
         ----
             stage (str): train, val, or test, depending on the stage.
             batch (PaddedBatch): Input.
-            batch_idx (int): ignored
+            batch_idx (int): ignored.
+            *args: ignored.
+            **kwargs: ignored.
 
         Returns:
         -------
@@ -304,4 +315,5 @@ class GPTContrastiveModule(VanillaAE):
     def predict_step(
         self, batch: PaddedBatch, batch_idx: int, dataloader_idx: int = 0
     ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
+        """Run self on batch."""
         return self(batch)

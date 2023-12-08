@@ -1,10 +1,13 @@
-from torch import nn, Tensor
+"""File with the LSTM Decoder."""
 import typing as tp
+
+from torch import Tensor, nn
+
 from .base import AbsDecoder
 
 
 class LSTMDecoder(AbsDecoder):
-    """Simple decoder, based on a seq2seq lstm. Basically a wrapper of nn.LSTM
+    """Simple decoder, based on a seq2seq lstm. Basically a wrapper of nn.LSTM.
 
     Attributes
     ----------
@@ -38,6 +41,7 @@ class LSTMDecoder(AbsDecoder):
 
     @property
     def output_size(self):
+        """Size of output embeddings."""
         return (
             self.proj_size
             or self.hidden_size * (self.bidirectional + 1) * self.num_layers

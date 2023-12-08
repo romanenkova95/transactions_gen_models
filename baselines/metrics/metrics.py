@@ -1,3 +1,4 @@
+"""The file with all the metrics, used in baselines."""
 import numpy as np
 import torch
 import wandb
@@ -15,7 +16,7 @@ from torchmetrics import AveragePrecision
 
 
 def val_metrics(df_predict, task="binary", num_classes=2):
-    """Calculates classification metrics on the test dataset.
+    """Calculate classification metrics on the test dataset.
 
     Args:
     ----

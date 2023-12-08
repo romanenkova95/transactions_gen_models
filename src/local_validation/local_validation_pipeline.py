@@ -1,21 +1,20 @@
 """Local targets validation script."""
 
+import warnings
 from pathlib import Path
 from typing import Optional
-import warnings
-from hydra.utils import instantiate, call
-from omegaconf import DictConfig
 
 import torch
-
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import WandbLogger, CometLogger
-
+from hydra.utils import call, instantiate
+from omegaconf import DictConfig
 from ptls.frames import PtlsDataModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
-from src.utils.create_trainer import create_trainer
+from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import CometLogger, WandbLogger
 
+from src.utils.create_trainer import create_trainer
 from src.utils.logging_utils import get_logger
+
 from .local_validation_model import LocalValidationModelBase
 
 
@@ -38,10 +37,17 @@ def local_target_validation(
             Encoder config (specified in 'config/encoder')
         cfg_validation (DictConfig):
             Validation config (specified in 'config/validation')
+        cfg_logger (DictConfig):
+            The config to use when creating the logger.
         encoder_name (str):
             Name of used encoder (for logging & saving)
         val_name (str):
             Name of validation (for logging & saving)
+        is_deterministic (bool):
+            Flag which allows you to override the default dataset creation behaviour.
+            If True, train & val & test are all deterministic. 
+            If False, all of them are shuffled.
+            If None, make train nondeterministic and val/test deterministic.
 
     Returns:
     -------

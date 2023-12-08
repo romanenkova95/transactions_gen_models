@@ -7,16 +7,16 @@ warnings.filterwarnings("ignore")
 import logging
 
 import hydra
+import wandb
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities.seed import reset_seed, seed_everything
-import wandb
 
 from src import learn
+from src.global_validation.global_validation_pipeline import global_target_validation
+from src.local_validation.local_validation_pipeline import local_target_validation
 from src.preprocessing import preprocess
 from src.utils.logging_utils import get_logger
-from src.local_validation.local_validation_pipeline import local_target_validation
-from src.global_validation.global_validation_pipeline import global_target_validation
 
 logging.basicConfig(level=logging.INFO)
 logger = get_logger(name=__name__)

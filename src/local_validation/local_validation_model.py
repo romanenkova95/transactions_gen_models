@@ -1,17 +1,15 @@
 """Module containtaining LocalValidationModel class."""
 from typing import Callable, Optional
 
-import torch
-from torch import nn
 import pytorch_lightning as pl
-from torchmetrics import MetricCollection
-
+import torch
 from ptls.data_load.padded_batch import PaddedBatch
+from torch import nn
+from torchmetrics import MetricCollection
 
 
 class LocalValidationModelBase(pl.LightningModule):
-    """PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions representations.
-    """
+    """PytorchLightningModule for local validation of backbone (e.g. CoLES) model of transactions representations."""
 
     def __init__(
         self,
@@ -27,13 +25,13 @@ class LocalValidationModelBase(pl.LightningModule):
 
         Args:
         ----
-            backbone (nn.Module) - backbone model for transactions representations.
-            pred_head (nn.Module) - prediction head for target prediction.
-            loss (Callable) - the loss to optimize while training. Called with (preds, targets).
-            metrics (MetricCollection) - collection of metrics to track in train, val, test steps.
-            freeze_backbone (bool) - whether to freeze backbone weights while training.
-            learning_rate (float) - learning rate for prediction head training.
-            postproc (Callable) - postprocessing function to apply to predictions before metric calculation.
+            backbone (nn.Module): backbone model for transactions representations.
+            pred_head (nn.Module): prediction head for target prediction.
+            loss (Callable): the loss to optimize while training. Called with (preds, targets).
+            metrics (MetricCollection): collection of metrics to track in train, val, test steps.
+            freeze_backbone (bool): whether to freeze backbone weights while training.
+            learning_rate (float): learning rate for prediction head training.
+            postproc (Callable): postprocessing function to apply to predictions before metric calculation.
         """
         super().__init__()
         self.backbone = backbone
@@ -56,7 +54,19 @@ class LocalValidationModelBase(pl.LightningModule):
 
     def train(
         self, mode: bool = True
-    ):  # override train to disable training when frozen
+    ):
+        """Set module to training mode, if mode=True, else to eval.
+        
+        Overloaded to always set backbone to eval if it's frozen.
+
+        Args:
+        ----
+            mode (bool, optional): whether to enable training or disable it. Defaults to True.
+
+        Returns:
+        -------
+            LocalValidationModelBase: self
+        """
         super().train(mode)
         if self.freeze_backbone:
             self.backbone.eval()
@@ -68,7 +78,7 @@ class LocalValidationModelBase(pl.LightningModule):
 
         Args:
         ----
-            inputs (PaddedBatch) - inputs if ptls format (no sampling)
+            inputs (PaddedBatch): inputs if ptls format (no sampling)
 
         Returns a tuple of:
             * torch.Tensor of predicted targets
@@ -81,7 +91,7 @@ class LocalValidationModelBase(pl.LightningModule):
     def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Generalized shared_step for model-learning with targets. Overload if neccessary
+        """Generalized shared_step for model-learning with targets. Overload if neccessary.
 
         Args:
         ----
@@ -98,7 +108,7 @@ class LocalValidationModelBase(pl.LightningModule):
         return preds, target
 
     def training_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
-        """Training step of the LocalValidationModel."""
+        """Run one training step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         train_loss = self.loss(preds, target)
         self.train_metrics(self.postproc(preds), target)
@@ -109,7 +119,7 @@ class LocalValidationModelBase(pl.LightningModule):
         return train_loss
 
     def validation_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
-        """Validation step of the LocalValidationModel."""
+        """Run one validation step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
         val_loss = self.loss(preds, target)
         self.val_metrics(self.postproc(preds), target)
@@ -118,7 +128,7 @@ class LocalValidationModelBase(pl.LightningModule):
         self.log_dict(self.val_metrics, on_step=False, on_epoch=True)  # type: ignore
 
     def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], batch_idx: int):
-        """Test step of the LocalValidationModel."""
+        """Run one test step of the LocalValidationModel."""
         preds, target = self.shared_step(batch, batch_idx)
 
         self.test_metrics(self.postproc(preds), target)
