@@ -19,11 +19,11 @@ def create_trainer(
 
     Args:
     ----
-        logger (Optional[DictConfig], optional): 
+        logger (Optional[DictConfig], optional):
             the loggger to use. Defaults to None, to use TB.
-        metric_name (Optional[str], optional): 
+        metric_name (Optional[str], optional):
             the metric name to monitor with EarlyStopping. Defaults to None.
-        checkpointing (bool, optional): 
+        checkpointing (bool, optional):
             whether to use checkpointing. Defaults to True.
         **kwargs:
             additional kwargs, passed when initializing the pl Trainer.

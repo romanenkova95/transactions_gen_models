@@ -41,8 +41,8 @@ class ConvEncoder(AbsSeqEncoder):
         self.hidden_size = hidden_size
 
         self.feature_extractor = DilatedConvEncoder(
-            input_size, # type: ignore
-            [input_size] * num_layers + [hidden_size], # type: ignore
+            input_size,  # type: ignore
+            [input_size] * num_layers + [hidden_size],  # type: ignore
             kernel_size=kernel_size,
         )
 
@@ -69,7 +69,7 @@ class ConvEncoder(AbsSeqEncoder):
 
         out = PaddedBatch(out, x.seq_lens)
         if self.is_reduce_sequence:
-            out = out.payload.max(dim=1).values # type: ignore
+            out = out.payload.max(dim=1).values  # type: ignore
 
         return out  # type: ignore # x: B x T x input_dims
 

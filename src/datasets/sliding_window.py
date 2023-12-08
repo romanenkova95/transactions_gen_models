@@ -8,7 +8,7 @@ from torch.utils.data import IterableDataset
 
 class SlidingWindowDataset(IterableDataset, FeatureDict):
     """A simple dataset for yielding sliding-window slices from users."""
-    
+
     def __init__(
         self,
         data: list[dict],
@@ -24,9 +24,9 @@ class SlidingWindowDataset(IterableDataset, FeatureDict):
             data (list[dict]): the data to yield from.
             window_size (int): the size of the sliding window.
             window_step (int): the step of the sliding window.
-            f_augmentations (_type_, optional): 
+            f_augmentations (_type_, optional):
                 augmentations to apply to cropped slices before yielding. Defaults to None.
-            collate_fn (_type_, optional): 
+            collate_fn (_type_, optional):
                 collation function for PtlsDatamodule. Defaults to None, in which case use collate_feature_dict.
         """
         super().__init__()

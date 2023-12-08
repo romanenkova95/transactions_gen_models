@@ -6,7 +6,7 @@ from torch import nn
 
 class AbsDecoder(nn.Module):
     """Abstract decoder class. Only requirement is to specify the output_size.
-    
+
     Properties:
         output_size (int): size of the channel dimension of the decoder output.
     """
@@ -16,8 +16,8 @@ class AbsDecoder(nn.Module):
 
         Args:
         ----
-            output_size (Optional[int], optional): 
-                you could set the output_size here, or by overloading the property. 
+            output_size (Optional[int], optional):
+                you could set the output_size here, or by overloading the property.
                 Defaults to None, in which case one should overload.
         """
         super().__init__()

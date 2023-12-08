@@ -71,7 +71,7 @@ def df_to_dataset(
     event_time_transformation="dt_to_timestamp",
 ):
     """Merge target data with train, val and test transactions data.
-    
+
     Transforms dataframes into MemoryMapDataset objects.
 
     Args:
@@ -101,7 +101,7 @@ def df_to_dataset(
     df_data_valid = preprocessor.transform(df_trx_valid)
     df_data_test = preprocessor.transform(df_trx_test)
 
-    df_data_train = pd.merge(df_data_train, df_target, on="uid") # type: ignore
+    df_data_train = pd.merge(df_data_train, df_target, on="uid")  # type: ignore
     df_data_valid = pd.merge(df_data_valid, df_target, on="uid")
     df_data_test = pd.merge(df_data_test, df_target, on="uid")
 
@@ -217,7 +217,7 @@ def load_dataset(ds_name: str):
             }
         )
 
-    df_trx_train, df_trx_valid, df_trx_test = split_dataset(df_trx, df_target) # type: ignore
+    df_trx_train, df_trx_valid, df_trx_test = split_dataset(df_trx, df_target)  # type: ignore
 
     dttm_transformation = "none" if ds_name == "age" else "dt_to_timestamp"
 
@@ -225,6 +225,6 @@ def load_dataset(ds_name: str):
         df_trx_train,
         df_trx_valid,
         df_trx_test,
-        df_target, # type: ignore
+        df_target,  # type: ignore
         event_time_transformation=dttm_transformation,
     )

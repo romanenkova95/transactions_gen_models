@@ -13,7 +13,7 @@ from .cotic_components import CCNN
 
 class CoticEncoder(AbsSeqEncoder):
     """The continuous convolutional sequence encoder for COTIC."""
-    
+
     def __init__(
         self,
         input_size: int,
@@ -38,7 +38,7 @@ class CoticEncoder(AbsSeqEncoder):
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
-        super().__init__(is_reduce_sequence=is_reduce_sequence) # type: ignore
+        super().__init__(is_reduce_sequence=is_reduce_sequence)  # type: ignore
 
         self.hidden_size = hidden_size
 
@@ -82,7 +82,7 @@ class CoticEncoder(AbsSeqEncoder):
 
 class CoticSeqEncoder(SeqEncoderContainer):
     """Pytorch-lifestream container wrapper for Continous convoluitonal sequence encoder."""
-    
+
     def __init__(
         self,
         input_size: int,
@@ -113,7 +113,9 @@ class CoticSeqEncoder(SeqEncoderContainer):
         self.col_time = col_time
         self.col_type = col_type
 
-    def _extract_times_and_features(self, x: PaddedBatch) -> tuple[torch.Tensor, torch.Tensor]:
+    def _extract_times_and_features(
+        self, x: PaddedBatch
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Extract event times and types from the input in ptls format.
 
         Args:

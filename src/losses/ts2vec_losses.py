@@ -107,7 +107,9 @@ class HierarchicalContrastiveLoss(nn.Module):
             d += 1
         return loss / d
 
-    def forward(self, embeddings: tuple[torch.Tensor, torch.Tensor, torch.Tensor], _) -> torch.Tensor:
+    def forward(
+        self, embeddings: tuple[torch.Tensor, torch.Tensor, torch.Tensor], _
+    ) -> torch.Tensor:
         """Compute value of the loss function.
 
         Args:

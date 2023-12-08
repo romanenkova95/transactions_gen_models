@@ -14,7 +14,7 @@ TEST_SEED = 473284789
 
 class TestBackbones(unittest.TestCase):
     """The backbone testing case."""
-    
+
     def setUp(self):
         """Set up some testing environment variables."""
         os.environ["FAST_DEV_RUN"] = "True"

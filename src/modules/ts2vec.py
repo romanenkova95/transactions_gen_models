@@ -148,11 +148,11 @@ class TS2Vec(ABSModule):
             head_instance = instantiate(head)
 
         if loss is None:
-            loss_instance = HierarchicalContrastiveLoss(alpha=0.5, temporal_unit=0) # type: ignore
+            loss_instance = HierarchicalContrastiveLoss(alpha=0.5, temporal_unit=0)  # type: ignore
         else:
             loss_instance = instantiate(loss)
 
-        self.temporal_unit = loss.temporal_unit # type: ignore
+        self.temporal_unit = loss.temporal_unit  # type: ignore
         self.mask_mode = mask_mode
 
         super().__init__(
@@ -183,8 +183,8 @@ class TS2Vec(ABSModule):
             * (embedding of the 1st augmented window, embedding of the 2nd augmented window, timestamps)
             * original labels as provided by the dataloader
         """
-        trx_encoder = self._seq_encoder.trx_encoder # type: ignore
-        seq_encoder = self._seq_encoder.seq_encoder # type: ignore
+        trx_encoder = self._seq_encoder.trx_encoder  # type: ignore
+        seq_encoder = self._seq_encoder.seq_encoder  # type: ignore
 
         seq_lens = batch.seq_lens
         t = batch.payload[self.col_time]
@@ -197,7 +197,7 @@ class TS2Vec(ABSModule):
         crop_eleft = np.random.randint(crop_left + 1)
         crop_eright = np.random.randint(low=crop_right, high=ts_l + 1)
         crop_offset = np.random.randint(
-            low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0) 
+            low=-crop_eleft, high=ts_l - crop_eright + 1, size=x.size(0)
         )
 
         input1 = take_per_row(x, crop_offset + crop_eleft, crop_right - crop_eleft)
@@ -206,13 +206,13 @@ class TS2Vec(ABSModule):
         t = take_per_row(t, crop_offset + crop_eleft, crop_right - crop_eleft)
         t = t[:, -crop_l:]
 
-        input1_masked = mask_input(input1, self.mask_mode) 
-        input2_masked = mask_input(input2, self.mask_mode) 
+        input1_masked = mask_input(input1, self.mask_mode)
+        input2_masked = mask_input(input2, self.mask_mode)
 
-        out1 = seq_encoder(PaddedBatch(input1_masked, seq_lens)).payload # type: ignore
+        out1 = seq_encoder(PaddedBatch(input1_masked, seq_lens)).payload  # type: ignore
         out1 = out1[:, -crop_l:]
 
-        out2 = seq_encoder(PaddedBatch(input2_masked, seq_lens)).payload # type: ignore
+        out2 = seq_encoder(PaddedBatch(input2_masked, seq_lens)).payload  # type: ignore
         out2 = out2[:, :crop_l]
 
         if self._head is not None:
@@ -231,7 +231,7 @@ class TS2Vec(ABSModule):
             batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into TS2Vec sequence encoder and labels
         """
         y_h, y = self.shared_step(*batch)
-        loss = self._loss(y_h, y) # type: ignore
+        loss = self._loss(y_h, y)  # type: ignore
         self.valid_loss(loss)
 
     def validation_epoch_end(self, _) -> None:

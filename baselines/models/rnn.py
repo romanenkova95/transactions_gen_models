@@ -17,7 +17,7 @@ class RNNClassifier(torch.nn.Module):
         num_classes: int = 1,
     ):
         """Initialize internal state.
-        
+
         Args:
         ----
             input_size (int): number of channels in the input data

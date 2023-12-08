@@ -20,7 +20,7 @@ logger = get_logger(name=__name__)
 
 class GPTModule(VanillaAE):
     """A module for GPT-like training, just encodes the sequence and predicts its shifted version.
-    
+
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -82,7 +82,7 @@ class GPTModule(VanillaAE):
             loss_weights=loss_weights,
             encoder=encoder,
             optimizer=optimizer,
-            num_types=num_types, # type: ignore
+            num_types=num_types,  # type: ignore
             scheduler=scheduler,
             scheduler_config=scheduler_config,
             encoder_weights=encoder_weights,
@@ -172,7 +172,7 @@ class GPTModule(VanillaAE):
 
 class GPTContrastiveModule(VanillaAE):
     """A module for GPT-like contrastive training, just encodes the sequence and predicts the embeddings of its shifted version.
-    
+
     Logs train/val/test losses:
      - QuerySoftmaxLoss.
 
@@ -215,7 +215,7 @@ class GPTContrastiveModule(VanillaAE):
                 negative count for `QuerySoftmaxLoss`
             temperature (float):
                 temperature parameter of `QuerySoftmaxLoss`
-            encoder_weights (Optional[str]): 
+            encoder_weights (Optional[str]):
                 optionally, supply a path to the weights to load into the encoder.
             freeze_enc (optional[bool]):
                 Whether to freeze the encoder model.
@@ -249,12 +249,12 @@ class GPTContrastiveModule(VanillaAE):
 
     def get_neg_ix(self, mask):
         """Sample from predicts, where `mask == True`, without self element.
-        
+
         sample from predicted tokens from batch
         """
         mask_num = mask.int().sum()
         mn = 1 - torch.eye(mask_num, device=mask.device)
-        neg_ix = torch.multinomial(mn, self.hparams.neg_count) # type: ignore
+        neg_ix = torch.multinomial(mn, self.hparams.neg_count)  # type: ignore
 
         b_ix = (
             torch.arange(mask.size(0), device=mask.device)

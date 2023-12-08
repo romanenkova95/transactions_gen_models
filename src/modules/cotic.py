@@ -56,7 +56,10 @@ class Cotic(ABSModule):
 
     def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor]
-    ) -> tuple[tuple[torch.Tensor, tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]], tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    ) -> tuple[
+        tuple[torch.Tensor, tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]],
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    ]:
         """Shared training/validation/testing step.
 
         Args:
@@ -72,7 +75,7 @@ class Cotic(ABSModule):
         )  # out of CoticSeqEncoder (aka 'encoded_output' in Cotic)
         pred_times, pred_types = self._head(encoded_output.detach())
 
-        inputs = self.seq_encoder._extract_times_and_features( # type: ignore
+        inputs = self.seq_encoder._extract_times_and_features(  # type: ignore
             batch[0]
         )  # format is (event_times, event_types)
         outputs = (

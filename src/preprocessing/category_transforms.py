@@ -5,7 +5,7 @@ from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 
 class DropRare(FrequencyEncoder):
     """Encode categories frequency-wise, and keep only top-k most frequent categories.
-    
+
     To be used after frequency encoder to drop the rarest mcc codes.
     """
 

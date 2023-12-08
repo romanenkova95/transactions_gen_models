@@ -7,7 +7,7 @@ from .vanilla import VanillaAE
 
 class MLMModule(VanillaAE):
     """Masked Language Model (MLM) from [ROBERTA](https://arxiv.org/abs/1907.11692).
-    
+
     Out of replace_proba tokens:
      - Mask 80% with token=num_tokens - 1;
      - replace 10% with random tokens;
@@ -27,7 +27,7 @@ class MLMModule(VanillaAE):
 
         Args:
         ----
-            replace_proba (float, optional): 
+            replace_proba (float, optional):
                 the fraction of tokens to consider in masking & loss & metrics. Defaults to 0.1.
             **kwargs: passed to VanillaAE.
         """

@@ -32,7 +32,7 @@ logger = get_logger(name=__name__)
 
 class VanillaAE(LightningModule):
     """A vanilla autoencoder, without masking, just encodes target sequence and then restores it.
-    
+
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
      - an MSELoss on amounts
@@ -181,7 +181,7 @@ class VanillaAE(LightningModule):
         self, batch: PaddedBatch, L: Optional[int] = None
     ) -> tuple[Tensor, Tensor, Union[PaddedBatch, Tensor], Tensor]:
         """Run the forward pass of the VanillaAE module.
-        
+
         Pass the batch through the autoencoder, and afterwards pass it through mcc_head & amount_head.
         to get the respective targets.
 

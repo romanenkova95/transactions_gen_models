@@ -8,7 +8,7 @@ from .cont_cnn_layers import ContConv1d, ContConv1dSim
 
 class CCNN(nn.Module):
     """The CCNN class for COTIC."""
-    
+
     def __init__(
         self,
         in_channels: int,
@@ -46,7 +46,7 @@ class CCNN(nn.Module):
         self.convs = nn.ModuleList(
             [
                 ContConv1d(
-                    kernel.recreate(self.in_channels[i]), # type: ignore
+                    kernel.recreate(self.in_channels[i]),  # type: ignore
                     kernel_size,
                     self.in_channels[i],
                     nb_filters,
@@ -61,7 +61,7 @@ class CCNN(nn.Module):
         self.final_list = nn.ModuleList(
             [
                 ContConv1dSim(
-                    kernel.recreate(self.nb_filters), 1, nb_filters, nb_filters # type: ignore
+                    kernel.recreate(self.nb_filters), 1, nb_filters, nb_filters  # type: ignore
                 ),
                 nn.LeakyReLU(0.1),
                 nn.Linear(nb_filters, num_types),
@@ -153,6 +153,6 @@ class CCNN(nn.Module):
         out = self.final_list[0](
             times, true_times, true_features, non_pad_mask, sim_size
         )
-        for layer in self.final_list[1:]: # type: ignore
+        for layer in self.final_list[1:]:  # type: ignore
             out = layer(out)
         return out

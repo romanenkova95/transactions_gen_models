@@ -45,7 +45,7 @@ def local_target_validation(
             Name of validation (for logging & saving)
         is_deterministic (bool):
             Flag which allows you to override the default dataset creation behaviour.
-            If True, train & val & test are all deterministic. 
+            If True, train & val & test are all deterministic.
             If False, all of them are shuffled.
             If None, make train nondeterministic and val/test deterministic.
 

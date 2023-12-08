@@ -8,7 +8,7 @@ from ptls.data_load.utils import collate_feature_dict
 
 class RandomCropDataset(AugmentationDataset):
     """Simple dataset, which randomly crops user sequences."""
-    
+
     def __init__(
         self,
         data: Any,

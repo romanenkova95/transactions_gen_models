@@ -24,9 +24,9 @@ class PretrainedRnnSeqEncoder(RnnSeqEncoder):
 
         Args:
         ----
-            path_to_dict (Optional[str], optional): 
+            path_to_dict (Optional[str], optional):
                 the path to load the weights from. Defaults to None, in which case doesn't load.
-            freeze (bool, optional): 
+            freeze (bool, optional):
                 whether to freeze the weights. Defaults to True.
             **seq_encoder_params: passed to RnnSeqEncoder.
         """

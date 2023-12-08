@@ -75,9 +75,9 @@ class CoLESonCoLESEncoder(nn.Module):
                 splitter used to train CoLES
             training_mode:
                 whether a model is training or not
-            encoding_step: 
+            encoding_step:
                 the step with which to encode sequences.
-            is_reduce_sequence: 
+            is_reduce_sequence:
                 whether to reduce the encoded sequence to a single embedding.
         """
         super().__init__()
@@ -125,7 +125,7 @@ class CoLESonCoLESEncoder(nn.Module):
                     torch.maximum(x.seq_lens - s, torch.zeros_like(x.seq_lens)),
                     torch.full_like(x.seq_lens, self.encoding_seq_len),
                 )
-                pb = PaddedBatch(payload, seq_lens) # type: ignore
+                pb = PaddedBatch(payload, seq_lens)  # type: ignore
                 yield self.frozen_encoder(pb).detach()
 
         emb_sequences = torch.stack(
@@ -136,7 +136,7 @@ class CoLESonCoLESEncoder(nn.Module):
             start_pos.expand(x.seq_lens.size(0), start_pos.size(0))
             < x.seq_lens.unsqueeze(-1)
         ).sum(dim=-1)
-        return PaddedBatch(payload=emb_sequences, length=seq_lens) # type: ignore
+        return PaddedBatch(payload=emb_sequences, length=seq_lens)  # type: ignore
 
     def forward(self, x: PaddedBatch):
         """Pass x through the encoder."""

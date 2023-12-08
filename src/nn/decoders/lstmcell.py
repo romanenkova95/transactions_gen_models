@@ -10,7 +10,7 @@ from .lstm import LSTMDecoder
 
 class LSTMCellDecoder(AbsDecoder):
     """An NLP-style LSTM-based decoder.
-    
+
     Restores a sequence of embeddings from a single embedding
 
     Attributes

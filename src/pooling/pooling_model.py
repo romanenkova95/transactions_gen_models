@@ -106,7 +106,7 @@ class PoolingModel(nn.Module):
         self, train_data: list[dict], max_users_in_train_dataloader: int, device: str
     ) -> dict[int, torch.Tensor]:
         """Create pooled embeding dataset.
-        
+
         This function for each timestamp get sequences in dataset which ends close to this timestamp,
         make local embedding out of them and pool them together
 
@@ -150,7 +150,7 @@ class PoolingModel(nn.Module):
         self, all_times: list, data: list[dict]
     ) -> dict[int, torch.Tensor]:
         """Reshaping of time-users-embeddings data.
-        
+
         from list of users with Dicts
         with time keys to dict with time keys and values with concatenated users
         embeddings
@@ -273,7 +273,7 @@ class PoolingModel(nn.Module):
             warnings.warn(
                 "Attention! Given data was before than any in train dataset. Pooling vector is set to random."
             )
-            
+
             pooled_vector = torch.rand(self.backbone_embd_size)
 
         else:
@@ -291,7 +291,7 @@ class PoolingModel(nn.Module):
                 pooled_vector = (sortmax_dot_prod * vectors).sum(dim=0)
             elif self.pooling_type == "learnable_attention":
                 vectors = torch.Tensor(vectors).to(user_emb.device)
-                
+
                 if not self.learnable_attention_matrix:
                     raise ValueError("Learnable attention matrix wasn't initialized!")
                 vectors = self.learnable_attention_matrix(vectors)
@@ -309,7 +309,7 @@ class PoolingModel(nn.Module):
 
         Return: output_size (int): the output size of the model
         """
-        return 2 * self.backbone_embd_size # type: ignore
+        return 2 * self.backbone_embd_size  # type: ignore
 
     def set_pooling_type(self, pooling_type: str) -> None:
         """Change pooling type of the model."""
@@ -320,5 +320,5 @@ class PoolingModel(nn.Module):
         if pooling_type == "learnable_attention":
             if self.learnable_attention_matrix is None:
                 self.learnable_attention_matrix = nn.Linear(
-                    self.backbone_embd_size, self.backbone_embd_size # type: ignore
+                    self.backbone_embd_size, self.backbone_embd_size  # type: ignore
                 )

@@ -22,7 +22,9 @@ def time_normalization(x: pd.Series, min_timestamp: int) -> pd.Series:
     return (
         pd.to_datetime(x).astype("datetime64[s]").astype("int64") / 1000000000
         - min_timestamp
-    ) / (60 * 60 * 24)  # seconds in day
+    ) / (
+        60 * 60 * 24
+    )  # seconds in day
 
 
 class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):
@@ -128,4 +130,4 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
         -------
             pd.DataFrame: the transformed data.
         """
-        return x.drop_duplicates(subset=self.index_cols, keep=self.keep) # type: ignore
+        return x.drop_duplicates(subset=self.index_cols, keep=self.keep)  # type: ignore

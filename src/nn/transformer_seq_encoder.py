@@ -7,7 +7,7 @@ from ptls.nn.trx_encoder import TrxEncoder
 
 class TransformerSeqEncoder(TransformerSeqEncoder_):
     """Adds a hidden_size parameter to TransformerSeqEncoder for consistency.
-    
+
     Done through setting the linear_projection param of TrxEncoder.
     """
 
@@ -23,7 +23,7 @@ class TransformerSeqEncoder(TransformerSeqEncoder_):
         Args:
         ----
             trx_encoder (DictConfig): the trx encoder to use.
-            hidden_size (int, optional): 
+            hidden_size (int, optional):
                 the output size, i.e. the linear_projection_size of the trx encoder. Defaults to 1024.
             is_reduce_sequence (bool, optional):
                 whether to reduce the output sequence. Defaults to True.

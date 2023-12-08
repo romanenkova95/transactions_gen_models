@@ -25,14 +25,14 @@ from baselines.preprocessing import load_dataset
 
 def train_and_eval():
     """Train and evaluate a classification model."""
-    with wandb.init() as run: # type: ignore
+    with wandb.init() as run:  # type: ignore
         cfg = wandb.config
 
         seed = 42
         torch.manual_seed(seed)
         random.seed(seed)
         np.random.seed(seed)
-        torch.backends.cudnn.deterministic = True # type: ignore
+        torch.backends.cudnn.deterministic = True  # type: ignore
         torch.cuda.manual_seed_all(seed)
 
         dataset_name = cfg["experiment"]["dataset"]
@@ -94,7 +94,7 @@ def train_and_eval():
                 Precision(task=task, num_classes=num_classes, average="macro"),
                 Recall(task=task, num_classes=num_classes, average="macro"),
                 AveragePrecision(task=task, num_classes=num_classes, average="macro"),
-            ], # type: ignore
+            ],  # type: ignore
             optimizer_partial=partial(torch.optim.AdamW, lr=3e-4),
             lr_scheduler_partial=partial(
                 torch.optim.lr_scheduler.StepLR, step_size=40, gamma=0.5
@@ -121,7 +121,7 @@ def train_and_eval():
             f"saves/{dataset_name}_{model_name}_{run.name}.pth",
         )
 
-        inference_dl = torch.utils.data.DataLoader( # type: ignore
+        inference_dl = torch.utils.data.DataLoader(  # type: ignore
             dataset=dataset_test,
             collate_fn=collate_feature_dict,
             shuffle=False,
@@ -135,7 +135,7 @@ def train_and_eval():
         )
 
         df_predict = trainer.predict(inf_module, inference_dl)
-        df_predict = pd.concat(df_predict, axis=0) # type: ignore
+        df_predict = pd.concat(df_predict, axis=0)  # type: ignore
 
         auroc, prauc, acc, fscore, conf_matrix = val_metrics(
             df_predict, task=task, num_classes=num_classes

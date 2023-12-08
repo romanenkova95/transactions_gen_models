@@ -52,11 +52,9 @@ class LocalValidationModelBase(pl.LightningModule):
         self.metric_name = "val_loss"
         self.postproc = postproc or nn.Identity()
 
-    def train(
-        self, mode: bool = True
-    ):
+    def train(self, mode: bool = True):
         """Set module to training mode, if mode=True, else to eval.
-        
+
         Overloaded to always set backbone to eval if it's frozen.
 
         Args:

@@ -100,7 +100,7 @@ class CoticMetrics(ABC):
     @staticmethod
     def get_event_type_predicted(
         inputs: tuple[torch.Tensor, torch.Tensor],
-        outputs:  tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]],
+        outputs: tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]],
     ) -> torch.Tensor:
         """Get event type predictions from model outputs.
 
@@ -117,7 +117,11 @@ class CoticMetrics(ABC):
         mask = inputs[1].ne(0)[:, 1:]
         return event_type_prediction[mask, :]
 
-    def update(self, inputs: tuple[torch.Tensor, torch.Tensor], outputs: tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]) -> None:
+    def update(
+        self,
+        inputs: tuple[torch.Tensor, torch.Tensor],
+        outputs: tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]],
+    ) -> None:
         """Compute predictions and targets for a batch and store values.
 
         Args:
