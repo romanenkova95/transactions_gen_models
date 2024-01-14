@@ -1,0 +1,16 @@
+_target_: src.modules.NHP
+loss:
+  _target_: src.losses.NHPLoss
+  # type_pad_value: 0
+  loss_integral_num_sample_per_step: 20 
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.Adam
+  lr: 0.001
+  weight_decay: 1e-8
+lr_scheduler_partial:
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [100]
+  gamma: 0.1
+  
