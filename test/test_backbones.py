@@ -63,12 +63,11 @@ class TestBackbones(unittest.TestCase):
                 "ae_nlp_from_scratch",
                 "ae_nlp_frozen",
                 "coles_churn",
-                "coles_emb_churn",
+                "coles_default",
                 "mlm",
-                # "cotic", # doesn't run on a small GPU
+                "gpt",
                 "ts2vec_churn",
-                "coles_timecl_churn",
-                "seq2vec_coles_emb_churn",
+                # "cotic", # doesn't run on a small GPU
             ],
             preprocessings=["default", "churn"],
             validations=["local_target", "event_time", "event_type", "global_target"],
