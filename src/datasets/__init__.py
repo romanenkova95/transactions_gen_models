@@ -1,7 +1,6 @@
 """Init module, which imports all the dataset creation tools."""
 from .basic_ds import create_basic_dataset
 from .coles import CustomColesDataset
-from .coles_with_splitter import CustomColesDatasetWithSplitter
 from .last_token_ds import create_last_token_dataset
 from .no_split import NoSplitDataset
 from .random_crop import RandomCropDataset
