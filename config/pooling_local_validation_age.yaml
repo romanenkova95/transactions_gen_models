@@ -1,0 +1,8 @@
+defaults:
+  - preprocessing: age
+  - backbone: coles_age
+  - validation: event_type
+  - _self_
+
+pretrain: false
+

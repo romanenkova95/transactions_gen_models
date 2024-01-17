@@ -7,9 +7,10 @@ transforms:
     _target_: ptls.preprocessing.PandasDataPreprocessor
     col_id: user_id
     col_event_time: timestamp
-    event_time_transformation: dt_to_timestamp
+    event_time_transformation: none
     cols_category: [mcc_code]
     cols_numerical: [amount]
+    cols_first_item: [global_target]
     return_records: False
 
 source: data/preprocessed_new/age.parquet
