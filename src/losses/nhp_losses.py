@@ -6,7 +6,7 @@ class NHPLoss(nn.Module):
 
     def __init__(
         self,
-        loss_integral_num_sample_per_step, 
+        loss_integral_num_sample_per_step,
     ) -> None:
         """Initialize .
 
@@ -16,6 +16,7 @@ class NHPLoss(nn.Module):
         super().__init__()
         
         self.loss_integral_num_sample_per_step = loss_integral_num_sample_per_step
+        self.eps = torch.finfo(torch.float32).eps
         
     def compute_loglikelihood(
         self,
@@ -46,7 +47,7 @@ class NHPLoss(nn.Module):
         event_lambdas = torch.sum(lambda_at_event * lambda_type_mask, dim=-1) + self.eps
 
         # mask the pad event
-        event_lambdas = event_lambdas.masked_fill_(~seq_mask, 1.0)
+        event_lambdas = event_lambdas.masked_fill_(seq_mask == 0., 1.0) # UPD: we have float masks which is a bit strange...
 
         # [batch_size, seq_len)
         event_ll = torch.log(event_lambdas)
@@ -90,7 +91,8 @@ class NHPLoss(nn.Module):
 
         return sampled_dtimes
     
-    def compute_states_at_sample_times(encoder, decay_states, sample_dtimes): # Q: encoder or just rnn_cell ???
+    @staticmethod
+    def compute_states_at_sample_times(seq_encoder, decay_states, sample_dtimes): # Q: encoder or just rnn_cell ???
         """Compute the states at sampling times.
 
         Args:
@@ -108,15 +110,17 @@ class NHPLoss(nn.Module):
         # at all sample points
         # h_ts shape (batch_size, num_times, num_mc_sample, hidden_dim)
         # cells[:, :, None, :]  (batch_size, num_times, 1, hidden_dim)
-        _, h_ts = encoder.rnn_cell.decay(cells[:, :, None, :],
-                                      cell_bars[:, :, None, :],
-                                      decays[:, :, None, :],
-                                      outputs[:, :, None, :],
-                                      sample_dtimes[..., None])
+        _, h_ts = seq_encoder.rnn_cell.decay(
+            cells[:, :, None, :],
+            cell_bars[:, :, None, :],
+            decays[:, :, None, :],
+            outputs[:, :, None, :],
+            sample_dtimes[..., None]
+        )
 
         return h_ts
         
-    def compute_loss(self, encoder, time_delta_seqs, type_seqs, batch_non_pad_mask, type_mask):
+    def compute_loss(self, seq_encoder, time_delta_seqs, type_seqs, batch_non_pad_mask, type_mask):
         """Compute the loglike loss.
 
         Args:
@@ -132,8 +136,10 @@ class NHPLoss(nn.Module):
         #print("type_seqs:", type_seqs.shape)
         #print("batch_non_pad_mask:", batch_non_pad_mask.shape)
         #print("type_mask:", type_mask.shape)
+        
+        inputs = (time_delta_seqs, type_seqs)
 
-        hiddens_ti, decay_states = encoder(time_delta_seqs, type_seqs)
+        hiddens_ti, decay_states = seq_encoder(inputs)
 
         # Num of samples in each batch and num of event time point in the sequence
         # batch_size, seq_len, _ = hiddens_ti.size()
@@ -141,7 +147,7 @@ class NHPLoss(nn.Module):
         # Lambda(t) right before each event time point
         # lambda_at_event - [batch_size, num_times=max_len-1, num_event_types]
         # Here we drop the last event because it has no delta_time label (can not decay)
-        lambda_at_event = encoder.layer_intensity(hiddens_ti)
+        lambda_at_event = seq_encoder.layer_intensity(hiddens_ti)
 
         # Compute the big lambda integral in Equation (8)
         # 1 - take num_mc_sample rand points in each event interval
@@ -155,10 +161,12 @@ class NHPLoss(nn.Module):
         interval_t_sample = self.make_dtime_loss_samples(time_delta_seqs[:, 1:])
 
         # [batch_size, num_times = max_len - 1, num_mc_sample, hidden_size]
-        state_t_sample = self.compute_states_at_sample_times(decay_states, interval_t_sample)
+        state_t_sample = self.compute_states_at_sample_times(seq_encoder, decay_states, interval_t_sample)
 
         # [batch_size, num_times = max_len - 1, num_mc_sample, event_num]
-        lambda_t_sample = encoder.layer_intensity(state_t_sample)
+        lambda_t_sample = seq_encoder.layer_intensity(state_t_sample)
+        
+        print("batch_non_pad_mask:", batch_non_pad_mask)
 
         event_ll, non_event_ll, num_events = self.compute_loglikelihood(
             lambda_at_event=lambda_at_event,

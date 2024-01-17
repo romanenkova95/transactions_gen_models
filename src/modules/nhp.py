@@ -69,7 +69,7 @@ class NHP(ABSModule):
         #print("type_mask:", type_mask.shape) 
         
         loss = self._loss.compute_loss(
-            self.encoder, time_delta, event_types, non_pad_mask, type_mask
+            self.encoder.seq_encoder, time_delta, event_types, non_pad_mask, type_mask
         )
 
         return loss
@@ -122,6 +122,10 @@ class NHP(ABSModule):
             batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
         """
         pass
+    
+    def validation_epoch_end(self, _) -> None:
+        """Compute and log metrics for a validation epoch."""
+        pass # TODO: implement metroics
 
     '''
     def training_epoch_end(self, _) -> None:

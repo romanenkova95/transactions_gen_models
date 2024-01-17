@@ -68,7 +68,7 @@ class NHPEncoder(AbsSeqEncoder):
 
         self.reducer = reducer
         
-    def init_state(self, batch_size):
+    def init_state(self, batch_size, device):
         """Initialize hidden and cell states.
 
         Args:
@@ -77,13 +77,16 @@ class NHPEncoder(AbsSeqEncoder):
         Returns:
             list: list of hidden states, cell states and cell bar states.
         """
-        h_t, c_t, c_bar = torch.zeros(batch_size,
-                                      3 * self.hidden_size,
-                                      device=self.device).chunk(3, dim=1)
+        h_t, c_t, c_bar = torch.zeros(
+            batch_size,
+            3 * self.hidden_size,
+            device=device
+        ).chunk(3, dim=1)
+        
         return h_t, c_t, c_bar
 
     def forward(
-        self, time_delta_seq, event_seq
+        self, inputs #time_delta_seq, event_seq
     ) -> torch.Tensor:
         """Forward pass through the model.
 
@@ -94,6 +97,8 @@ class NHPEncoder(AbsSeqEncoder):
         -------
             torch.Tensor with model output
         """
+        
+        time_delta_seq, event_seq = inputs
         
         all_hiddens = []
         all_outputs = []
@@ -109,7 +114,7 @@ class NHPEncoder(AbsSeqEncoder):
         max_seq_length = self.max_steps if self.max_steps is not None else event_seq.size(1) - 1
 
         batch_size = len(event_seq)
-        h_t, c_t, c_bar_i = self.init_state(batch_size)
+        h_t, c_t, c_bar_i = self.init_state(batch_size, time_delta_seq.device)
 
         # if only one event, then we dont decay
         if max_seq_length == 1:
@@ -415,8 +420,15 @@ class NHPSeqEncoder(SeqEncoderContainer):
             torch.Tensor with model output
         """
         
-        _, time_delta, event_types, _, _, _ = self._restruct_batch(x)
+        #batch, labels = x
+        
+        #print("batch:", batch)
+        #print("labels:", labels)
+        
+        _, time_delta, event_types, _, _, _ = self._restruct_batch(x) # take only PaddedBatch, no labels
+        
+        inputs = (time_delta, event_types)
 
-        hiddens_stack, decay_states_stack = self.seq_encoder(time_delta, event_types)
+        hiddens_stack, decay_states_stack = self.seq_encoder(inputs)
         
         return hiddens_stack, decay_states_stack
