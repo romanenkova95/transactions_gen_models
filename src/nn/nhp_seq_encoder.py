@@ -53,6 +53,8 @@ class NHPEncoder(AbsSeqEncoder):
         self.max_steps = max_steps
         self.max_decay_time = max_decay_time
         
+        self.pad_token_id = pad_token_id
+        
         self.rnn_cell = ContTimeLSTMCell(
             hidden_dim=hidden_size,
             num_event_types_pad=num_event_types_pad,
@@ -91,10 +93,8 @@ class NHPEncoder(AbsSeqEncoder):
         """Forward pass through the model.
 
         Args:
-        ----
             
         Returns:
-        -------
             torch.Tensor with model output
         """
         
@@ -105,10 +105,6 @@ class NHPEncoder(AbsSeqEncoder):
         all_cells = []
         all_cell_bars = []
         all_decays = []
-
-        #max_steps = kwargs.get('max_steps', None)
-        
-        #max_decay_time = kwargs.get('max_decay_time', 5.0)
 
         # last event has no time label
         max_seq_length = self.max_steps if self.max_steps is not None else event_seq.size(1) - 1
@@ -172,9 +168,9 @@ class NHPEncoder(AbsSeqEncoder):
             dim=2
         )
 
-        return hiddens_stack, decay_states_stack # Q: do we need both ???
+        return hiddens_stack, decay_states_stack
         
-        #if self.is_reduce_sequence:
+        # if self.is_reduce_sequence:
         #    if self.reducer == "maxpool":
         #        out = out.max(dim=1).values
         #    else:
@@ -356,10 +352,7 @@ class NHPSeqEncoder(SeqEncoderContainer):
               [False False False False  True  True]
               [False False False False False  True]]]
         ```
-
-
         """
-
         seq_num, seq_len = pad_seqs.shape
 
         # [batch_size, seq_len]
@@ -367,12 +360,14 @@ class NHPSeqEncoder(SeqEncoderContainer):
 
         # [batch_size, seq_len, seq_len]
         attention_key_pad_mask = torch.tile(seq_pad_mask[:, None, :], (1, seq_len, 1))
+        
         subsequent_mask = torch.tile(
-            torch.triu(torch.ones((seq_len, seq_len), dtype=bool), diagonal=0)[None, :, :], (seq_num, 1, 1)
-        )
+            torch.triu(torch.ones((seq_len, seq_len), dtype=bool), diagonal=0)[None, :, :], 
+            (seq_num, 1, 1),
+        ).to(pad_seqs.device)
 
         attention_mask = subsequent_mask | attention_key_pad_mask
-
+        
         return attention_mask
     
     @staticmethod 
@@ -391,7 +386,7 @@ class NHPSeqEncoder(SeqEncoderContainer):
         for i in range(num_event_types):
             type_mask[:, :, i] = pad_seqs == i
 
-        return type_mask
+        return type_mask.to(pad_seqs.device)
 
     def _restruct_batch(self, x: PaddedBatch):
         event_times = x.payload[self.col_time].float()
@@ -418,17 +413,10 @@ class NHPSeqEncoder(SeqEncoderContainer):
         Returns:
         -------
             torch.Tensor with model output
-        """
-        
-        #batch, labels = x
-        
-        #print("batch:", batch)
-        #print("labels:", labels)
-        
-        _, time_delta, event_types, _, _, _ = self._restruct_batch(x) # take only PaddedBatch, no labels
+        """        
+        _, time_delta, event_types, _, _, _ = self._restruct_batch(x)
         
         inputs = (time_delta, event_types)
-
         hiddens_stack, decay_states_stack = self.seq_encoder(inputs)
         
         return hiddens_stack, decay_states_stack

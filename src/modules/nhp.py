@@ -62,12 +62,6 @@ class NHP(ABSModule):
         """
         _, time_delta, event_types, non_pad_mask, _, type_mask = self.encoder._restruct_batch(batch[0])
         
-        #print("In NHP.shared_step():")
-        #print("time_delta:", time_delta.shape)
-        #print("event_types:", event_types.shape)
-        #print("non_pad_mask:", non_pad_mask.shape)
-        #print("type_mask:", type_mask.shape) 
-        
         loss = self._loss.compute_loss(
             self.encoder.seq_encoder, time_delta, event_types, non_pad_mask, type_mask
         )
@@ -125,7 +119,7 @@ class NHP(ABSModule):
     
     def validation_epoch_end(self, _) -> None:
         """Compute and log metrics for a validation epoch."""
-        pass # TODO: implement metroics
+        pass # TODO: implement metrics
 
     '''
     def training_epoch_end(self, _) -> None:

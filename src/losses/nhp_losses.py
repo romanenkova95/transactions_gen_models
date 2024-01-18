@@ -44,6 +44,9 @@ class NHPLoss(nn.Module):
 
         # Sum of lambda over every type and every event point
         # [batch_size, seq_len]
+        print("lambda_at_event:", lambda_at_event.device)
+        print("lambda_type_mask:", lambda_type_mask.device)
+        
         event_lambdas = torch.sum(lambda_at_event * lambda_type_mask, dim=-1) + self.eps
 
         # mask the pad event
@@ -131,14 +134,7 @@ class NHPLoss(nn.Module):
         """
         #time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, _, type_mask = batch
         
-        #print("In NHPLoss.compute_loss():")
-        #print("time_delta_seqs:", time_delta_seqs.shape)
-        #print("type_seqs:", type_seqs.shape)
-        #print("batch_non_pad_mask:", batch_non_pad_mask.shape)
-        #print("type_mask:", type_mask.shape)
-        
         inputs = (time_delta_seqs, type_seqs)
-
         hiddens_ti, decay_states = seq_encoder(inputs)
 
         # Num of samples in each batch and num of event time point in the sequence
@@ -166,8 +162,6 @@ class NHPLoss(nn.Module):
         # [batch_size, num_times = max_len - 1, num_mc_sample, event_num]
         lambda_t_sample = seq_encoder.layer_intensity(state_t_sample)
         
-        print("batch_non_pad_mask:", batch_non_pad_mask)
-
         event_ll, non_event_ll, num_events = self.compute_loglikelihood(
             lambda_at_event=lambda_at_event,
             lambdas_loss_samples=lambda_t_sample,
@@ -178,6 +172,5 @@ class NHPLoss(nn.Module):
 
         # (num_samples, num_times)
         loss = - (event_ll - non_event_ll).sum()
-        #return loss, num_events
         
         return loss / num_events

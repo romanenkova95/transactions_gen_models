@@ -116,7 +116,6 @@ class ContTimeLSTMCell(nn.Module):
             list: list of cell and hidden state tensors after the decay.
         """
         c_t = cell_bar_i + (cell_i - cell_bar_i) * torch.exp(-gate_decay * dtime)
-
         h_t = gate_output * torch.tanh(c_t)
 
         return c_t, h_t
