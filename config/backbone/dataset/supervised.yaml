@@ -1,0 +1,3 @@
+_target_: src.datasets.supervised.CustomSupervisedDataset
+min_len: 15
+max_len: 150

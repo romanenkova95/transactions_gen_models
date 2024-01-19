@@ -1,0 +1,22 @@
+_target_: src.modules.seq_to_target.CustomSeqToTarget
+num_classes: 2
+loss: 
+  _target_: torch.nn.NLLLoss
+metric_list:
+  -
+    _target_: torchmetrics.Accuracy
+    task: multiclass
+    num_classes: 2
+  -
+    _target_: torchmetrics.AveragePrecision
+    task: multiclass
+    num_classes: 2
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.Adam
+  lr: .0001
+lr_scheduler_partial:
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 100
+  gamma: .5
