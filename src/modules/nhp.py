@@ -3,6 +3,7 @@ from omegaconf import DictConfig
 import torch
 
 from hydra.utils import instantiate
+from torchmetrics import MeanMetric
 
 from ptls.data_load import PaddedBatch
 from ptls.frames.abs_module import ABSModule
@@ -15,7 +16,6 @@ class NHP(ABSModule):
         self,
         encoder: DictConfig,
         loss: DictConfig,
-        # metrics: DictConfig,
         optimizer_partial: DictConfig,
         lr_scheduler_partial: DictConfig,
     ) -> None:
@@ -42,11 +42,8 @@ class NHP(ABSModule):
         )
 
         self.encoder = enc
-
-        #self.train_metrics = instantiate(metrics)
-        #self.val_metrics = instantiate(metrics)
-        #self.test_metrics = instantiate(metrics)
-
+        self.valid_metric = MeanMetric()
+        
     def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor]
     ):
@@ -59,7 +56,7 @@ class NHP(ABSModule):
         Retruns a tuple of:
             inputs - inputs for CCNN model: (event_times, event_types), for loss & metric computation
             outputs - outputs of the model: (encoded_outputs, (pred_times, pred_types))
-        """
+        """        
         _, time_delta, event_types, non_pad_mask, _, type_mask = self.encoder._restruct_batch(batch[0])
         
         loss = self._loss.compute_loss(
@@ -85,8 +82,6 @@ class NHP(ABSModule):
 
         self.log("train_ll_loss", train_ll_loss, prog_bar=True)
 
-        #self.train_metrics.update(inputs, outputs)
-
         return {"loss": train_ll_loss}
 
     def validation_step(
@@ -103,56 +98,22 @@ class NHP(ABSModule):
             dict with val loss
         """
         val_ll_loss = self.shared_step(batch)
-
+        self.valid_metric(-1 * val_ll_loss)
         self.log("val_ll_loss", val_ll_loss, prog_bar=True)
 
         return {"loss": val_ll_loss}
 
-    def test_step(self, batch: tuple[PaddedBatch, torch.Tensor], _) -> None:
-        """Test step of the module.
-
-        Args:
-        ----
-            batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
-        """
-        pass
-    
-    def validation_epoch_end(self, _) -> None:
-        """Compute and log metrics for a validation epoch."""
-        pass # TODO: implement metrics
-
-    '''
-    def training_epoch_end(self, _) -> None:
-        """Compute and log metrics for a training epoch."""
-        if self.head_start is not None and self.current_epoch >= self.head_start:
-            return_time_metric, event_type_metric = self.train_metrics.compute()
-
-            self.log("val_return_time_metric", return_time_metric, prog_bar=True)
-            self.log("val_event_type_metric", event_type_metric, prog_bar=True)
-
-    def validation_epoch_end(self, _) -> None:
-        """Compute and log metrics for a validation epoch."""
-        if self.head_start is not None and self.current_epoch >= self.head_start:
-            return_time_metric, event_type_metric = self.val_metrics.compute()
-
-            self.log("val_return_time_metric", return_time_metric, prog_bar=True)
-            self.log("val_event_type_metric", event_type_metric, prog_bar=True)
-
-    def test_epoch_end(self, _) -> None:
-        """Compute and log metrics for a test epoch."""
-        return_time_metric, event_type_metric = self.test_metrics.compute()
-
-        self.log("test_return_time_metric", return_time_metric, prog_bar=True)
-        self.log("test_event_type_metric", event_type_metric, prog_bar=True)
-    '''
-
     def lr_scheduler_step(self, scheduler, *args, **kwargs):
         """Overwrite method as to fix bug in our PyTorch version."""
         scheduler.step(epoch=self.current_epoch)
+        
+    def validation_epoch_end(self, _) -> None:
+        """Log loss for a validation epoch."""
+        self.log("val_log_likelihood", self.valid_metric, prog_bar=True)
 
     @property
     def is_requires_reduced_sequence(self):
-        """COTIC does not reduce sequence by default."""
+        """NHP does not reduce sequence by default."""
         return False
 
     @property

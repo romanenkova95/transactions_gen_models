@@ -4,10 +4,7 @@ import torch.nn as nn
 class NHPLoss(nn.Module):
     """Loss computation for HNP. """
 
-    def __init__(
-        self,
-        loss_integral_num_sample_per_step,
-    ) -> None:
+    def __init__(self, loss_integral_num_sample_per_step) -> None:
         """Initialize .
 
         Args:
@@ -30,27 +27,20 @@ class NHPLoss(nn.Module):
 
         Args:
             time_delta_seq (tensor): [batch_size, seq_len], time_delta_seq from model input.
-            lambda_at_event (tensor): [batch_size, seq_len, num_event_types], unmasked intensity at
-            (right after) the event.
-            lambdas_loss_samples (tensor): [batch_size, seq_len, num_sample, num_event_types],
-            intensity at sampling times.
+            lambda_at_event (tensor): [batch_size, seq_len, num_event_types], unmasked intensity at (right after) the event.
+            lambdas_loss_samples (tensor): [batch_size, seq_len, num_sample, num_event_types], intensity at sampling times.
             seq_mask (tensor): [batch_size, seq_len], sequence mask vector to mask the padded events.
-            lambda_type_mask (tensor): [batch_size, seq_len, num_event_types], type mask matrix to mask the
-            padded event types.
+            lambda_type_mask (tensor): [batch_size, seq_len, num_event_types], type mask matrix to mask the padded event types.
 
         Returns:
             tuple: event loglike, non-event loglike, intensity at event with padding events masked
         """
-
         # Sum of lambda over every type and every event point
         # [batch_size, seq_len]
-        print("lambda_at_event:", lambda_at_event.device)
-        print("lambda_type_mask:", lambda_type_mask.device)
-        
         event_lambdas = torch.sum(lambda_at_event * lambda_type_mask, dim=-1) + self.eps
 
         # mask the pad event
-        event_lambdas = event_lambdas.masked_fill_(seq_mask == 0., 1.0) # UPD: we have float masks which is a bit strange...
+        event_lambdas = event_lambdas.masked_fill_(seq_mask == 0, 1.0)
 
         # [batch_size, seq_len)
         event_ll = torch.log(event_lambdas)
@@ -131,9 +121,7 @@ class NHPLoss(nn.Module):
 
         Returns:
             list: loglike loss, num events.
-        """
-        #time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, _, type_mask = batch
-        
+        """        
         inputs = (time_delta_seqs, type_seqs)
         hiddens_ti, decay_states = seq_encoder(inputs)
 

@@ -82,7 +82,7 @@ class LocalValidationModelBase(pl.LightningModule):
             * torch.Tensor of predicted targets
             * torch.Tensor with mask corresponding to non-padded times
         """
-        out = self.backbone(inputs)
+        out = self.backbone.get_embeddings(inputs)
         preds = self.pred_head(out)
         return preds
 

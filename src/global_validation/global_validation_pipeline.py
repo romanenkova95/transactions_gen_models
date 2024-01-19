@@ -120,7 +120,7 @@ def embed_data(
             batch = dataset[i * batch_size : (i + 1) * batch_size]
             batch_collated = collate_feature_dict(batch).to(device)
 
-            embeddings = seq_encoder(batch_collated).detach().cpu()
+            embeddings = seq_encoder.get_embeddings(batch_collated).detach().cpu()
             embeddings_all += [*embeddings]
 
             targets_all += [batch_collated.payload["global_target"].detach().cpu()]

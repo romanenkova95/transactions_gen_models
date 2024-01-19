@@ -6,7 +6,7 @@ hidden_size: 64
 num_types: 100
 beta: 1.0
 bias: True
-max_steps: null # do we need it?
+max_steps: null
 max_decay_time: 5.0
 num_event_types_pad: 101
 pad_token_id: 0

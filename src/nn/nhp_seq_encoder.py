@@ -20,13 +20,10 @@ class NHPEncoder(AbsSeqEncoder):
         num_types: int,
         beta: float,
         bias: bool,
-
-        max_steps: int,
+        max_steps: Optional[int],
         max_decay_time: float,
-        
         num_event_types_pad: int,
         pad_token_id: int,
-        
         is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
     ) -> None:
@@ -37,14 +34,20 @@ class NHPEncoder(AbsSeqEncoder):
             input_size (int): input size for CCNN (output size of feature embeddings)
             hidden_size (int): size of the output embeddings of the encoder
             num_types (int): number of event types in in the dataset
-            kernel (nn.Module): kernel (MLP, by default)
-            num_layers (int): number of continuous convolutional layers
-            kernel_size (int): kernel size
+            
+            beta (float)
+            bias (bool)
+            max_steps (int)
+            max_decay_time (float)
+            num_event_types_pad (int)
+            pad_token_id (int)
+            
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
         super().__init__(is_reduce_sequence=is_reduce_sequence)
 
+        self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_types = num_types
         self.beta = beta
@@ -56,6 +59,7 @@ class NHPEncoder(AbsSeqEncoder):
         self.pad_token_id = pad_token_id
         
         self.rnn_cell = ContTimeLSTMCell(
+            embed_dim=input_size,
             hidden_dim=hidden_size,
             num_event_types_pad=num_event_types_pad,
             pad_token_id=pad_token_id,
@@ -87,9 +91,7 @@ class NHPEncoder(AbsSeqEncoder):
         
         return h_t, c_t, c_bar
 
-    def forward(
-        self, inputs #time_delta_seq, event_seq
-    ) -> torch.Tensor:
+    def forward(self, inputs) -> torch.Tensor:
         """Forward pass through the model.
 
         Args:
@@ -169,123 +171,14 @@ class NHPEncoder(AbsSeqEncoder):
         )
 
         return hiddens_stack, decay_states_stack
-        
-        # if self.is_reduce_sequence:
-        #    if self.reducer == "maxpool":
-        #        out = out.max(dim=1).values
-        #    else:
-        #        raise NotImplementedError("Unknown reducer.")
-
-        # return out
-
-'''
-    def compute_intensities_at_sample_times(
-        self, time_delta_seqs, type_seqs, sample_dtimes, compute_last_step_only: bool = False
-    ):
-        """Compute the intensity at sampled times, not only event times.
-
-        Args:
-            time_seqs (tensor): [batch_size, seq_len], times seqs.
-            time_delta_seqs (tensor): [batch_size, seq_len], time delta seqs.
-            type_seqs (tensor): [batch_size, seq_len], event type seqs.
-            sample_dtimes (tensor): [batch_size, seq_len, num_sample], sampled inter-event timestamps.
-
-        Returns:
-            tensor: [batch_size, num_times, num_mc_sample, num_event_types],
-                    intensity at each timestamp for each event type.
-        """
-        input_ = time_delta_seqs, type_seqs
-
-        # forward to the last but one event
-        hiddens_ti, decay_states = self.forward(input_)
-
-        # Num of samples in each batch and num of event time point in the sequence
-        # batch_size, seq_len, _ = hiddens_ti.size()
-
-        # update the states given last event
-        # cells (batch_size, num_times, hidden_dim)
-        cells, cell_bars, decays, outputs = decay_states.unbind(dim=-2)
-
-        if compute_last_step_only:
-            interval_t_sample = sample_dtimes[:, -1:, :, None]
-            _, h_ts = self.rnn_cell.decay(cells[:, -1:, None, :],
-                                          cell_bars[:, -1:, None, :],
-                                          decays[:, -1:, None, :],
-                                          outputs[:, -1:, None, :],
-                                          interval_t_sample)
-
-            # [batch_size, 1, num_mc_sample, num_event_types]
-            sampled_intensities = self.layer_intensity(h_ts)
-
-        else:
-            # interval_t_sample - [batch_size, num_times, num_mc_sample, 1]
-            interval_t_sample = sample_dtimes[..., None]
-            # Use broadcasting to compute the decays at all time steps
-            # at all sample points
-            # h_ts shape (batch_size, num_times, num_mc_sample, hidden_dim)
-            # cells[:, :, None, :]  (batch_size, num_times, 1, hidden_dim)
-            _, h_ts = self.rnn_cell.decay(cells[:, :, None, :],
-                                          cell_bars[:, :, None, :],
-                                          decays[:, :, None, :],
-                                          outputs[:, :, None, :],
-                                          interval_t_sample)
-
-            # [batch_size, num_times, num_mc_sample, num_event_types]
-            sampled_intensities = self.layer_intensity(h_ts)
-
-        return sampled_intensities
     
-    def predict_one_step_at_every_event(self, time_seq, time_delta_seq, event_seq):
-        """One-step prediction for every event in the sequence.
-
-        Args:
-            time_seqs (tensor): [batch_size, seq_len].
-            time_delta_seqs (tensor): [batch_size, seq_len].
-            type_seqs (tensor): [batch_size, seq_len].
-
-        Returns:
-            tuple: tensors of dtime and type prediction, [batch_size, seq_len].
-        """
-        # time_seq, time_delta_seq, event_seq, batch_non_pad_mask, _, type_mask = batch
-
-        # remove the last event, as the prediction based on the last event has no label
-        # time_delta_seq should start from 1, because the first one is zero
-        time_seq, time_delta_seq, event_seq = time_seq[:, :-1], time_delta_seq[:, 1:], event_seq[:, :-1]
-
-        # [batch_size, seq_len]
-        dtime_boundary = time_delta_seq + self.event_sampler.dtime_max
-
-        # [batch_size, seq_len, num_sample]
-        accepted_dtimes, weights = self.event_sampler.draw_next_time_one_step(time_seq,
-                                                                              time_delta_seq,
-                                                                              event_seq,
-                                                                              dtime_boundary,
-                                                                              self.compute_intensities_at_sample_times)
-
-        # [batch_size, seq_len]
-        dtimes_pred = torch.sum(accepted_dtimes * weights, dim=-1)
-
-        # [batch_size, seq_len, 1, event_num]
-        intensities_at_times = self.compute_intensities_at_sample_times(time_seq,
-                                                                        time_delta_seq,
-                                                                        event_seq,
-                                                                        dtimes_pred[:, :, None],
-                                                                        max_steps=event_seq.size()[1])
-
-        # [batch_size, seq_len, event_num]
-        intensities_at_times = intensities_at_times.squeeze(dim=-2)
-
-        types_pred = torch.argmax(intensities_at_times, dim=-1)
-
-        return dtimes_pred, types_pred
-'''
         
 class NHPSeqEncoder(SeqEncoderContainer):
     """Pytorch-lifestream container wrapper for ... sequence encoder."""
 
     def __init__(
         self,
-        input_size: int, # Q: do we need it ???
+        input_size: int, # aka embd size
         trx_encoder: Optional[TrxEncoder] = None,
         is_reduce_sequence: bool = False,
         col_time: str = "event_time",
@@ -379,7 +272,6 @@ class NHPSeqEncoder(SeqEncoderContainer):
 
         Returns:
             np.array: a 3-dim matrix, where the last dim (one-hot vector) indicates the type of event
-
         """
         type_mask = torch.zeros([*pad_seqs.shape, num_event_types], dtype=torch.int32)
         
@@ -396,9 +288,9 @@ class NHPSeqEncoder(SeqEncoderContainer):
         time_delta = torch.hstack((event_times[:, 0].unsqueeze(-1), time_delta)) # EasyTPP format: start with 1st time, then diff
         
         type_mask = self.make_type_mask_for_pad_sequence(event_types, num_event_types=self.seq_encoder.num_types)
-        attention_mask = self.make_attn_mask_for_pad_sequence(event_types, pad_token_id=0) # Q: should we pass it ???
+        attention_mask = self.make_attn_mask_for_pad_sequence(event_types, pad_token_id=self.seq_encoder.pad_token_id)
         
-        non_pad_mask = event_times.ne(0).type(torch.float) # and here
+        non_pad_mask = event_times.ne(0).type(torch.int32)
         
         return event_times, time_delta, event_types, non_pad_mask, attention_mask, type_mask # no need for event_times and attention_mask here 
     
@@ -420,3 +312,12 @@ class NHPSeqEncoder(SeqEncoderContainer):
         hiddens_stack, decay_states_stack = self.seq_encoder(inputs)
         
         return hiddens_stack, decay_states_stack
+    
+    def get_embeddings(self, x):
+        out = self.forward(x)[0]
+        if self.is_reduce_sequence:
+            if self.seq_encoder.reducer == "maxpool":
+                out = out.max(dim=1).values
+            else:
+                raise NotImplementedError("Unknown reducer.")
+        return out

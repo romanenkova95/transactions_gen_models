@@ -7,7 +7,14 @@ import torch.nn as nn
 class ContTimeLSTMCell(nn.Module):
     """LSTM Cell in Neural Hawkes Process, NeurIPS'17."""
 
-    def __init__(self, hidden_dim: int, num_event_types_pad, pad_token_id, beta: float = 1.0) -> None:
+    def __init__(
+        self,
+        embed_dim: int,
+        hidden_dim: int,
+        num_event_types_pad,
+        pad_token_id,
+        beta: float = 1.0
+    ) -> None:
         """Initialize the continuous LSTM cell.
 
         Args:
@@ -15,17 +22,16 @@ class ContTimeLSTMCell(nn.Module):
             beta (float, optional): beta in nn.Softplus. Defaults to 1.0.
         """
         super(ContTimeLSTMCell, self).__init__()
-        # self.hidden_dim = hidden_dim
         
         self.layer_type_emb = nn.Embedding(
             num_event_types_pad,  # have padding
-            hidden_dim,
+            embed_dim,
             padding_idx=pad_token_id
         )
         
-        self.init_dense_layer(hidden_dim, bias=True, beta=beta)
+        self.init_dense_layer(embed_dim, hidden_dim, bias=True, beta=beta)
 
-    def init_dense_layer(self, hidden_dim: int, bias: bool, beta: float) -> None:
+    def init_dense_layer(self, embed_dim, hidden_dim: int, bias: bool, beta: float) -> None:
         """Initialize linear layers given Equations (5a-6c) in the paper.
 
         Args:
@@ -33,14 +39,24 @@ class ContTimeLSTMCell(nn.Module):
             bias (bool): whether to use bias term in nn.Linear.
             beta (float): beta in nn.Softplus.
         """
-        self.layer_input = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        self.layer_forget = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        self.layer_output = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        self.layer_input_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        self.layer_forget_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        self.layer_pre_c = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_input = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_forget = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_output = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_input_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_forget_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_pre_c = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
+        #self.layer_decay = nn.Sequential(
+        #    nn.Linear(hidden_dim * 2, hidden_dim, bias=bias),
+        #    nn.Softplus(beta=beta))
+        
+        self.layer_input = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
+        self.layer_forget = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
+        self.layer_output = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
+        self.layer_input_bar = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
+        self.layer_forget_bar = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
+        self.layer_pre_c = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_decay = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim, bias=bias),
+            nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias),
             nn.Softplus(beta=beta))
 
     def forward(
