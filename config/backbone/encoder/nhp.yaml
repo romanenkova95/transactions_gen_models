@@ -9,5 +9,5 @@ bias: True
 max_steps: null
 max_decay_time: 5.0
 num_event_types_pad: 101
-pad_token_id: 0
+pad_token_id: 100
 reducer: maxpool
