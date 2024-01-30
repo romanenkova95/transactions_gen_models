@@ -11,7 +11,7 @@ from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from .nhp_components import ContTimeLSTMCell
 
 class NHPEncoder(AbsSeqEncoder):
-    """The continuous convolutional sequence encoder for COTIC."""
+    """."""
  
     def __init__(
         self,
@@ -27,7 +27,7 @@ class NHPEncoder(AbsSeqEncoder):
         is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
     ) -> None:
-        """Continous convoluitonal sequence encoder for COTIC model.
+        """.
 
         Args:
         ----
