@@ -1,5 +1,5 @@
 defaults:
- - dataset: cotic
+ - dataset: tpp
  - encoder: cotic
  - module: cotic
  - _self_

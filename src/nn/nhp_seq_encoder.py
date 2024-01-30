@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -8,11 +8,11 @@ from ptls.nn import TrxEncoder
 from ptls.nn.seq_encoder.abs_seq_encoder import AbsSeqEncoder
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
-from .nhp_components import ContTimeLSTMCell
+from .nhp_components import ContTimeLSTMCell, restruct_batch
 
 
 class NHPEncoder(AbsSeqEncoder):
-    """The continuous convolutional sequence encoder for COTIC."""
+    """Continuous-time LSTM sequence encoder for the NHP model."""
 
     def __init__(
         self,
@@ -28,21 +28,19 @@ class NHPEncoder(AbsSeqEncoder):
         is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
     ) -> None:
-        """Continous convoluitonal sequence encoder for NHP model.
+        """Initialize continous-time LSTM sequence encoder for the NHP model.
 
         Args:
         ----
             input_size (int): input size for CCNN (output size of feature embeddings)
             hidden_size (int): size of the output embeddings of the encoder
             num_types (int): number of event types in in the dataset
-
-            beta (float)
-            bias (bool)
-            max_steps (int)
-            max_decay_time (float)
-            num_event_types_pad (int)
-            pad_token_id (int)
-
+            beta (float): beta in nn.Softplus for ContTimeLSTMCell
+            bias (bool): if True, include bias in the intensity layer
+            max_steps (int): if not None, crop all the sequences up to 'max_steps'
+            max_decay_time (float): restrict maximum dt for the decay of the LSTM hidden state
+            num_event_types_pad (int): total number of events, including padding type 
+            pad_token_id (int): event type used for padding (num_event_types in EasyTPP pipeline)
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
@@ -74,14 +72,19 @@ class NHPEncoder(AbsSeqEncoder):
 
         self.reducer = reducer
 
-    def init_state(self, batch_size, device):
+    def init_state(self, batch_size: int, device: str) -> Tuple[torch.Tensor]:
         """Initialize hidden and cell states.
 
         Args:
-            batch_size (int): size of batch data.
+        ----
+            batch_size (int): size of batch data
+            device (str): 'cpu' or 'cuda' if available
 
         Returns:
-            list: list of hidden states, cell states and cell bar states.
+        -------
+            * h_t - torch.Tensor of LSTM hidden states
+            * c_t - torch.Tensor of LSTM cell states
+            * c_bar - torch.Tensor of LSTM cell bar states 
         """
         h_t, c_t, c_bar = torch.zeros(
             batch_size, 3 * self.hidden_size, device=device
@@ -89,15 +92,18 @@ class NHPEncoder(AbsSeqEncoder):
 
         return h_t, c_t, c_bar
 
-    def forward(self, inputs) -> torch.Tensor:
-        """Forward pass through the model.
+    def run_batch(self, inputs: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+        """Pass batch through the model, return hidden states and decayed states for log-likelihood loss computation.
 
         Args:
+            inputs (Tuple of torch.Tensors): 
+                * time_delta_seq - time deltas between events
+                * event_seq - event types
 
         Returns:
-            torch.Tensor with model output
+            * hiddens_stack (torch.Tensor): hidden states of contimuous-time LSTM
+            * decay_states_stack (torch.Tensor): hidden states of contimuous-time LSTM after exponential decay 
         """
-
         time_delta_seq, event_seq = inputs
 
         all_hiddens = []
@@ -134,9 +140,8 @@ class NHPEncoder(AbsSeqEncoder):
                 if i == event_seq.size(1) - 1:
                     dt = torch.ones_like(time_delta_seq[:, i]) * self.max_decay_time
                 else:
-                    dt = time_delta_seq[:, i + 1]  # need to carefully check here
+                    dt = time_delta_seq[:, i + 1]
                 types_sub_batch = event_seq[:, i]
-                # x_t = self.layer_type_emb(types_sub_batch)
 
                 # cell_i  (batch_size, process_dim)
                 cell_i, c_bar_i, decay_i, output_i = self.rnn_cell(
@@ -170,6 +175,25 @@ class NHPEncoder(AbsSeqEncoder):
         )
 
         return hiddens_stack, decay_states_stack
+    
+    def forward(self, inputs):
+        """Forward pass through the model.
+
+        Args:
+        ----
+            inputs (Tuple[torch.Tensor]): inputs as passed to .run_batch() method above
+
+        Returns:
+        -------
+            torch.Tensor with model output
+        """
+        out = self.run_batch(inputs)[0] # take only hidden states for embeddings
+        if self.is_reduce_sequence:
+            if self.reducer == "maxpool":
+                out = out.max(dim=1).values
+            else:
+                raise NotImplementedError("Unknown reducer.")
+        return out
 
 
 class NHPSeqEncoder(SeqEncoderContainer):
@@ -177,19 +201,19 @@ class NHPSeqEncoder(SeqEncoderContainer):
 
     def __init__(
         self,
-        input_size: int,  # aka embd size
+        input_size: int,
         trx_encoder: Optional[TrxEncoder] = None,
         is_reduce_sequence: bool = False,
         col_time: str = "event_time",
         col_type: str = "mcc_code",
         **seq_encoder_params,
     ) -> None:
-        """Pytorch-lifestream container wrapper for NHP sequence encoder.
+        """Initialize pytorch-lifestream container wrapper for NHP sequence encoder.
 
         Args:
         ----
-            trx_encoder (TrxEncoder=None): we do not use TrxEncoder in this model as we need to keep initial times and features
             input_size (int): input size for CCNN (output size of feature embeddings)
+            trx_encoder (TrxEncoder=None): we do not use TrxEncoder in this model as we need to keep initial times and features
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             col_time (str): name of the field (in PaddedBatch.payload) containig event times
             col_type (str): name of the field (in PaddedBatch.payload) containig event types
@@ -206,110 +230,6 @@ class NHPSeqEncoder(SeqEncoderContainer):
         self.col_time = col_time
         self.col_type = col_type
 
-    @staticmethod
-    def make_attn_mask_for_pad_sequence(pad_seqs, pad_token_id):
-        """Make the attention masks for the sequence.
-
-        Args:
-            pad_seqs (tensor): list of sequences that have been padded with fixed length
-            pad_token_id (int): optional, a value that used to pad the sequences. If None, then the pad index
-            is set to be the event_num_with_pad
-
-        Returns:
-            np.array: a bool matrix of the same size of input, denoting the masks of the
-            sequence (True: non mask, False: mask)
-
-
-        Example:
-        ```python
-        seqs = [[ 1,  6,  0,  7, 12, 12],
-        [ 1,  0,  5,  1, 10,  9]]
-        make_attn_mask_for_pad_sequence(seqs, pad_index=12)
-        >>>
-            batch_non_pad_mask
-            ([[ True,  True,  True,  True, False, False],
-            [ True,  True,  True,  True,  True,  True]])
-            attention_mask
-            [[[ True  True  True  True  True  True]
-              [False  True  True  True  True  True]
-              [False False  True  True  True  True]
-              [False False False  True  True  True]
-              [False False False False  True  True]
-              [False False False False  True  True]]
-
-             [[ True  True  True  True  True  True]
-              [False  True  True  True  True  True]
-              [False False  True  True  True  True]
-              [False False False  True  True  True]
-              [False False False False  True  True]
-              [False False False False False  True]]]
-        ```
-        """
-        seq_num, seq_len = pad_seqs.shape
-
-        # [batch_size, seq_len]
-        seq_pad_mask = pad_seqs == pad_token_id
-
-        # [batch_size, seq_len, seq_len]
-        attention_key_pad_mask = torch.tile(seq_pad_mask[:, None, :], (1, seq_len, 1))
-
-        subsequent_mask = torch.tile(
-            torch.triu(torch.ones((seq_len, seq_len), dtype=bool), diagonal=0)[
-                None, :, :
-            ],
-            (seq_num, 1, 1),
-        ).to(pad_seqs.device)
-
-        attention_mask = subsequent_mask | attention_key_pad_mask
-
-        return attention_mask
-
-    @staticmethod
-    def make_type_mask_for_pad_sequence(pad_seqs, num_event_types):
-        """Make the type mask.
-
-        Args:
-            pad_seqs (tensor): a list of sequence events with equal length (i.e., padded sequence)
-
-        Returns:
-            np.array: a 3-dim matrix, where the last dim (one-hot vector) indicates the type of event
-        """
-        type_mask = torch.zeros([*pad_seqs.shape, num_event_types], dtype=torch.int32)
-
-        for i in range(1, num_event_types):
-            type_mask[:, :, i] = pad_seqs == i
-
-        return type_mask.to(pad_seqs.device)
-
-    def _restruct_batch(self, x: PaddedBatch):
-        event_times = x.payload[self.col_time].float()
-        event_types = x.payload[self.col_type]
-
-        time_delta = event_times[:, 1:] - event_times[:, :-1]
-        time_delta = torch.nn.functional.pad(time_delta, (1, 0))  # EasyTPP format
-
-        non_pad_mask = event_times.ne(0)
-
-        event_times[~non_pad_mask] = self.seq_encoder.pad_token_id
-        event_types[~non_pad_mask] = self.seq_encoder.pad_token_id
-        time_delta[~non_pad_mask] = self.seq_encoder.pad_token_id
-
-        type_mask = self.make_type_mask_for_pad_sequence(
-            event_types, num_event_types=self.seq_encoder.num_types
-        )
-        attention_mask = self.make_attn_mask_for_pad_sequence(
-            event_types, pad_token_id=self.seq_encoder.pad_token_id
-        )
-
-        return (
-            event_times,
-            time_delta,
-            event_types,
-            non_pad_mask.type(torch.int32),
-            attention_mask,
-            type_mask,
-        )  # no need for event_times and attention_mask here
-
     def forward(self, x: PaddedBatch) -> torch.Tensor:
         """Forward pass through the model.
 
@@ -321,18 +241,15 @@ class NHPSeqEncoder(SeqEncoderContainer):
         -------
             torch.Tensor with model output
         """
-        _, time_delta, event_types, _, _, _ = self._restruct_batch(x)
+        _, time_delta, event_types, _, _, _ = restruct_batch(
+            x=x, 
+            col_time=self.col_time, 
+            col_type=self.col_type, 
+            pad_token_id=self.seq_encoder.pad_token_id, 
+            num_types=self.seq_encoder.num_types
+        )
 
         inputs = (time_delta, event_types)
-        hiddens_stack, decay_states_stack = self.seq_encoder(inputs)
+        out = self.seq_encoder(inputs)
 
-        return hiddens_stack, decay_states_stack
-
-    def get_embeddings(self, x):
-        out = self.forward(x)[0]
-        if self.is_reduce_sequence:
-            if self.seq_encoder.reducer == "maxpool":
-                out = out.max(dim=1).values
-            else:
-                raise NotImplementedError("Unknown reducer.")
         return out

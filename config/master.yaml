@@ -1,5 +1,5 @@
 defaults:
-  - preprocessing: cotic_churn_nodup
+  - preprocessing: tpp_churn_nodup
   - backbone: nhp
   - validation: [global_target, event_type, event_time, local_target]
   - logger: comet

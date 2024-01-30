@@ -112,8 +112,19 @@ class NHPLoss(nn.Module):
         )
 
         return h_ts
+    
+    # time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
         
-    def compute_loss(self, seq_encoder, time_delta_seqs, type_seqs, batch_non_pad_mask, type_mask):
+    def compute_loss(
+        self,
+        seq_encoder,
+        time_seqs,
+        time_delta_seqs, 
+        type_seqs, 
+        batch_non_pad_mask,
+        attention_mask,
+        type_mask
+    ):
         """Compute the loglike loss.
 
         Args:
@@ -123,7 +134,7 @@ class NHPLoss(nn.Module):
             list: loglike loss, num events.
         """        
         inputs = (time_delta_seqs, type_seqs)
-        hiddens_ti, decay_states = seq_encoder(inputs)
+        hiddens_ti, decay_states = seq_encoder.run_batch(inputs)
 
         # Num of samples in each batch and num of event time point in the sequence
         # batch_size, seq_len, _ = hiddens_ti.size()
@@ -162,3 +173,81 @@ class NHPLoss(nn.Module):
         loss = - (event_ll - non_event_ll).sum()
         
         return loss / num_events
+    
+class AttnNHPLoss(NHPLoss):
+    """Loss computation for A-HNP."""
+    
+    def compute_intensities_at_sample_times(self, seq_encoder, time_seqs, type_seqs, sample_times, **kwargs):
+        """Compute the intensity at sampled times.
+
+        Args:
+            time_seqs (tensor): [batch_size, seq_len], sequences of timestamps.
+            time_delta_seqs (tensor): [batch_size, seq_len], sequences of delta times.
+            type_seqs (tensor): [batch_size, seq_len], sequences of event types.
+            sampled_dtimes (tensor): [batch_size, seq_len, num_sample], sampled time delta sequence.
+
+        Returns:
+            tensor: intensities as sampled_dtimes, [batch_size, seq_len, num_samples, event_num].
+        """
+        attention_mask = kwargs.get('attention_mask', None)
+        compute_last_step_only = kwargs.get('compute_last_step_only', False)
+
+        if attention_mask is None:
+            batch_size, seq_len = time_seqs.size()
+            attention_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1).unsqueeze(0)
+            attention_mask = attention_mask.expand(batch_size, -1, -1).to(torch.bool)
+
+        if sample_times.size()[1] < time_seqs.size()[1]:
+            # we pass sample_dtimes for last time step here
+            # we do a temp solution
+            # [batch_size, seq_len, num_samples]
+            sample_times = time_seqs[:, :, None] + torch.tile(sample_times, [1, time_seqs.size()[1], 1])
+
+        # [batch_size, seq_len, num_samples, hidden_size]
+        encoder_output = self.compute_states_at_sample_times(time_seqs, type_seqs, attention_mask, sample_times)
+
+        if compute_last_step_only:
+            lambdas = seq_encoder.layer_intensity(encoder_output[:, -1:, :, :])
+        else:
+            # [batch_size, seq_len, num_samples, num_event_types]
+            lambdas = seq_encoder.layer_intensity(encoder_output)
+        return lambdas
+    
+    def compute_loss(
+        self, seq_encoder, time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, attention_mask, type_mask
+    ):
+                
+        # 1. compute event-loglik
+        # the prediction of last event has no label, so we proceed to the last but one
+        # att mask => diag is False, not mask.
+        
+        enc_out = seq_encoder.run_batch(time_seqs[:, :-1], type_seqs[:, :-1], attention_mask[:, 1:, :-1], time_seqs[:, 1:])
+        # [batch_size, seq_len, num_event_types]
+        lambda_at_event = self.layer_intensity(enc_out)
+
+        # 2. compute non-event-loglik (using MC sampling to compute integral)
+        # 2.1 sample times
+        # [batch_size, seq_len, num_sample]
+        temp_time = self.make_dtime_loss_samples(time_delta_seqs[:, 1:])
+
+        # [batch_size, seq_len, num_sample]
+        sample_times = temp_time + time_seqs[:, :-1].unsqueeze(-1)
+
+        # 2.2 compute intensities at sampled times
+        # [batch_size, seq_len = max_len - 1, num_sample, event_num]
+        lambda_t_sample = self.compute_intensities_at_sample_times(time_seqs[:, :-1],
+                                                                #time_delta_seqs[:, :-1],  # not used
+                                                                type_seqs[:, :-1],
+                                                                sample_times,
+                                                                attention_mask=attention_mask[:, 1:, :-1])
+
+        event_ll, non_event_ll, num_events = self.compute_loglikelihood(lambda_at_event=lambda_at_event,
+                                                                        lambdas_loss_samples=lambda_t_sample,
+                                                                        time_delta_seq=time_delta_seqs[:, 1:],
+                                                                        seq_mask=batch_non_pad_mask[:, 1:],
+                                                                        lambda_type_mask=type_mask[:, 1:])
+
+        # return enc_inten to compute accuracy
+        loss = - (event_ll - non_event_ll).sum()
+
+        return loss, num_events

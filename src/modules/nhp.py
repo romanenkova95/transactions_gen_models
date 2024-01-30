@@ -9,6 +9,9 @@ from ptls.data_load import PaddedBatch
 from ptls.frames.abs_module import ABSModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 
+from ..nn.nhp_components import restruct_batch
+
+
 class NHP(ABSModule):
     """Cotic module in ptls format."""
 
@@ -57,10 +60,20 @@ class NHP(ABSModule):
             inputs - inputs for CCNN model: (event_times, event_types), for loss & metric computation
             outputs - outputs of the model: (encoded_outputs, (pred_times, pred_types))
         """        
-        _, time_delta, event_types, non_pad_mask, _, type_mask = self.encoder._restruct_batch(batch[0])
+        (
+            time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
+        ) = restruct_batch(
+            batch[0],
+            col_time=self.encoder.col_time, 
+            col_type=self.encoder.col_type, 
+            pad_token_id=self.encoder.seq_encoder.pad_token_id, 
+            num_types=self.encoder.seq_encoder.num_types
+        )
+        
+        #time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, attention_mask, type_mask
         
         loss = self._loss.compute_loss(
-            self.encoder.seq_encoder, time_delta, event_types, non_pad_mask, type_mask
+            self.encoder.seq_encoder, time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
         )
 
         return loss
