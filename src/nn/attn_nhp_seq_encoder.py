@@ -25,12 +25,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
         num_heads,
         dropout, 
         num_types: int,
-        #beta: float,
-        #bias: bool,
-        #max_steps: Optional[int],
-        #max_decay_time: float,
-        #num_event_types_pad: int,
-        
+        num_event_types_pad: int,
         pad_token_id: int,
         is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
@@ -52,36 +47,36 @@ class AttnNHPEncoder(AbsSeqEncoder):
         super().__init__(is_reduce_sequence=is_reduce_sequence)
 
         self.input_size = input_size
+        self.model_size = hidden_size // 2
         self.hidden_size = hidden_size
         self.num_types = num_types
-        #self.beta = beta
-        #self.bias = bias
 
-        #self.max_steps = max_steps
-        #self.max_decay_time = max_decay_time
-
+        self.num_event_types_pad = num_event_types_pad
         self.pad_token_id = pad_token_id
 
-        self.hidden_size = hidden_size
         self.use_ln = use_ln
         self.time_emb_size = time_emb_size
 
-        self.div_term = torch.exp(torch.arange(0, self.d_time, 2) * -(math.log(10000.0) / self.d_time)).reshape(1, 1,
-                                                                                                                -1)
+        self.div_term = torch.exp(
+            torch.arange(0, self.time_emb_size, 2) * -(math.log(10000.0) / self.time_emb_size)
+        ).reshape(1, 1, -1)
 
         self.num_layers = num_layers
         self.num_heads = num_heads
         self.dropout = dropout
+        
+        # self.input_layer = nn.Linear(self.input_size + time_emb_size, self.model_size)
 
         self.heads = []
-        for i in range(self.num_heads):
+        for _ in range(self.num_heads):
             self.heads.append(
                 nn.ModuleList(
                     [EncoderLayer(
-                        self.hidden_size + self.time_emb_size,
-                        MultiHeadAttention(1, self.hidden_size + self.time_emb_size, self.hidden_size, self.dropout,
-                                           output_linear=False),
-
+                        self.model_size + self.time_emb_size,
+                        MultiHeadAttention(
+                            1, self.input_size + self.time_emb_size, self.model_size, self.dropout,
+                            output_linear=False
+                        ),
                         use_residual=False,
                         dropout=self.dropout
                     )
@@ -92,10 +87,16 @@ class AttnNHPEncoder(AbsSeqEncoder):
         self.heads = nn.ModuleList(self.heads)
 
         if self.use_ln:
-            self.norm = nn.LayerNorm(self.hidden_size)
-        self.inten_linear = nn.Linear(self.hidden_size * self.num_heads, self.num_types)
+            self.norm = nn.LayerNorm(self.model_size)
+        self.inten_linear = nn.Linear(self.model_size * self.num_heads, self.num_types)
         self.softplus = nn.Softplus()
-        self.layer_event_emb = nn.Linear(self.hidden_size + self.time_emb_size, self.hidden_size)
+        
+        self.layer_type_emb = nn.Embedding(
+            self.num_event_types_pad,
+            self.input_size,
+            padding_idx=pad_token_id
+        )
+        
         self.layer_intensity = nn.Sequential(self.inten_linear, self.softplus)
         self.eps = torch.finfo(torch.float32).eps
 
@@ -112,7 +113,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
         """
         batch_size = time.size(0)
         seq_len = time.size(1)
-        pe = torch.zeros(batch_size, seq_len, self.d_time).to(time)
+        pe = torch.zeros(batch_size, seq_len, self.time_emb_size).to(time)
         _time = time.unsqueeze(-1)
         div_term = self.div_term.to(time)
         pe[..., 0::2] = torch.sin(_time * div_term)
@@ -134,8 +135,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
         time_emb = self.compute_temporal_embedding(time_seqs)
         
         # [batch_size, seq_len, hidden_size]
-        # type_emb = torch.tanh(self.layer_type_emb(event_seqs.long()))
-        type_emb = torch.tanh(event_seqs.long())
+        type_emb = torch.tanh(self.layer_type_emb(event_seqs.long()))    
         
         # [batch_size, seq_len, hidden_size*2]
         event_emb = torch.cat([type_emb, time_emb], dim=-1)
@@ -193,7 +193,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
         for head_i in range(self.num_heads):
             # [batch_size, seq_len, hidden_size]
             cur_layer_ = init_cur_layer
-            for layer_i in range(self.n_layers):
+            for layer_i in range(self.num_layers):
                 # each layer concats the temporal emb
                 # [batch_size, seq_len, hidden_size*2]
                 layer_ = torch.cat([cur_layer_, sample_time_emb], dim=-1)
@@ -208,6 +208,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
                 # [batch_size, seq_len, hidden_size]
                 _cur_layer_ = enc_output[:, seq_len:, :]
                 # add residual connection
+                
                 cur_layer_ = torch.tanh(_cur_layer_) + cur_layer_
 
                 # event emb
@@ -234,7 +235,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
         """
         event_emb, time_emb, type_emb = self.seq_encoding(time_seqs, event_seqs)
         init_cur_layer = torch.zeros_like(type_emb)
-        layer_mask = self.make_layer_mask(attention_mask)
+        layer_mask = self.make_layer_mask(attention_mask).to(attention_mask.device)
         if sample_times is None:
             sample_time_emb = time_emb
         else:
@@ -246,8 +247,12 @@ class AttnNHPEncoder(AbsSeqEncoder):
     
     
     def forward(self, inputs):
-        #out = self.run_batch(inputs)[0] # take only hidden states for embeddings
-        out = self.run_batch(inputs)
+        time_seqs, event_seqs, attention_mask, sample_times = inputs
+        
+        out = self.run_batch(time_seqs, event_seqs, attention_mask, sample_times)
+        
+        if out.isnan().any().item():
+            print("!!! NaN in model's out !!!")
        
         if self.is_reduce_sequence:
             if self.reducer == "maxpool":
@@ -311,7 +316,8 @@ class AttnNHPSeqEncoder(SeqEncoderContainer):
             num_types=self.seq_encoder.num_types
         )
         
-        inputs = (time_seqs, event_types, attention_mask)
+        inputs = (time_seqs, event_types, attention_mask, None) # sample_times=None Q: is it ok???
+        
         out = self.seq_encoder(inputs)
 
         return out

@@ -1,7 +1,7 @@
 _target_: src.modules.NHP
 loss:
-  _target_: src.losses.NHPLoss
-  loss_integral_num_sample_per_step: 20
+  _target_: src.losses.AttnNHPLoss
+  loss_integral_num_sample_per_step: 10
 optimizer_partial:
   _partial_: True
   _target_: torch.optim.Adam

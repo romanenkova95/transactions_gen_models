@@ -177,7 +177,51 @@ class NHPLoss(nn.Module):
 class AttnNHPLoss(NHPLoss):
     """Loss computation for A-HNP."""
     
-    def compute_intensities_at_sample_times(self, seq_encoder, time_seqs, type_seqs, sample_times, **kwargs):
+    @staticmethod
+    def compute_states_at_sample_times(
+        seq_encoder, time_seqs, type_seqs, attention_mask, sample_times
+    ):
+        """Compute the states at sampling times.
+
+        Args:
+            time_seqs (tensor): [batch_size, seq_len], sequences of timestamps.
+            time_delta_seqs (tensor): [batch_size, seq_len], sequences of delta times.
+            type_seqs (tensor): [batch_size, seq_len], sequences of event types.
+            attention_mask (tensor): [batch_size, seq_len, seq_len], masks for event sequences.
+            sample_dtimes (tensor): delta times in sampling.
+
+        Returns:
+            tensor: hiddens states at sampling times.
+        """
+        batch_size = type_seqs.size(0)
+        seq_len = type_seqs.size(1)
+        num_samples = sample_times.size(-1)
+
+        # [num_samples, batch_size, seq_len]
+        sample_times = sample_times.permute((2, 0, 1))
+        # [num_samples * batch_size, seq_len]
+        _sample_time = sample_times.reshape(num_samples * batch_size, -1)
+        # [num_samples * batch_size, seq_len]
+        _types = type_seqs.expand(num_samples, -1, -1).reshape(num_samples * batch_size, -1)
+        # [num_samples * batch_size, seq_len]
+        _times = time_seqs.expand(num_samples, -1, -1).reshape(num_samples * batch_size, -1)
+        # [num_samples * batch_size, seq_len]
+        _attn_mask = attention_mask.unsqueeze(0).expand(num_samples, -1, -1, -1).reshape(num_samples * batch_size,
+                                                                                         seq_len,
+                                                                                         seq_len)
+        # [num_samples * batch_size, seq_len, hidden_size]
+        inputs = (_times, _types, _attn_mask, _sample_time)
+        encoder_output = seq_encoder(inputs)
+
+        # [num_samples, batch_size, seq_len, hidden_size]
+        encoder_output = encoder_output.reshape(num_samples, batch_size, seq_len, -1)
+        # [batch_size, seq_len, num_samples, hidden_size]
+        encoder_output = encoder_output.permute((1, 2, 0, 3))
+        return encoder_output
+    
+    def compute_intensities_at_sample_times(
+        self, seq_encoder, time_seqs, type_seqs, sample_times, attention_mask, compute_last_step_only=False 
+    ):
         """Compute the intensity at sampled times.
 
         Args:
@@ -189,8 +233,8 @@ class AttnNHPLoss(NHPLoss):
         Returns:
             tensor: intensities as sampled_dtimes, [batch_size, seq_len, num_samples, event_num].
         """
-        attention_mask = kwargs.get('attention_mask', None)
-        compute_last_step_only = kwargs.get('compute_last_step_only', False)
+        #attention_mask = kwargs.get('attention_mask', None)
+        #compute_last_step_only = kwargs.get('compute_last_step_only', False)
 
         if attention_mask is None:
             batch_size, seq_len = time_seqs.size()
@@ -204,7 +248,9 @@ class AttnNHPLoss(NHPLoss):
             sample_times = time_seqs[:, :, None] + torch.tile(sample_times, [1, time_seqs.size()[1], 1])
 
         # [batch_size, seq_len, num_samples, hidden_size]
-        encoder_output = self.compute_states_at_sample_times(time_seqs, type_seqs, attention_mask, sample_times)
+        encoder_output = self.compute_states_at_sample_times(
+            seq_encoder, time_seqs, type_seqs, attention_mask, sample_times
+        )
 
         if compute_last_step_only:
             lambdas = seq_encoder.layer_intensity(encoder_output[:, -1:, :, :])
@@ -223,7 +269,7 @@ class AttnNHPLoss(NHPLoss):
         
         enc_out = seq_encoder.run_batch(time_seqs[:, :-1], type_seqs[:, :-1], attention_mask[:, 1:, :-1], time_seqs[:, 1:])
         # [batch_size, seq_len, num_event_types]
-        lambda_at_event = self.layer_intensity(enc_out)
+        lambda_at_event = seq_encoder.layer_intensity(enc_out)
 
         # 2. compute non-event-loglik (using MC sampling to compute integral)
         # 2.1 sample times
@@ -235,11 +281,14 @@ class AttnNHPLoss(NHPLoss):
 
         # 2.2 compute intensities at sampled times
         # [batch_size, seq_len = max_len - 1, num_sample, event_num]
-        lambda_t_sample = self.compute_intensities_at_sample_times(time_seqs[:, :-1],
-                                                                #time_delta_seqs[:, :-1],  # not used
-                                                                type_seqs[:, :-1],
-                                                                sample_times,
-                                                                attention_mask=attention_mask[:, 1:, :-1])
+        lambda_t_sample = self.compute_intensities_at_sample_times(
+            seq_encoder, 
+            time_seqs[:, :-1],
+            #time_delta_seqs[:, :-1],  # not used
+            type_seqs[:, :-1],
+            sample_times,
+            attention_mask[:, 1:, :-1]
+        )
 
         event_ll, non_event_ll, num_events = self.compute_loglikelihood(lambda_at_event=lambda_at_event,
                                                                         lambdas_loss_samples=lambda_t_sample,
@@ -250,4 +299,4 @@ class AttnNHPLoss(NHPLoss):
         # return enc_inten to compute accuracy
         loss = - (event_ll - non_event_ll).sum()
 
-        return loss, num_events
+        return loss / num_events

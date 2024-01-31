@@ -8,7 +8,7 @@ def attention(query, key, value, mask=None, dropout=None):
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         # small change here -- we use "1" for masked element
-        scores = scores.masked_fill(mask > 0, -1e9)
+        scores = scores.masked_fill(mask > 0, float("-inf"))
     p_attn = torch.softmax(scores, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)
@@ -17,18 +17,23 @@ def attention(query, key, value, mask=None, dropout=None):
 class MultiHeadAttention(nn.Module):
     def __init__(self, n_head, d_input, d_model, dropout=0.1, output_linear=False):
         super(MultiHeadAttention, self).__init__()
+        
         assert d_model % n_head == 0
+        
         self.n_head = n_head
         self.d_k = d_model // n_head
         self.d_v = self.d_k
+       
+        self.d_input = d_input 
         self.d_model = d_model
+        
         self.output_linear = output_linear
-
+        
         if output_linear:
             self.linears = nn.ModuleList(
-                [nn.Linear(d_input, d_model) for _ in range(3)] + [nn.Linear(d_model, d_model), ])
+                [nn.Linear(self.d_input, self.d_model) for _ in range(3)] + [nn.Linear(self.d_model, self.d_model), ])
         else:
-            self.linears = nn.ModuleList([nn.Linear(d_input, d_model) for _ in range(3)])
+            self.linears = nn.ModuleList([nn.Linear(self.d_input, self.d_model) for _ in range(3)])
 
         self.dropout = nn.Dropout(p=dropout)
 
@@ -41,10 +46,10 @@ class MultiHeadAttention(nn.Module):
             lin_layer(x).view(nbatches, -1, self.n_head, self.d_k).transpose(1, 2)
             for lin_layer, x in zip(self.linears, (query, key, value))
         ]
+        
         x, attn_weight = attention(query, key, value, mask=mask, dropout=self.dropout)
 
-        x = x.transpose(1, 2).contiguous() \
-            .view(nbatches, -1, self.n_head * self.d_k)
+        x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.n_head * self.d_k)
 
         if self.output_linear:
             if output_weight:

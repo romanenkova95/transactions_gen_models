@@ -92,7 +92,7 @@ class NHPEncoder(AbsSeqEncoder):
 
         return h_t, c_t, c_bar
 
-    def run_batch(self, inputs: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+    def run_batch(self, time_delta_seq, event_seq) -> Tuple[torch.Tensor]:
         """Pass batch through the model, return hidden states and decayed states for log-likelihood loss computation.
 
         Args:
@@ -104,8 +104,6 @@ class NHPEncoder(AbsSeqEncoder):
             * hiddens_stack (torch.Tensor): hidden states of contimuous-time LSTM
             * decay_states_stack (torch.Tensor): hidden states of contimuous-time LSTM after exponential decay 
         """
-        time_delta_seq, event_seq = inputs
-
         all_hiddens = []
         all_outputs = []
         all_cells = []
@@ -187,7 +185,9 @@ class NHPEncoder(AbsSeqEncoder):
         -------
             torch.Tensor with model output
         """
-        out = self.run_batch(inputs)[0] # take only hidden states for embeddings
+        time_delta_seq, event_seq = inputs
+        
+        out = self.run_batch(time_delta_seq, event_seq)[0] # take only hidden states for embeddings
         if self.is_reduce_sequence:
             if self.reducer == "maxpool":
                 out = out.max(dim=1).values

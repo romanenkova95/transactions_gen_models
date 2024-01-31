@@ -69,9 +69,7 @@ class NHP(ABSModule):
             pad_token_id=self.encoder.seq_encoder.pad_token_id, 
             num_types=self.encoder.seq_encoder.num_types
         )
-        
-        #time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, attention_mask, type_mask
-        
+                
         loss = self._loss.compute_loss(
             self.encoder.seq_encoder, time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
         )
