@@ -112,17 +112,15 @@ class NHPLoss(nn.Module):
         )
 
         return h_ts
-    
-    # time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
         
     def compute_loss(
         self,
         seq_encoder,
-        time_seqs,
+        time_seqs, # for interface consistency only
         time_delta_seqs, 
         type_seqs, 
         batch_non_pad_mask,
-        attention_mask,
+        attention_mask, # for interface consistency only
         type_mask
     ):
         """Compute the loglike loss.
@@ -133,8 +131,7 @@ class NHPLoss(nn.Module):
         Returns:
             list: loglike loss, num events.
         """        
-        inputs = (time_delta_seqs, type_seqs)
-        hiddens_ti, decay_states = seq_encoder.run_batch(inputs)
+        hiddens_ti, decay_states = seq_encoder.run_batch(time_delta_seqs, type_seqs)
 
         # Num of samples in each batch and num of event time point in the sequence
         # batch_size, seq_len, _ = hiddens_ti.size()
@@ -260,7 +257,14 @@ class AttnNHPLoss(NHPLoss):
         return lambdas
     
     def compute_loss(
-        self, seq_encoder, time_seqs, time_delta_seqs, type_seqs, batch_non_pad_mask, attention_mask, type_mask
+        self,
+        seq_encoder,
+        time_seqs,
+        time_delta_seqs,
+        type_seqs,
+        batch_non_pad_mask,
+        attention_mask,
+        type_mask
     ):
                 
         # 1. compute event-loglik
