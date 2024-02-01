@@ -340,7 +340,7 @@ class AttnNHPSeqEncoder(SeqEncoderContainer):
             torch.Tensor with model output
         """
         time_seqs, _, event_types, _, attention_mask, _ = restruct_batch(
-            x=x, 
+            x, 
             col_time=self.col_time, 
             col_type=self.col_type, 
             pad_token_id=self.seq_encoder.pad_token_id, 

@@ -7,7 +7,7 @@ import math
 import torch
 import torch.nn as nn
 
-MINUS_INF = -1e3
+MINUS_INF = -1e3 
 
 def attention(
     query: torch.Tensor, 
@@ -68,7 +68,7 @@ class MultiHeadAttention(nn.Module):
         
         self.n_head = n_head
         self.d_k = d_model // n_head
-        self.d_v = self.d_k
+        self.d_v = self.d_k 
        
         self.d_input = d_input 
         self.d_model = d_model
@@ -77,7 +77,10 @@ class MultiHeadAttention(nn.Module):
         
         if output_linear:
             self.linears = nn.ModuleList(
-                [nn.Linear(self.d_input, self.d_model) for _ in range(3)] + [nn.Linear(self.d_model, self.d_model), ])
+                [
+                    nn.Linear(self.d_input, self.d_model) for _ in range(3)] + [nn.Linear(self.d_model, self.d_model), 
+                ]
+            )
         else:
             self.linears = nn.ModuleList([nn.Linear(self.d_input, self.d_model) for _ in range(3)])
 
@@ -158,7 +161,7 @@ class SublayerConnection(nn.Module):
         -------
             torch.Tensor: output of the module
         """
-        return x + self.dropout(sublayer(self.norm(x)))
+        return x + self.dropout(sublayer(self.norm(x))) 
 
 class EncoderLayer(nn.Module):
     """Encoder layer for A-NHP model."""

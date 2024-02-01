@@ -241,7 +241,7 @@ class NHPSeqEncoder(SeqEncoderContainer):
             torch.Tensor with model output
         """
         _, time_delta, event_types, _, _, _ = restruct_batch(
-            x=x, 
+            x,
             col_time=self.col_time, 
             col_type=self.col_type, 
             pad_token_id=self.seq_encoder.pad_token_id, 
