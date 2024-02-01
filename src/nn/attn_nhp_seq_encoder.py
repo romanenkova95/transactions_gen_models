@@ -14,33 +14,35 @@ from .nhp_components import EncoderLayer, MultiHeadAttention, restruct_batch
 
 class AttnNHPEncoder(AbsSeqEncoder):
     """Transformer-style sequence encoder for the A-NHP model."""
-
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
-        use_ln,
-        time_emb_size,
-        num_layers,
-        num_heads,
-        dropout, 
+        use_ln: bool,
+        time_emb_size: int,
+        num_layers: int,
+        num_heads: int,
+        dropout: float, 
         num_types: int,
         num_event_types_pad: int,
         pad_token_id: int,
         is_reduce_sequence: Optional[bool] = False,
         reducer: str = "maxpool",
     ) -> None:
-        """Initialize continous-time LSTM sequence encoder for the NHP model.
+        """Initialize transformer-style sequence encoder for the A-NHP model.
 
         Args:
         ----
             input_size (int): input size for CCNN (output size of feature embeddings)
             hidden_size (int): size of the output embeddings of the encoder
+            use_ln (bool): if True, add layer normalization
+            time_emb_size (int): embedding size for temporal encoding
+            num_layers (int): number of layers in the Encoder
+            num_heads (int): number of attention heads
+            dropout (float): dropout probability
             num_types (int): number of event types in in the dataset
-            
             num_event_types_pad (int): total number of events, including padding type 
             pad_token_id (int): event type used for padding (num_event_types in EasyTPP pipeline)
-            
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
@@ -61,12 +63,10 @@ class AttnNHPEncoder(AbsSeqEncoder):
             torch.arange(0, self.time_emb_size, 2) * -(math.log(10000.0) / self.time_emb_size)
         ).reshape(1, 1, -1)
 
-        self.num_layers = num_layers
+        self.num_layers = num_layers 
         self.num_heads = num_heads
         self.dropout = dropout
-        
-        # self.input_layer = nn.Linear(self.input_size + time_emb_size, self.model_size)
-
+    
         self.heads = []
         for _ in range(self.num_heads):
             self.heads.append(
@@ -102,14 +102,16 @@ class AttnNHPEncoder(AbsSeqEncoder):
 
         self.reducer = reducer
         
-    def compute_temporal_embedding(self, time):
+    def compute_temporal_embedding(self, time: torch.Tensor) -> torch.Tensor:
         """Compute the temporal embedding.
 
         Args:
-            time (tensor): [batch_size, seq_len].
+        ----
+            time (torch.Tensor): [batch_size, seq_len], input event times
 
         Returns:
-            tensor: [batch_size, seq_len, emb_size].
+        -------
+            torch.Tensor: [batch_size, seq_len, emb_size], temporal embeddings
         """
         batch_size = time.size(0)
         seq_len = time.size(1)
@@ -121,15 +123,19 @@ class AttnNHPEncoder(AbsSeqEncoder):
 
         return pe
     
-    def seq_encoding(self, time_seqs, event_seqs):
+    def seq_encoding(self, time_seqs: torch.Tensor, event_seqs: torch.Tensor) -> Tuple[torch.Tensor]:
         """Encode the sequence.
 
         Args:
-            time_seqs (tensor): time seqs input, [batch_size, seq_len].
-            event_seqs (_type_): event type seqs input, [batch_size, seq_len].
+        ----
+            time_seqs (torch.Tensor): time seqs input, [batch_size, seq_len]
+            event_seqs (torch.Tensor): event type seqs input, [batch_size, seq_len]
 
         Returns:
-            tuple: event embedding, time embedding and type embedding.
+            a tuple of torch.Tensors
+                * event embedding (concatenation of time and type embeddings)
+                * time embedding
+                * type embedding
         """
         # [batch_size, seq_len, hidden_size]
         time_emb = self.compute_temporal_embedding(time_seqs)
@@ -142,21 +148,23 @@ class AttnNHPEncoder(AbsSeqEncoder):
         
         return event_emb, time_emb, type_emb
     
-    def make_layer_mask(self, attention_mask):
+    def make_layer_mask(self, attention_mask: torch.Tensor) -> torch.Tensor:
         """Create a tensor to do masking on layers.
 
         Args:
+        ----
             attention_mask (tensor): mask for attention operation, [batch_size, seq_len, seq_len]
 
         Returns:
-            tensor: aim to keep the current layer, the same size of attention mask
+        ------
+            tensor: aim to keep the current layer, the same size of attention mask 
             a diagonal matrix, [batch_size, seq_len, seq_len]
         """
         # [batch_size, seq_len, seq_len]
         layer_mask = (torch.eye(attention_mask.size(1)) < 1).unsqueeze(0).expand_as(attention_mask)
         return layer_mask
     
-    def make_combined_att_mask(self, attention_mask, layer_mask):
+    def make_combined_att_mask(self, attention_mask: torch.Tensor, layer_mask: torch.Tensor) -> torch.Tensor:
         """Combined attention mask and layer mask.
 
         Args:
@@ -175,10 +183,18 @@ class AttnNHPEncoder(AbsSeqEncoder):
         return combined_mask
         
         
-    def apply_layer(self, init_cur_layer, time_emb, sample_time_emb, event_emb, combined_mask):
-        """update the structure sequentially.
+    def apply_layer(
+        self, 
+        init_cur_layer: torch.Tensor, 
+        time_emb: torch.Tensor, 
+        sample_time_emb: torch.Tensor, 
+        event_emb: torch.Tensor, 
+        combined_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """Update the structure sequentially.
 
         Args:
+        ----
             init_cur_layer (tensor): [batch_size, seq_len, hidden_size]
             time_emb (tensor): [batch_size, seq_len, hidden_size]
             sample_time_emb (tensor): [batch_size, seq_len, hidden_size]
@@ -186,6 +202,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
             combined_mask (tensor): [batch_size, seq_len, hidden_size]
 
         Returns:
+        -------
             tensor: [batch_size, seq_len, hidden_size*2]
         """
         cur_layers = []
@@ -221,16 +238,24 @@ class AttnNHPEncoder(AbsSeqEncoder):
 
         return cur_layer_
     
-    def run_batch(self, time_seqs, event_seqs, attention_mask, sample_times=None):
+    def run_batch(
+        self, 
+        time_seqs: torch.Tensor, 
+        event_seqs: torch.Tensor, 
+        attention_mask: torch.Tensor, 
+        sample_times: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """Call the model.
 
         Args:
+        ----
             time_seqs (tensor): [batch_size, seq_len], sequences of timestamps.
             event_seqs (tensor): [batch_size, seq_len], sequences of event types.
             attention_mask (tensor): [batch_size, seq_len, seq_len], masks for event sequences.
             sample_times (tensor, optional): [batch_size, seq_len, num_samples]. Defaults to None.
 
         Returns:
+        -------
             tensor: states at sampling times, [batch_size, seq_len, num_samples].
         """
         event_emb, time_emb, type_emb = self.seq_encoding(time_seqs, event_seqs)
@@ -246,13 +271,20 @@ class AttnNHPEncoder(AbsSeqEncoder):
         return cur_layer_
     
     
-    def forward(self, inputs):
+    def forward(self, inputs: Tuple[torch.Tensor]) -> torch.Tensor:
+        """Forward pass through the model.
+
+        Args:
+        ----
+            inputs (Tuple[torch.Tensor]): inputs as passed to .run_batch() method above
+
+        Returns:
+        -------
+            torch.Tensor with model output
+        """
         time_seqs, event_seqs, attention_mask, sample_times = inputs
         
         out = self.run_batch(time_seqs, event_seqs, attention_mask, sample_times)
-        
-        if out.isnan().any().item():
-            print("!!! NaN in model's out !!!")
        
         if self.is_reduce_sequence:
             if self.reducer == "maxpool":
@@ -263,8 +295,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
 
 
 class AttnNHPSeqEncoder(SeqEncoderContainer):
-    """Pytorch-lifestream container wrapper for NHP sequence encoder."""
-
+    """Pytorch-lifestream container wrapper for the A-NHP sequence encoder."""
     def __init__(
         self,
         input_size: int,

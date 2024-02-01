@@ -1,14 +1,21 @@
+"""Based on code from the EasyTPP repository: https://github.com/ant-research/EasyTemporalPointProcess."""
+
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 
-class NHPLoss(nn.Module):
-    """Loss computation for HNP. """
+from ..nn.nhp_seq_encoder import NHPEncoder
+from ..nn.attn_nhp_seq_encoder import AttnNHPSeqEncoder
 
-    def __init__(self, loss_integral_num_sample_per_step) -> None:
-        """Initialize .
+
+class NHPLoss(nn.Module):
+    """Class for HNP loss computation."""
+    def __init__(self, loss_integral_num_sample_per_step: int) -> None:
+        """Initialize class for HNP loss computation. 
 
         Args:
-        ----
+            loss_integral_num_sample_per_step (int): number of samples for MC integral approximation 
         """
         super().__init__()
         
@@ -17,23 +24,28 @@ class NHPLoss(nn.Module):
         
     def compute_loglikelihood(
         self,
-        time_delta_seq,
-        lambda_at_event,
-        lambdas_loss_samples,
-        seq_mask,
-        lambda_type_mask
-    ):
+        time_delta_seq: torch.Tensor,
+        lambda_at_event: torch.Tensor,
+        lambdas_loss_samples: torch.Tensor,
+        seq_mask: torch.Tensor,
+        lambda_type_mask: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, int]:
         """Compute the loglikelihood of the event sequence based on Equation (8) of NHP paper.
 
         Args:
-            time_delta_seq (tensor): [batch_size, seq_len], time_delta_seq from model input.
-            lambda_at_event (tensor): [batch_size, seq_len, num_event_types], unmasked intensity at (right after) the event.
-            lambdas_loss_samples (tensor): [batch_size, seq_len, num_sample, num_event_types], intensity at sampling times.
-            seq_mask (tensor): [batch_size, seq_len], sequence mask vector to mask the padded events.
-            lambda_type_mask (tensor): [batch_size, seq_len, num_event_types], type mask matrix to mask the padded event types.
+        ----
+            time_delta_seq (tensor): [batch_size, seq_len], time_delta_seq from model input
+            lambda_at_event (tensor): [batch_size, seq_len, num_event_types], unmasked intensity at (right after) the event
+            lambdas_loss_samples (tensor): [batch_size, seq_len, num_sample, num_event_types], intensity at sampling times
+            seq_mask (tensor): [batch_size, seq_len], sequence mask vector to mask the padded events
+            lambda_type_mask (tensor): [batch_size, seq_len, num_event_types], type mask matrix to mask the padded event types
 
         Returns:
-            tuple: event loglike, non-event loglike, intensity at event with padding events masked
+        -------
+            A tuple of:
+                * torch.Tensor: event loglikelihood
+                * torch.Tensor: non-event loglikehood (integral approximation)
+                * int: number of events
         """
         # Sum of lambda over every type and every event point
         # [batch_size, seq_len]
@@ -62,20 +74,24 @@ class NHPLoss(nn.Module):
 
         return event_ll, non_event_ll, num_events
     
-    def make_dtime_loss_samples(self, time_delta_seq):
+    @staticmethod
+    def make_dtime_loss_samples(time_delta_seq: torch.Tensor, loss_integral_num_sample_per_step: int) -> torch.Tensor:
         """Generate the time point samples for every interval.
 
         Args:
-            time_delta_seq (tensor): [batch_size, seq_len].
+        ----
+            time_delta_seq (tensor): [batch_size, seq_len], sequences of time differences between events
+            loss_integral_num_sample_per_step (int): number of samples for MC integral approximation  
 
         Returns:
-            tensor: [batch_size, seq_len, n_samples]
+        -------
+            tensor: [batch_size, seq_len, n_samples], tensor with sampled (auxiliary) times between events
         """
         # [1, 1, n_samples]
         dtimes_ratio_sampled = torch.linspace(
             start=0.0,
             end=1.0,
-            steps=self.loss_integral_num_sample_per_step,
+            steps=loss_integral_num_sample_per_step,
             device=time_delta_seq.device
         )[None, None, :]
 
@@ -85,15 +101,20 @@ class NHPLoss(nn.Module):
         return sampled_dtimes
     
     @staticmethod
-    def compute_states_at_sample_times(seq_encoder, decay_states, sample_dtimes): # Q: encoder or just rnn_cell ???
+    def compute_states_at_sample_times(
+        seq_encoder: NHPEncoder, decay_states: torch.Tensor, sample_dtimes: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the states at sampling times.
 
         Args:
-            decay_states (tensor): states right after the events.
-            sample_dtimes (tensor): delta times in sampling.
+        ----
+            seq_encoder (NHPEncoder): implemented NHP sequence encoder with .rnn_cell() method
+            decay_states (tensor): states right after the events
+            sample_dtimes (tensor): delta times in sampling
 
         Returns:
-            tensor: hiddens states at sampling times.
+        -------
+            tensor: hiddens states at sampling times
         """
         # update the states given last event
         # cells (batch_size, num_times, hidden_dim)
@@ -115,22 +136,28 @@ class NHPLoss(nn.Module):
         
     def compute_loss(
         self,
-        seq_encoder,
-        time_seqs, # for interface consistency only
-        time_delta_seqs, 
-        type_seqs, 
-        batch_non_pad_mask,
-        attention_mask, # for interface consistency only
-        type_mask
-    ):
-        """Compute the loglike loss.
+        seq_encoder: NHPEncoder,
+        time_seqs: torch.Tensor, # for interface consistency only
+        time_delta_seqs: torch.Tensor, 
+        type_seqs: torch.Tensor, 
+        batch_non_pad_mask: torch.Tensor,
+        attention_mask: torch.Tensor, # for interface consistency only
+        type_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute log-likelihood loss for the NHP model.
 
         Args:
-            batch (list): batch input.
+        ----
+            seq_encoder (NHPEncoder): implemented NHP sequence encoder with .rnn_cell() method
+            time_seqs (torch.Tensor): times of events (batch)
+            type_seqs (torch.Tensor): types of events (batch)
+            batch_non_pad_mask (torch.Tensor): boolean mask indicating non-padding events
+            attention_mask (torch.Tensor): bollean mask for masked attention computation
 
         Returns:
-            list: loglike loss, num events.
-        """        
+        -------
+            torch.Tensor: value of the loss function
+        """
         hiddens_ti, decay_states = seq_encoder.run_batch(time_delta_seqs, type_seqs)
 
         # Num of samples in each batch and num of event time point in the sequence
@@ -150,7 +177,7 @@ class NHPLoss(nn.Module):
         # interval_t_sample - [batch_size, num_times=max_len-1, num_mc_sample]
         # for every batch and every event point => do a sampling (num_mc_sampling)
         # the first dtime is zero, so we use time_delta_seq[:, 1:]
-        interval_t_sample = self.make_dtime_loss_samples(time_delta_seqs[:, 1:])
+        interval_t_sample = self.make_dtime_loss_samples(time_delta_seqs[:, 1:], self.loss_integral_num_sample_per_step)
 
         # [batch_size, num_times = max_len - 1, num_mc_sample, hidden_size]
         state_t_sample = self.compute_states_at_sample_times(seq_encoder, decay_states, interval_t_sample)
@@ -165,29 +192,34 @@ class NHPLoss(nn.Module):
             seq_mask=batch_non_pad_mask[:, 1:],
             lambda_type_mask=type_mask[:, 1:]
         )
-        # (num_samples, num_times)
+
         loss = - (event_ll - non_event_ll).sum()
-        
         return loss / num_events
     
 class AttnNHPLoss(NHPLoss):
-    """Loss computation for A-HNP."""
-    
+    """Class for A-HNP loss computation."""
     @staticmethod
     def compute_states_at_sample_times(
-        seq_encoder, time_seqs, type_seqs, attention_mask, sample_times
-    ):
+        seq_encoder: AttnNHPSeqEncoder,
+        time_seqs: torch.Tensor,
+        type_seqs: torch.Tensor,
+        attention_mask: torch.Tensor,
+        sample_times: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the states at sampling times.
 
         Args:
-            time_seqs (tensor): [batch_size, seq_len], sequences of timestamps.
-            time_delta_seqs (tensor): [batch_size, seq_len], sequences of delta times.
-            type_seqs (tensor): [batch_size, seq_len], sequences of event types.
-            attention_mask (tensor): [batch_size, seq_len, seq_len], masks for event sequences.
-            sample_dtimes (tensor): delta times in sampling.
+        ----
+            seq_encoder (AttnNHPSeqEncoder): implemented AttnNHP sequence encoder
+            time_seqs (tensor): [batch_size, seq_len], sequences of timestamps
+            time_delta_seqs (tensor): [batch_size, seq_len], sequences of delta times
+            type_seqs (tensor): [batch_size, seq_len], sequences of event types
+            attention_mask (tensor): [batch_size, seq_len, seq_len], masks for attention computation
+            sample_dtimes (tensor): delta times in sampling
 
         Returns:
-            tensor: hiddens states at sampling times.
+        ------
+            tensor: hiddens states at sampling times
         """
         batch_size = type_seqs.size(0)
         seq_len = type_seqs.size(1)
@@ -216,22 +248,29 @@ class AttnNHPLoss(NHPLoss):
         return encoder_output
     
     def compute_intensities_at_sample_times(
-        self, seq_encoder, time_seqs, type_seqs, sample_times, attention_mask, compute_last_step_only=False 
-    ):
+        self,
+        seq_encoder: AttnNHPSeqEncoder,
+        time_seqs: torch.Tensor, 
+        type_seqs: torch.Tensor, 
+        sample_times: torch.Tensor, 
+        attention_mask: torch.Tensor, 
+        compute_last_step_only: bool = False 
+    ) -> torch.Tensor:
         """Compute the intensity at sampled times.
 
         Args:
-            time_seqs (tensor): [batch_size, seq_len], sequences of timestamps.
-            time_delta_seqs (tensor): [batch_size, seq_len], sequences of delta times.
-            type_seqs (tensor): [batch_size, seq_len], sequences of event types.
-            sampled_dtimes (tensor): [batch_size, seq_len, num_sample], sampled time delta sequence.
+        ----
+            seq_encoder (AttnNHPSeqEncoder): implemented AttnNHP sequence encoder
+            time_seqs (tensor): sequences of timestamps
+            type_seqs (tensor): sequences of event types
+            sample_times (tensor): sampled time delta sequence
+            attention_mask (tensor): boolean mask for masked attention computation
+            compute_last_step_only (bool): if True, compute only intensity value at the last event
 
         Returns:
-            tensor: intensities as sampled_dtimes, [batch_size, seq_len, num_samples, event_num].
+        -------
+            tensor: intensities at sampled_times, [batch_size, seq_len, num_samples, event_num]
         """
-        #attention_mask = kwargs.get('attention_mask', None)
-        #compute_last_step_only = kwargs.get('compute_last_step_only', False)
-
         if attention_mask is None:
             batch_size, seq_len = time_seqs.size()
             attention_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1).unsqueeze(0)
@@ -257,16 +296,31 @@ class AttnNHPLoss(NHPLoss):
     
     def compute_loss(
         self,
-        seq_encoder,
-        time_seqs,
-        time_delta_seqs,
-        type_seqs,
-        batch_non_pad_mask,
-        attention_mask,
-        type_mask
-    ):
-                
-        # 1. compute event-loglik
+        seq_encoder: AttnNHPSeqEncoder,
+        time_seqs: torch.Tensor,
+        time_delta_seqs: torch.Tensor,
+        type_seqs: torch.Tensor,
+        batch_non_pad_mask: torch.Tensor,
+        attention_mask: torch.Tensor,
+        type_mask: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute log-likelihood loss for the A-NHP model.
+
+        Args:
+        ----
+            seq_encoder (AttnNHPSeqEncoder): implemented AttnNHP sequence encoder
+            time_seqs (torch.Tensor): sequences of timestamps
+            time_delta_seqs (torch.Tensor): sequences of time differences
+            type_seqs (torch.Tensor): sequences of event types
+            batch_non_pad_mask (torch.Tensor): boolean mask indicating non-padding events
+            attention_mask (torch.Tensor): boolean mask for masked attention computation
+            type_mask (torch.Tensor): type mask matrix to mask the padded event types
+
+        Returns:
+        -------
+            torch.Tensor: value of the loss function
+        """
+        # 1. compute event-loglikelihood
         # the prediction of last event has no label, so we proceed to the last but one
         # att mask => diag is False, not mask.
         
@@ -277,7 +331,7 @@ class AttnNHPLoss(NHPLoss):
         # 2. compute non-event-loglik (using MC sampling to compute integral)
         # 2.1 sample times
         # [batch_size, seq_len, num_sample]
-        temp_time = self.make_dtime_loss_samples(time_delta_seqs[:, 1:])
+        temp_time = self.make_dtime_loss_samples(time_delta_seqs[:, 1:], self.loss_integral_num_sample_per_step)
 
         # [batch_size, seq_len, num_sample]
         sample_times = temp_time + time_seqs[:, :-1].unsqueeze(-1)
@@ -287,7 +341,6 @@ class AttnNHPLoss(NHPLoss):
         lambda_t_sample = self.compute_intensities_at_sample_times(
             seq_encoder, 
             time_seqs[:, :-1],
-            #time_delta_seqs[:, :-1],  # not used
             type_seqs[:, :-1],
             sample_times,
             attention_mask[:, 1:, :-1]
@@ -299,7 +352,5 @@ class AttnNHPLoss(NHPLoss):
                                                                         seq_mask=batch_non_pad_mask[:, 1:],
                                                                         lambda_type_mask=type_mask[:, 1:])
 
-        # return enc_inten to compute accuracy
         loss = - (event_ll - non_event_ll).sum()
-
         return loss / num_events

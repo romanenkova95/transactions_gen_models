@@ -1,4 +1,4 @@
-"""Code from th COTIC repo: https://github.com/VladislavZh/COTIC/tree/main."""
+"""Code from the COTIC repository: https://github.com/VladislavZh/COTIC/tree/main."""
 
 import math
 

@@ -13,8 +13,7 @@ from ..nn.nhp_components import restruct_batch
 
 
 class NHP(ABSModule):
-    """Cotic module in ptls format."""
-
+    """NHP module in ptls format. Note that this module is used for both NHP and A-NHP models."""
     def __init__(
         self,
         encoder: DictConfig,
@@ -22,17 +21,14 @@ class NHP(ABSModule):
         optimizer_partial: DictConfig,
         lr_scheduler_partial: DictConfig,
     ) -> None:
-        """Init Cotic module.
+        """Initialize NHP / A-NHP module.
 
         Args:
         ----
             encoder (DictConfig): config for continuous convolutional sequence encoder instantiation
-            head (DictConfig): config custom prediction head for Cotic model instantiation
             loss (DictConfig): config for module with Cotic losses instantiation
-            metrics (DictConfig): config for module with Cotic metrics instantiation
             optimizer_partial (DictConfig): config for optimizer instantiation (ptls format)
             lr_scheduler_partial (DictConfig): config for lr scheduler instantiation (ptls format)
-            head_start (int): if not None, start training prediction head after this epoch.
         """
         self.save_hyperparameters()
         enc: SeqEncoderContainer = instantiate(encoder)
@@ -49,16 +45,16 @@ class NHP(ABSModule):
         
     def shared_step(
         self, batch: tuple[PaddedBatch, torch.Tensor]
-    ):
+    ) -> torch.Tensor:
         """Shared training/validation/testing step.
 
         Args:
         ----
             batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
 
-        Retruns a tuple of:
-            inputs - inputs for CCNN model: (event_times, event_types), for loss & metric computation
-            outputs - outputs of the model: (encoded_outputs, (pred_times, pred_types))
+        Retruns:
+        -------
+            torch.Tensor: value of the loss function
         """        
         (
             time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
@@ -84,6 +80,7 @@ class NHP(ABSModule):
         Args:
         ----
             batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+            _: batch idx (not used here)
 
         Returns:
         -------
@@ -103,6 +100,7 @@ class NHP(ABSModule):
         Args:
         ----
             batch (tuple[PaddedBatch, torch.Tensor]): padded batch that is fed into CoticSeqEncoder and labels (irrelevant here)
+            _: batch idx (not used here)
 
         Returns:
         -------

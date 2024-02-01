@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
 import torch
-import torch.nn as nn
+import torch.nn as nn 
 
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.nn import TrxEncoder
@@ -13,7 +13,6 @@ from .nhp_components import ContTimeLSTMCell, restruct_batch
 
 class NHPEncoder(AbsSeqEncoder):
     """Continuous-time LSTM sequence encoder for the NHP model."""
-
     def __init__(
         self,
         input_size: int,
@@ -44,7 +43,7 @@ class NHPEncoder(AbsSeqEncoder):
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
-        super().__init__(is_reduce_sequence=is_reduce_sequence)
+        super().__init__(is_reduce_sequence=is_reduce_sequence) 
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -73,7 +72,7 @@ class NHPEncoder(AbsSeqEncoder):
         self.reducer = reducer
 
     def init_state(self, batch_size: int, device: str) -> Tuple[torch.Tensor]:
-        """Initialize hidden and cell states.
+        """Initialize hidden and cell states of the encoder.
 
         Args:
         ----
@@ -92,7 +91,7 @@ class NHPEncoder(AbsSeqEncoder):
 
         return h_t, c_t, c_bar
 
-    def run_batch(self, time_delta_seq, event_seq) -> Tuple[torch.Tensor]:
+    def run_batch(self, time_delta_seq: torch.Tensor, event_seq: torch.Tensor) -> Tuple[torch.Tensor]:
         """Pass batch through the model, return hidden states and decayed states for log-likelihood loss computation.
 
         Args:
@@ -174,20 +173,21 @@ class NHPEncoder(AbsSeqEncoder):
 
         return hiddens_stack, decay_states_stack
     
-    def forward(self, inputs):
+    def forward(self, inputs: Tuple[torch.Tensor]) -> torch.Tensor:
         """Forward pass through the model.
 
         Args:
         ----
             inputs (Tuple[torch.Tensor]): inputs as passed to .run_batch() method above
 
-        Returns:
+        Returns: 
         -------
             torch.Tensor with model output
         """
         time_delta_seq, event_seq = inputs
-        
+
         out = self.run_batch(time_delta_seq, event_seq)[0] # take only hidden states for embeddings
+        
         if self.is_reduce_sequence:
             if self.reducer == "maxpool":
                 out = out.max(dim=1).values
@@ -198,7 +198,6 @@ class NHPEncoder(AbsSeqEncoder):
 
 class NHPSeqEncoder(SeqEncoderContainer):
     """Pytorch-lifestream container wrapper for NHP sequence encoder."""
-
     def __init__(
         self,
         input_size: int,

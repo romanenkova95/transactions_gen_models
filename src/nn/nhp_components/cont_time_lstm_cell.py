@@ -6,49 +6,46 @@ import torch.nn as nn
 
 class ContTimeLSTMCell(nn.Module):
     """LSTM Cell in Neural Hawkes Process, NeurIPS'17."""
-
     def __init__(
-        self,
+        self, 
         embed_dim: int,
-        hidden_dim: int,
-        num_event_types_pad,
-        pad_token_id,
+        hidden_dim: int, 
+        num_event_types_pad: int,
+        pad_token_id: int,
         beta: float = 1.0
     ) -> None:
         """Initialize the continuous LSTM cell.
 
         Args:
-            hidden_dim (int): dim of hidden state.
-            beta (float, optional): beta in nn.Softplus. Defaults to 1.0.
+        ----
+            embed_dim (int): size of the event types embeddings
+            hidden_dim (int): dimensionality of the hidden state
+            num_event_types_pad (int): number of event types in the dataset (including padding)
+            pad_token_id (int): event type number used as padding value
+            beta (float): beta coefficient in nn.Softplus
         """
         super(ContTimeLSTMCell, self).__init__()
         
         self.layer_type_emb = nn.Embedding(
-            num_event_types_pad,  # have padding
+            num_event_types_pad,
             embed_dim,
-            padding_idx=pad_token_id
+            padding_idx=pad_token_id 
         )
         
         self.init_dense_layer(embed_dim, hidden_dim, bias=True, beta=beta)
 
-    def init_dense_layer(self, embed_dim, hidden_dim: int, bias: bool, beta: float) -> None:
+    def init_dense_layer(
+        self, embed_dim: int, hidden_dim: int, bias: bool, beta: float
+    ) -> None:
         """Initialize linear layers given Equations (5a-6c) in the paper.
 
         Args:
-            hidden_dim (int): dim of hidden state.
-            bias (bool): whether to use bias term in nn.Linear.
-            beta (float): beta in nn.Softplus.
-        """
-        #self.layer_input = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_forget = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_output = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_input_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_forget_bar = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_pre_c = nn.Linear(hidden_dim * 2, hidden_dim, bias=bias)
-        #self.layer_decay = nn.Sequential(
-        #    nn.Linear(hidden_dim * 2, hidden_dim, bias=bias),
-        #    nn.Softplus(beta=beta))
-        
+        ----
+            embed_dim (int): size of the event types embeddings
+            hidden_dim (int): dim of hidden state
+            bias (bool): whether to use bias term in nn.Linear
+            beta (float): beta coefficient in nn.Softplus
+        """        
         self.layer_input = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_forget = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_output = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
@@ -69,13 +66,19 @@ class ContTimeLSTMCell(nn.Module):
         """Update the continuous-time LSTM cell.
 
         Args:
+        ----
             event_types_i (tensor): event types vector at t_i.
             hidden_i_minus (tensor): hidden state at t_i-
             cell_i_minus (tensor): cell state at t_i-
             cell_bar_i_minus_1 (tensor): cell bar state at t_{i-1}
 
         Returns:
-            list: cell state, cell bar state, decay and output at t_i
+        -------
+            a tuple of torch.Tensors:
+                * cell state
+                * cell bar state
+                * decay
+                * output at t_i
         """
         # event embeddings
         x_i = self.layer_type_emb(event_types_i)
@@ -122,6 +125,7 @@ class ContTimeLSTMCell(nn.Module):
         """Cell and hidden state decay according to Equation (7).
 
         Args:
+        ----
             cell_i (tensor): cell state at t_i.
             cell_bar_i (tensor): cell bar state at t_i.
             gate_decay (tensor): gate decay state at t_i.
@@ -129,7 +133,10 @@ class ContTimeLSTMCell(nn.Module):
             dtime (tensor): delta time to decay.
 
         Returns:
-            list: list of cell and hidden state tensors after the decay.
+        -------
+            a tuple of torch.Tensors
+            * cell state after the decay
+            * hidden state after the decay
         """
         c_t = cell_bar_i + (cell_i - cell_bar_i) * torch.exp(-gate_decay * dtime)
         h_t = gate_output * torch.tanh(c_t)
