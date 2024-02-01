@@ -3,12 +3,19 @@ import math
 import torch
 import torch.nn as nn
 
+MINUS_INF = -1e3
+
 def attention(query, key, value, mask=None, dropout=None):
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         # small change here -- we use "1" for masked element
-        scores = scores.masked_fill(mask > 0, float("-inf"))
+        #scores = scores.masked_fill(mask > 0, float("-inf"))
+        
+        #print("max scores:", scores.max().item())
+        #print("min scores:", scores.min().item())
+        
+        scores = scores.masked_fill(mask > 0, MINUS_INF)
     p_attn = torch.softmax(scores, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)

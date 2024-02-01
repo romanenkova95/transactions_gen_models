@@ -165,7 +165,6 @@ class NHPLoss(nn.Module):
             seq_mask=batch_non_pad_mask[:, 1:],
             lambda_type_mask=type_mask[:, 1:]
         )
-
         # (num_samples, num_times)
         loss = - (event_ll - non_event_ll).sum()
         
