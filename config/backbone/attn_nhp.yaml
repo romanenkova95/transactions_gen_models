@@ -18,4 +18,4 @@ trainer:
   accumulate_grad_batches: 1
   gradient_clip_val: 1
   accelerator: gpu
-  devices: [1]
+  devices: 1
