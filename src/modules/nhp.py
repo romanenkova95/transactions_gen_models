@@ -1,19 +1,17 @@
-from omegaconf import DictConfig
-
 import torch
-
 from hydra.utils import instantiate
-from torchmetrics import MeanMetric
-
+from omegaconf import DictConfig
 from ptls.data_load import PaddedBatch
 from ptls.frames.abs_module import ABSModule
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
+from torchmetrics import MeanMetric
 
 from ..nn.nhp_components import restruct_batch
 
 
 class NHP(ABSModule):
     """NHP module in ptls format. Note that this module is used for both NHP and A-NHP models."""
+
     def __init__(
         self,
         encoder: DictConfig,
@@ -42,10 +40,8 @@ class NHP(ABSModule):
 
         self.encoder = enc
         self.valid_metric = MeanMetric()
-        
-    def shared_step(
-        self, batch: tuple[PaddedBatch, torch.Tensor]
-    ) -> torch.Tensor:
+
+    def shared_step(self, batch: tuple[PaddedBatch, torch.Tensor]) -> torch.Tensor:
         """Shared training/validation/testing step.
 
         Args:
@@ -55,19 +51,30 @@ class NHP(ABSModule):
         Retruns:
         -------
             torch.Tensor: value of the loss function
-        """        
+        """
         (
-            time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
+            time_seqs,
+            time_delta,
+            event_types,
+            non_pad_mask,
+            attention_mask,
+            type_mask,
         ) = restruct_batch(
             batch[0],
-            col_time=self.encoder.col_time, 
-            col_type=self.encoder.col_type, 
-            pad_token_id=self.encoder.seq_encoder.pad_token_id, 
-            num_types=self.encoder.seq_encoder.num_types
+            col_time=self.encoder.col_time,  # type: ignore
+            col_type=self.encoder.col_type,  # type: ignore
+            pad_token_id=self.encoder.seq_encoder.pad_token_id,
+            num_types=self.encoder.seq_encoder.num_types,
         )
-                
+
         loss = self._loss.compute_loss(
-            self.encoder.seq_encoder, time_seqs, time_delta, event_types, non_pad_mask, attention_mask, type_mask
+            self.encoder.seq_encoder,
+            time_seqs,
+            time_delta,
+            event_types,
+            non_pad_mask,
+            attention_mask,
+            type_mask,
         )
 
         return loss
@@ -85,7 +92,7 @@ class NHP(ABSModule):
         Returns:
         -------
             dict with train loss
-        """        
+        """
         train_ll_loss = self.shared_step(batch)
 
         self.log("train_ll_loss", train_ll_loss, prog_bar=True)
@@ -115,7 +122,7 @@ class NHP(ABSModule):
     def lr_scheduler_step(self, scheduler, *args, **kwargs):
         """Overwrite method as to fix bug in our PyTorch version."""
         scheduler.step(epoch=self.current_epoch)
-        
+
     def validation_epoch_end(self, _) -> None:
         """Log loss for a validation epoch."""
         self.log("val_log_likelihood", self.valid_metric, prog_bar=True)

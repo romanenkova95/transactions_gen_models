@@ -1,21 +1,21 @@
 """Code from the EasyTPP repository: https://github.com/ant-research/EasyTemporalPointProcess."""
 
-from typing import Tuple, Optional, Callable
-
 import math
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
 
-MINUS_INF = -1e3 
+MINUS_INF = -1e3
+
 
 def attention(
-    query: torch.Tensor, 
-    key: torch.Tensor, 
-    value: torch.Tensor, 
-    mask: Optional[torch.Tensor] = None, 
-    dropout: Optional[Callable] = None
-) -> Tuple[torch.Tensor]:
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    dropout: Optional[Callable] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """Calculate masked attention.
 
     Args:
@@ -35,22 +35,26 @@ def attention(
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
-        # small change here -- we use "1" for masked element        
-        scores = scores.masked_fill(mask > 0, MINUS_INF) # use smaller constant here, 1e9 caused overflows
+        # small change here -- we use "1" for masked element
+        scores = scores.masked_fill(
+            mask > 0, MINUS_INF
+        )  # use smaller constant here, 1e9 caused overflows
     p_attn = torch.softmax(scores, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
+
 class MultiHeadAttention(nn.Module):
     """Custom multi-head attention class."""
+
     def __init__(
-        self, 
-        n_head: int, 
-        d_input: int, 
-        d_model: int, 
-        dropout: float = 0.1, 
-        output_linear: bool = False
+        self,
+        n_head: int,
+        d_input: int,
+        d_model: int,
+        dropout: float = 0.1,
+        output_linear: bool = False,
     ) -> None:
         """Initialize Custom multi-head attention class.
 
@@ -63,37 +67,42 @@ class MultiHeadAttention(nn.Module):
             output_linear (bool, optional): if True, add linear output layer
         """
         super(MultiHeadAttention, self).__init__()
-        
-        assert d_model % n_head == 0, "Model dimensionality must be a multiple of number of heads"
-        
+
+        assert (
+            d_model % n_head == 0
+        ), "Model dimensionality must be a multiple of number of heads"
+
         self.n_head = n_head
         self.d_k = d_model // n_head
-        self.d_v = self.d_k 
-       
-        self.d_input = d_input 
+        self.d_v = self.d_k
+
+        self.d_input = d_input
         self.d_model = d_model
-        
+
         self.output_linear = output_linear
-        
+
         if output_linear:
             self.linears = nn.ModuleList(
-                [
-                    nn.Linear(self.d_input, self.d_model) for _ in range(3)] + [nn.Linear(self.d_model, self.d_model), 
+                [nn.Linear(self.d_input, self.d_model) for _ in range(3)]
+                + [
+                    nn.Linear(self.d_model, self.d_model),
                 ]
             )
         else:
-            self.linears = nn.ModuleList([nn.Linear(self.d_input, self.d_model) for _ in range(3)])
+            self.linears = nn.ModuleList(
+                [nn.Linear(self.d_input, self.d_model) for _ in range(3)]
+            )
 
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(
-        self, 
-        query: torch.Tensor, 
-        key: torch.Tensor, 
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
         value: torch.Tensor,
-        mask: torch.Tensor, 
-        output_weight: bool = False
-    ) -> torch.Tensor:
+        mask: torch.Tensor,
+        output_weight: bool = False,
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass through the module.
 
         Args:
@@ -112,13 +121,13 @@ class MultiHeadAttention(nn.Module):
         """
         if mask is not None:
             mask = mask.unsqueeze(1)
-        nbatches = query.size(0) 
+        nbatches = query.size(0)
 
         query, key, value = [
             lin_layer(x).view(nbatches, -1, self.n_head, self.d_k).transpose(1, 2)
             for lin_layer, x in zip(self.linears, (query, key, value))
         ]
-        
+
         x, attn_weight = attention(query, key, value, mask=mask, dropout=self.dropout)
 
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.n_head * self.d_k)
@@ -134,8 +143,10 @@ class MultiHeadAttention(nn.Module):
             else:
                 return x
 
+
 class SublayerConnection(nn.Module):
     """Custom model for residual connections."""
+
     # used for residual connection
     def __init__(self, d_model: int, dropout: float) -> None:
         """Initialize custom model for residual connections.
@@ -161,19 +172,21 @@ class SublayerConnection(nn.Module):
         -------
             torch.Tensor: output of the module
         """
-        return x + self.dropout(sublayer(self.norm(x))) 
+        return x + self.dropout(sublayer(self.norm(x)))
+
 
 class EncoderLayer(nn.Module):
     """Encoder layer for A-NHP model."""
+
     def __init__(
-        self, 
-        d_model: int, 
-        self_attn: Callable, 
-        feed_forward: Optional[Callable] = None, 
-        use_residual: bool = False, 
-        dropout: float = 0.1
+        self,
+        d_model: int,
+        self_attn: Callable,
+        feed_forward: Optional[Callable] = None,
+        use_residual: bool = False,
+        dropout: float = 0.1,
     ) -> None:
-        """Initialize encoder layer for A-NHP model. 
+        """Initialize encoder layer for A-NHP model.
 
         Args:
         ----
@@ -188,7 +201,9 @@ class EncoderLayer(nn.Module):
         self.feed_forward = feed_forward
         self.use_residual = use_residual
         if use_residual:
-            self.sublayer = nn.ModuleList([SublayerConnection(d_model, dropout) for _ in range(2)])
+            self.sublayer = nn.ModuleList(
+                [SublayerConnection(d_model, dropout) for _ in range(2)]
+            )
         self.d_model = d_model
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:

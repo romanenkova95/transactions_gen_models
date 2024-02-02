@@ -3,11 +3,12 @@
 from typing import Tuple
 
 import torch
-
 from ptls.data_load.padded_batch import PaddedBatch
 
 
-def make_type_mask_for_pad_sequence(pad_seqs: torch.Tensor, num_event_types: int) -> torch.Tensor:
+def make_type_mask_for_pad_sequence(
+    pad_seqs: torch.Tensor, num_event_types: int
+) -> torch.Tensor:
     """Make the type mask.
 
     Args:
@@ -25,8 +26,11 @@ def make_type_mask_for_pad_sequence(pad_seqs: torch.Tensor, num_event_types: int
         type_mask[:, :, i] = pad_seqs == i
 
     return type_mask.to(pad_seqs.device)
-    
-def make_attn_mask_for_pad_sequence(pad_seqs: torch.Tensor, pad_token_id: int) -> torch.Tensor:
+
+
+def make_attn_mask_for_pad_sequence(
+    pad_seqs: torch.Tensor, pad_token_id: int
+) -> torch.Tensor:
     """Make the attention masks for the sequence.
 
     Args:
@@ -73,7 +77,7 @@ def make_attn_mask_for_pad_sequence(pad_seqs: torch.Tensor, pad_token_id: int) -
     attention_key_pad_mask = torch.tile(seq_pad_mask[:, None, :], (1, seq_len, 1))
 
     subsequent_mask = torch.tile(
-        torch.triu(torch.ones((seq_len, seq_len), dtype=bool), diagonal=0)[
+        torch.triu(torch.ones((seq_len, seq_len), dtype=torch.bool), diagonal=0)[
             None, :, :
         ],
         (seq_num, 1, 1),
@@ -82,10 +86,17 @@ def make_attn_mask_for_pad_sequence(pad_seqs: torch.Tensor, pad_token_id: int) -
     attention_mask = subsequent_mask | attention_key_pad_mask
 
     return attention_mask
-    
+
+
 def restruct_batch(
-    ptls_batch: PaddedBatch, col_time: str, col_type: str, pad_token_id: int, num_types: int
-) -> Tuple[torch.Tensor]:
+    ptls_batch: PaddedBatch,
+    col_time: str,
+    col_type: str,
+    pad_token_id: int,
+    num_types: int,
+) -> Tuple[
+    torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
+]:
     """Restruct batch from pytorch-lifestream format (PaddedBatch with dicts of tensors) to EasyTPP format.
 
     Args:
@@ -103,7 +114,7 @@ def restruct_batch(
             * event_types - event types for a batch
             * non_pad_mask - boolean mask indicating non-padding events
             * attention_mask - boolean mask for masked attention computation
-            * type_mask - a 3-dim matrix, where the last dim (one-hot vector) indicates the type of event 
+            * type_mask - a 3-dim matrix, where the last dim (one-hot vector) indicates the type of event
     """
     event_times = ptls_batch.payload[col_time].float()
     event_types = ptls_batch.payload[col_type]
@@ -117,9 +128,7 @@ def restruct_batch(
     event_types[~non_pad_mask] = pad_token_id
     time_delta[~non_pad_mask] = pad_token_id
 
-    type_mask = make_type_mask_for_pad_sequence(
-        event_types, num_event_types=num_types
-    )
+    type_mask = make_type_mask_for_pad_sequence(event_types, num_event_types=num_types)
     attention_mask = make_attn_mask_for_pad_sequence(
         event_types, pad_token_id=pad_token_id
     )

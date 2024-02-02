@@ -4,15 +4,17 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
+
 class ContTimeLSTMCell(nn.Module):
     """LSTM Cell in Neural Hawkes Process, NeurIPS'17."""
+
     def __init__(
-        self, 
+        self,
         embed_dim: int,
-        hidden_dim: int, 
+        hidden_dim: int,
         num_event_types_pad: int,
         pad_token_id: int,
-        beta: float = 1.0
+        beta: int = 1,
     ) -> None:
         """Initialize the continuous LSTM cell.
 
@@ -22,16 +24,14 @@ class ContTimeLSTMCell(nn.Module):
             hidden_dim (int): dimensionality of the hidden state
             num_event_types_pad (int): number of event types in the dataset (including padding)
             pad_token_id (int): event type number used as padding value
-            beta (float): beta coefficient in nn.Softplus
+            beta (int): beta coefficient in nn.Softplus
         """
         super(ContTimeLSTMCell, self).__init__()
-        
+
         self.layer_type_emb = nn.Embedding(
-            num_event_types_pad,
-            embed_dim,
-            padding_idx=pad_token_id 
+            num_event_types_pad, embed_dim, padding_idx=pad_token_id
         )
-        
+
         self.init_dense_layer(embed_dim, hidden_dim, bias=True, beta=beta)
 
     def init_dense_layer(
@@ -45,7 +45,7 @@ class ContTimeLSTMCell(nn.Module):
             hidden_dim (int): dim of hidden state
             bias (bool): whether to use bias term in nn.Linear
             beta (float): beta coefficient in nn.Softplus
-        """        
+        """
         self.layer_input = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_forget = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_output = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
@@ -54,15 +54,16 @@ class ContTimeLSTMCell(nn.Module):
         self.layer_pre_c = nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias)
         self.layer_decay = nn.Sequential(
             nn.Linear(hidden_dim + embed_dim, hidden_dim, bias=bias),
-            nn.Softplus(beta=beta))
+            nn.Softplus(beta=beta),
+        )
 
     def forward(
-        self, 
+        self,
         event_types_i: torch.Tensor,
-        hidden_i_minus: torch.Tensor, 
+        hidden_i_minus: torch.Tensor,
         cell_i_minus: torch.Tensor,
-        cell_bar_i_minus_1: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
+        cell_bar_i_minus_1: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Update the continuous-time LSTM cell.
 
         Args:
@@ -82,7 +83,7 @@ class ContTimeLSTMCell(nn.Module):
         """
         # event embeddings
         x_i = self.layer_type_emb(event_types_i)
-        
+
         x_i_ = torch.cat((x_i, hidden_i_minus), dim=1)
 
         # update input gate - Equation (5a)
@@ -115,13 +116,13 @@ class ContTimeLSTMCell(nn.Module):
         return cell_i, cell_bar_i, gate_decay, gate_output
 
     def decay(
-        self, 
-        cell_i: torch.Tensor, 
-        cell_bar_i: torch.Tensor, 
-        gate_decay: torch.Tensor, 
-        gate_output: torch.Tensor, 
-        dtime: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
+        self,
+        cell_i: torch.Tensor,
+        cell_bar_i: torch.Tensor,
+        gate_decay: torch.Tensor,
+        gate_output: torch.Tensor,
+        dtime: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Cell and hidden state decay according to Equation (7).
 
         Args:

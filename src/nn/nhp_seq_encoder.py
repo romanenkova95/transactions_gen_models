@@ -1,8 +1,7 @@
 from typing import Optional, Tuple
 
 import torch
-import torch.nn as nn 
-
+import torch.nn as nn
 from ptls.data_load.padded_batch import PaddedBatch
 from ptls.nn import TrxEncoder
 from ptls.nn.seq_encoder.abs_seq_encoder import AbsSeqEncoder
@@ -13,18 +12,19 @@ from .nhp_components import ContTimeLSTMCell, restruct_batch
 
 class NHPEncoder(AbsSeqEncoder):
     """Continuous-time LSTM sequence encoder for the NHP model."""
+
     def __init__(
         self,
         input_size: int,
         hidden_size: int,
         num_types: int,
-        beta: float,
+        beta: int,
         bias: bool,
         max_steps: Optional[int],
         max_decay_time: float,
         num_event_types_pad: int,
         pad_token_id: int,
-        is_reduce_sequence: Optional[bool] = False,
+        is_reduce_sequence: bool = False,
         reducer: str = "maxpool",
     ) -> None:
         """Initialize continous-time LSTM sequence encoder for the NHP model.
@@ -34,16 +34,16 @@ class NHPEncoder(AbsSeqEncoder):
             input_size (int): input size for CCNN (output size of feature embeddings)
             hidden_size (int): size of the output embeddings of the encoder
             num_types (int): number of event types in in the dataset
-            beta (float): beta in nn.Softplus for ContTimeLSTMCell
+            beta (int): beta in nn.Softplus for ContTimeLSTMCell
             bias (bool): if True, include bias in the intensity layer
             max_steps (int): if not None, crop all the sequences up to 'max_steps'
             max_decay_time (float): restrict maximum dt for the decay of the LSTM hidden state
-            num_event_types_pad (int): total number of events, including padding type 
+            num_event_types_pad (int): total number of events, including padding type
             pad_token_id (int): event type used for padding (num_event_types in EasyTPP pipeline)
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             reducer (str): type of reducer (only 'maxpool' is available now)
         """
-        super().__init__(is_reduce_sequence=is_reduce_sequence) 
+        super().__init__(is_reduce_sequence=is_reduce_sequence)
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -71,7 +71,9 @@ class NHPEncoder(AbsSeqEncoder):
 
         self.reducer = reducer
 
-    def init_state(self, batch_size: int, device: str) -> Tuple[torch.Tensor]:
+    def init_state(
+        self, batch_size: int, device: torch.device
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Initialize hidden and cell states of the encoder.
 
         Args:
@@ -83,7 +85,7 @@ class NHPEncoder(AbsSeqEncoder):
         -------
             * h_t - torch.Tensor of LSTM hidden states
             * c_t - torch.Tensor of LSTM cell states
-            * c_bar - torch.Tensor of LSTM cell bar states 
+            * c_bar - torch.Tensor of LSTM cell bar states
         """
         h_t, c_t, c_bar = torch.zeros(
             batch_size, 3 * self.hidden_size, device=device
@@ -91,17 +93,19 @@ class NHPEncoder(AbsSeqEncoder):
 
         return h_t, c_t, c_bar
 
-    def run_batch(self, time_delta_seq: torch.Tensor, event_seq: torch.Tensor) -> Tuple[torch.Tensor]:
+    def run_batch(
+        self, time_delta_seq: torch.Tensor, event_seq: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pass batch through the model, return hidden states and decayed states for log-likelihood loss computation.
 
         Args:
-            inputs (Tuple of torch.Tensors): 
+            inputs (Tuple of torch.Tensors):
                 * time_delta_seq - time deltas between events
                 * event_seq - event types
 
         Returns:
             * hiddens_stack (torch.Tensor): hidden states of contimuous-time LSTM
-            * decay_states_stack (torch.Tensor): hidden states of contimuous-time LSTM after exponential decay 
+            * decay_states_stack (torch.Tensor): hidden states of contimuous-time LSTM after exponential decay
         """
         all_hiddens = []
         all_outputs = []
@@ -115,7 +119,9 @@ class NHPEncoder(AbsSeqEncoder):
         )
 
         batch_size = len(event_seq)
-        h_t, c_t, c_bar_i = self.init_state(batch_size, time_delta_seq.device)
+        h_t, c_t, c_bar_i = self.init_state(
+            batch_size, device=torch.device(time_delta_seq.device)
+        )
 
         # if only one event, then we dont decay
         if max_seq_length == 1:
@@ -172,22 +178,24 @@ class NHPEncoder(AbsSeqEncoder):
         )
 
         return hiddens_stack, decay_states_stack
-    
-    def forward(self, inputs: Tuple[torch.Tensor]) -> torch.Tensor:
+
+    def forward(self, inputs: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
         """Forward pass through the model.
 
         Args:
         ----
             inputs (Tuple[torch.Tensor]): inputs as passed to .run_batch() method above
 
-        Returns: 
+        Returns:
         -------
             torch.Tensor with model output
         """
         time_delta_seq, event_seq = inputs
 
-        out = self.run_batch(time_delta_seq, event_seq)[0] # take only hidden states for embeddings
-        
+        out = self.run_batch(time_delta_seq, event_seq)[
+            0
+        ]  # take only hidden states for embeddings
+
         if self.is_reduce_sequence:
             if self.reducer == "maxpool":
                 out = out.max(dim=1).values
@@ -198,6 +206,7 @@ class NHPEncoder(AbsSeqEncoder):
 
 class NHPSeqEncoder(SeqEncoderContainer):
     """Pytorch-lifestream container wrapper for NHP sequence encoder."""
+
     def __init__(
         self,
         input_size: int,
@@ -242,10 +251,10 @@ class NHPSeqEncoder(SeqEncoderContainer):
         """
         _, time_delta, event_types, _, _, _ = restruct_batch(
             x,
-            col_time=self.col_time, 
-            col_type=self.col_type, 
-            pad_token_id=self.seq_encoder.pad_token_id, 
-            num_types=self.seq_encoder.num_types
+            col_time=self.col_time,
+            col_type=self.col_type,
+            pad_token_id=self.seq_encoder.pad_token_id,
+            num_types=self.seq_encoder.num_types,
         )
 
         inputs = (time_delta, event_types)
