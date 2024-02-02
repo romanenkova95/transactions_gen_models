@@ -6,3 +6,4 @@ from .no_split import NoSplitDataset
 from .random_crop import RandomCropDataset
 from .sliding_window import SlidingWindowDataset
 from .time_diff_ds import create_time_diff_dataset
+from .supervised import CustomSupervisedDataset

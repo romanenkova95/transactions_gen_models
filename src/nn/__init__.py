@@ -5,3 +5,4 @@ from .pretrained_seq_encoder import PretrainedRnnSeqEncoder
 from .transformer_seq_encoder import TransformerSeqEncoder
 from .ts2vec_seq_encoder import ConvSeqEncoder
 from .nhp_seq_encoder import NHPSeqEncoder
+from .seq_encoder_container import CustomSeqEncoderContainer

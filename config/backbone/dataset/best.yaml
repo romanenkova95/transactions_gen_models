@@ -1,0 +1,2 @@
+_target_: src.datasets.CustomSupervisedDataset
+target_col_name: global_target

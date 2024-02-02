@@ -17,6 +17,7 @@ class BestClassifier(torch.nn.Module):
         dropout: float = 0,
         bidirectional: bool = True,
         num_classes: int = 4,
+        is_reduce_sequence: bool = True,
     ):
         """Initialize internal module state.
 
@@ -63,7 +64,7 @@ class BestClassifier(torch.nn.Module):
             torch.nn.Linear(classifier_units, num_classes),
         )
 
-    def forward(self, input):
+    def forward(self, input, return_embs: bool = True):
         """Pass input through the model."""
         embs = input.payload  # (N, L, C)
         dropout_embs = self.dropout(embs)
@@ -75,8 +76,15 @@ class BestClassifier(torch.nn.Module):
         h_n = h_n.view(batch_size, -1)  # (N, 2 * C_out)
 
         output = torch.cat([rnn_max_pool, rnn_avg_pool, h_n], dim=-1)  # (N, 6 * C_out)
+        if return_embs:
+            return output
+
         drop = torch.nn.functional.dropout(output, p=0.5)
         logit = self.mlp(drop)
         probas = torch.nn.functional.softmax(logit, dim=1)
 
         return probas
+
+    @property
+    def embedding_size(self):
+        return 6 * self.gru.hidden_size

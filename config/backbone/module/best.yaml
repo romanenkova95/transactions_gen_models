@@ -1,0 +1,23 @@
+_target_: src.modules.CustomSeqToTarget
+num_classes: 2
+loss:
+  _target_: torch.nn.CrossEntropyLoss
+metric_list:
+  -
+    _target_: torchmetrics.Accuracy
+    task: multiclass
+    num_classes: 2
+  -
+    _target_: torchmetrics.AveragePrecision
+    task: multiclass
+    num_classes: 2
+optimizer_partial:
+  _partial_: True
+  _target_: torch.optim.AdamW
+  lr: 0.0003
+  weight_decay: 0.0
+lr_scheduler_partial:
+  _partial_: True
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 40
+  gamma: 0.5

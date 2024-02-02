@@ -1,0 +1,15 @@
+_target_: src.nn.CustomSeqEncoderContainer
+trx_encoder:
+  _target_: ptls.nn.RnnSeqEncoder
+  trx_encoder:
+    _target_: ptls.nn.TrxEncoder
+    embeddings_noise: .001
+    embeddings: {mcc_code: {in: 345, out: 16}}
+    numeric_values: {amount: log}
+  hidden_size: 64
+  is_reduce_sequence: False
+input_size: 64
+seq_encoder_cls:
+  _partial_: True
+  _target_: baselines.models.BestClassifier
+seq_encoder_params: {rnn_units: 160, classifier_units: 80, num_classes: 2} 
