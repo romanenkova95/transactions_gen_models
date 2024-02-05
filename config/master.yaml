@@ -1,8 +1,8 @@
 defaults:
-  - preprocessing: default
-  - backbone: mlm
-  - validation: [event_type, event_time, global_target, local_target]
-  - logger: wandb
+  - preprocessing: tpp_churn_nodup
+  - backbone: nhp
+  - validation: [global_target, event_type, event_time, local_target]
+  - logger: comet
   - _self_
 
 pretrain: true

@@ -6,7 +6,6 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ptls.frames import PtlsDataModule
-from pytorch_lightning import seed_everything
 from pytorch_lightning.utilities.model_helpers import is_overridden
 from torch.utils.data import Dataset
 

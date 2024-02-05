@@ -1,20 +1,20 @@
 defaults:
  - dataset: tpp
- - encoder: cotic
- - module: cotic
+ - encoder: attn_nhp
+ - module: attn_nhp
  - _self_
 
 datamodule:
   _target_: ptls.frames.PtlsDataModule
-  train_batch_size: 20
-  valid_batch_size: 20
-  test_batch_size: 20
+  train_batch_size: 64
+  valid_batch_size: 64
+  test_batch_size: 64
   train_num_workers: 2
   valid_num_workers: 2
   test_num_workers: 2
 
 trainer:
-  max_epochs: 100
+  max_epochs: 50
   accumulate_grad_batches: 1
   gradient_clip_val: 1
   accelerator: gpu

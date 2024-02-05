@@ -6,7 +6,6 @@ from pathlib import Path
 
 from hydra import compose, initialize
 from hydra.core.hydra_config import HydraConfig
-
 from main import run
 
 TEST_SEED = 473284789
@@ -67,7 +66,10 @@ class TestBackbones(unittest.TestCase):
                 "mlm",
                 "gpt",
                 "ts2vec_churn",
-                # "cotic", # doesn't run on a small GPU
+                "coles_timecl_churn",
+                "seq2vec_coles_emb_churn",
+                "nhp",
+                "attn_nhp",
             ],
             preprocessings=["default", "churn"],
             validations=["local_target", "event_time", "event_type", "global_target"],

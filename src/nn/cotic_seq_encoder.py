@@ -88,7 +88,7 @@ class CoticSeqEncoder(SeqEncoderContainer):
         input_size: int,
         trx_encoder: Optional[TrxEncoder] = None,
         is_reduce_sequence: bool = False,
-        col_time: str = "event_time",
+        col_time: str = "event_time", 
         col_type: str = "mcc_code",
         **seq_encoder_params,
     ) -> None:
@@ -96,8 +96,8 @@ class CoticSeqEncoder(SeqEncoderContainer):
 
         Args:
         ----
-            trx_encoder (TrxEncoder=None): we do not use TrxEncoder in this model as we need to keep initial times and features
             input_size (int): input size for CCNN (output size of feature embeddings)
+            trx_encoder (TrxEncoder=None): we do not use TrxEncoder in this model as we need to keep initial times and features
             is_reduce_sequence (bool): if True, use reducer and work in the 'seq2vec' mode, else work in 'seq2seq'
             col_time (str): name of the field (in PaddedBatch.payload) containig event times
             col_type (str): name of the field (in PaddedBatch.payload) containig event types
