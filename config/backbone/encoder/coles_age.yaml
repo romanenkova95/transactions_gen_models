@@ -1,8 +1,14 @@
 _target_: ptls.nn.RnnSeqEncoder
 trx_encoder:
   _target_: ptls.nn.TrxEncoder
-  embeddings_noise: .005
-  embeddings: {mcc_code: {in: 202, out: 32}}
-  numeric_values: {event_time: log}
-hidden_size: 32
+  use_batch_norm_with_lens: True
+  norm_embeddings: False
+  embeddings_noise: 0.003
+  embeddings: {mcc_code: {in: 202, out: 16}}
+  out_of_index: clip
+  numeric_values: {amount: identity}
+hidden_size: 800
+bidir: False
+trainable_starter: static
 type: gru
+is_reduce_sequence: True
