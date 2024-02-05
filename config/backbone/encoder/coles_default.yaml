@@ -6,10 +6,9 @@ trx_encoder:
   embeddings_noise: 0.003
   embeddings: {mcc_code: {in: 345, out: 16}}
   out_of_index: clip
-  numeric_values: {
-    amount: identity
-  }
+  numeric_values: {amount: identity}
 hidden_size: 800
 bidir: False
 trainable_starter: static
 type: gru
+is_reduce_sequence: True
