@@ -4,5 +4,6 @@ trx_encoder:
   embeddings_noise: .005
   embeddings: {mcc_code: {in: 202, out: 32}}
   numeric_values: {event_time: log}
-hidden_size: 32
+hidden_size: 800 
 type: gru
+is_reduce_sequence: True
