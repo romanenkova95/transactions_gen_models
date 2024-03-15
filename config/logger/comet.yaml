@@ -1,6 +1,4 @@
 _target_: pytorch_lightning.loggers.CometLogger
-project_name: macro_micro_coles
-display_summary_level: 0
 save_dir: logs/coles
 project_name: macro-micro-coles
 experiment_name: COLES
