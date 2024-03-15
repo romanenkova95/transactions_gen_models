@@ -1,4 +1,5 @@
 """File with all the different tests we run."""
+
 import logging
 import os
 import unittest
@@ -58,21 +59,18 @@ class TestBackbones(unittest.TestCase):
         """The general test case, to test all backbones on all datasets, with all validations enabled."""
         self.run_with_config(
             backbones=[
-                "ae_nlp_pretrained",
-                "ae_nlp_from_scratch",
-                "ae_nlp_frozen",
+                "ae",
                 "coles_churn",
                 "coles_default",
                 "mlm",
-                "gpt",
+                "ar",
                 "ts2vec_churn",
-                "coles_timecl_churn",
-                "seq2vec_coles_emb_churn",
+                "cotic",
                 "nhp",
                 "attn_nhp",
             ],
-            preprocessings=["default", "churn"],
-            validations=["local_target", "event_time", "event_type", "global_target"],
+            preprocessings=["default", "churn", "hsbc"],
+            validations=["local_target", "event_type", "global_target"],
         )
 
 
