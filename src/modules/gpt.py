@@ -1,15 +1,12 @@
-"""The file with the main logic for the GPT model."""
-from pathlib import Path
+"""The file with the main logic for the AR model."""
+
 from typing import Literal, Optional, Union
 
 import torch
-from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ptls.data_load import PaddedBatch
-from ptls.frames.bert.losses.query_soft_max import QuerySoftmaxLoss
-from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from pytorch_lightning.utilities.types import STEP_OUTPUT
-from torch import Tensor, nn
+from torch import Tensor
 
 from src.utils.logging_utils import get_logger
 
@@ -18,8 +15,8 @@ from .vanilla import VanillaAE
 logger = get_logger(name=__name__)
 
 
-class GPTModule(VanillaAE):
-    """A module for GPT-like training, just encodes the sequence and predicts its shifted version.
+class ARModule(VanillaAE):
+    """A module for AR training, just encodes the sequence and predicts its shifted version.
 
     Logs train/val/test losses:
      - a CrossEntropyLoss on mcc codes
@@ -56,7 +53,7 @@ class GPTModule(VanillaAE):
         encoder_weights: Optional[str] = None,
         freeze_enc: Optional[bool] = False,
     ) -> None:
-        """Initialize GPTModule internal state.
+        """Initialize ARModule internal state.
 
         Args:
         ----
@@ -168,5 +165,3 @@ class GPTModule(VanillaAE):
     ) -> Union[tuple[list[Tensor], list[Tensor]], tuple[Tensor, Tensor]]:
         """Run self on input batch."""
         return self(batch)
-
-
