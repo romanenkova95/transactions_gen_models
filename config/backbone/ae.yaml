@@ -1,8 +1,8 @@
 defaults:
  - dataset: basic
- - encoder: ae_nlp
+ - encoder: ae
  - decoder: lstmcell
- - module: autoencoder/frozen
+ - module: autoencoder
  - _self_
 
 datamodule:

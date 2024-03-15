@@ -10,6 +10,10 @@ transforms:
     _target_: src.preprocessing.DropRare
     col_name_original: mcc_code
     k: 100
+ - 
+    _target_: src.preprocessing.DropDuplicates
+    index_cols: [user_id, timestamp]
+    keep: first
  -
     _target_: ptls.preprocessing.pandas.category_identity_encoder.CategoryIdentityEncoder
     col_name_original: churn_target
@@ -24,7 +28,7 @@ transforms:
     cols_numerical: [amount]
     return_records: False
 
-source: data/preprocessed_new/churn.parquet
+source: data/preprocessed/hsbc.parquet
 cache_dir: cache
 val_size: .1
 test_size: .1

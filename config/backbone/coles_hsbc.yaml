@@ -1,0 +1,16 @@
+defaults:
+ - dataset: coles
+ - encoder: coles_churn # use the same encoder and module
+ - module: coles_churn
+ - _self_
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 128
+  valid_batch_size: 128
+  train_num_workers: 8
+  valid_num_workers: 8
+
+trainer:
+  max_epochs: 60
+  log_every_n_steps: 10

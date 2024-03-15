@@ -1,9 +1,9 @@
 defaults:
-  - preprocessing: tpp_churn_nodup
-  - backbone: nhp
-  - validation: [global_target, event_type, event_time, local_target]
+  - preprocessing: churn
+  - backbone: coles_churn
+  - validation: [global_target, event_type, local_target]
   - logger: comet
   - _self_
 
 pretrain: true
-seed: 1
+seed: 0

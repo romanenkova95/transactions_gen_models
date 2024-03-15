@@ -28,7 +28,7 @@ transforms:
     cols_numerical: [amount]
     return_records: False
 
-source: data/preprocessed_new/default.parquet
+source: data/preprocessed/default.parquet
 cache_dir: cache
 val_size: .1
 test_size: .1
