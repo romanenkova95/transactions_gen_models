@@ -34,7 +34,7 @@ With use a hydra-based experiment configuration structure. To assemble the set-u
 * `- preprocessing:` choose the dataset and the preprocessing you need from the `config/preprocessing/` directory. Note that TPP models (COTIC, NHP, and A-NHP) require time normalization and, thus, have their own configs `tpp_*_nodup.yaml`, while all the other models use configs `*.yaml`.
 * `- backbone:` choose the backbone representation learning model from the `config/backbone/` directory. In the paper, we experiment with the following models: CoLES, AE, AR, MLM, TS2Vec, COTIC, NHP, and A-NHP. However, one could add custom models and the corresponding configuration files to the pipeline.
 * `- validation:` specify list of validation procedures for the model. By default, we use `['global_validation', 'event_type', 'local_target']` for the Churn, Default anf HSBC datasets. As mentioned in the paper, the Age dataset does not have binary local targets, so, in this case, we only validate the models with `['global_validation', 'event_type']`. The parameters of the validation models are specified in the `config/validation/` folder.
-* `- logger:` select wandb, comet or any other logger you prefer.
+* `- logger:` select wandb, comet, tensorboard, or any other logger you prefer.
 
 ## Models with external context
 In the paper, we propose a representation learning model for transactions that accounts for the external context information of other users. It uses the pretrained CoLES model as a backbone. Please, look to the `notebooks/` directory, to reproduce the experiments with these models. The corresponding configuration files are specified in `config/pooling_*_validation.yaml` files.
