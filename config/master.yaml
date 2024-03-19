@@ -2,7 +2,7 @@ defaults:
   - preprocessing: churn
   - backbone: coles_churn
   - validation: [global_target, event_type, local_target]
-  - logger: comet
+  - logger: comet_my
   - _self_
 
 pretrain: true
