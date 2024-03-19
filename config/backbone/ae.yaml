@@ -1,6 +1,6 @@
 defaults:
  - dataset: basic
- - encoder: ae
+ - encoder: rnn_encoder_churn # change to 'rnn_encoder_*' for other datasets
  - decoder: lstmcell
  - module: autoencoder
  - _self_

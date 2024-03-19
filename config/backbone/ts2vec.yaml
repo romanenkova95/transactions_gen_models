@@ -1,7 +1,7 @@
 defaults:
- - dataset: coles
- - encoder: coles_churn
- - module: coles_churn
+ - dataset: ts2vec
+ - encoder: ts2vec
+ - module: ts2vec
  - _self_
 
 datamodule:
@@ -12,5 +12,5 @@ datamodule:
   valid_num_workers: 8
 
 trainer:
-  max_epochs: 60
+  max_epochs: 100
   log_every_n_steps: 10

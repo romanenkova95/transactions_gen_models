@@ -60,16 +60,15 @@ class TestBackbones(unittest.TestCase):
         self.run_with_config(
             backbones=[
                 "ae",
-                "coles_churn",
-                "coles_default",
+                "coles",
                 "mlm",
                 "ar",
-                "ts2vec_churn",
+                "ts2vec",
                 "cotic",
                 "nhp",
                 "attn_nhp",
             ],
-            preprocessings=["default", "churn", "hsbc"],
+            preprocessings=["churn"],
             validations=["local_target", "event_type", "global_target"],
         )
 

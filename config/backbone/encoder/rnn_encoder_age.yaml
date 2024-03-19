@@ -4,13 +4,14 @@ trx_encoder:
   use_batch_norm_with_lens: True
   norm_embeddings: False
   embeddings_noise: 0.0003
-  embeddings: 
-    mcc_code:   
+  embeddings:
+    mcc_code:
       in: 345
       out: 24
-  numeric_values: {amount: log}
-hidden_size: 1024
+  out_of_index: clip
+  numeric_values: {amount: identity}
+hidden_size: 800
 bidir: False
 trainable_starter: static
-type: lstm
-is_reduce_sequence: False
+type: gru
+is_reduce_sequence: True

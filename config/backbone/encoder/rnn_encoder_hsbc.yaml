@@ -5,10 +5,11 @@ trx_encoder:
   norm_embeddings: False
   embeddings_noise: 0.0003
   embeddings: 
-    mcc_code:   
+    mcc_code:
       in: 345
       out: 24
-  numeric_values: {amount: log}
+  out_of_index: clip
+  numeric_values: {amount: identity}
 hidden_size: 1024
 bidir: False
 trainable_starter: static

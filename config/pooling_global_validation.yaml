@@ -1,0 +1,7 @@
+defaults:
+  - preprocessing: churn # change to * for other datasets
+  - backbone: coles # change config/backbone/coles.yaml for other datasets
+  - validation: global_target
+  - _self_
+
+pretrain: true

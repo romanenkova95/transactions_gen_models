@@ -3,12 +3,15 @@ trx_encoder:
   _target_: ptls.nn.TrxEncoder
   use_batch_norm_with_lens: True
   norm_embeddings: False
-  embeddings_noise: 0.003
-  embeddings: {mcc_code: {in: 345, out: 16}}
+  embeddings_noise: 0.0003
+  embeddings: 
+    mcc_code:
+      in: 345
+      out: 24
   out_of_index: clip
   numeric_values: {amount: identity}
-hidden_size: 800
+hidden_size: 1024
 bidir: False
 trainable_starter: static
-type: gru
+type: lstm
 is_reduce_sequence: True

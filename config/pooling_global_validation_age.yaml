@@ -1,7 +1,0 @@
-defaults:
-  - preprocessing: age
-  - backbone: coles_age
-  - validation: global_target
-  - _self_
-
-pretrain: true

@@ -1,7 +1,7 @@
 defaults:
  - dataset: basic
- - encoder: gpt
- - module: gpt
+ - encoder: rnn_encoder_churn # change to 'rnn_encoder_*' for other datasets
+ - module: ar
  - _self_
 
 datamodule:

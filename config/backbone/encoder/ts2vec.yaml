@@ -4,7 +4,11 @@ trx_encoder:
   use_batch_norm_with_lens: True
   norm_embeddings: False
   embeddings_noise: 0.0003
-  embeddings: {mcc_code: {in: 344, out: 24}}
+  embeddings:
+    mcc_code:
+      in: 344
+      out: 24
+  out_of_index: clip
   numeric_values: {amount: identity}
 kernel_size: 3
 hidden_size: 1024
