@@ -1,4 +1,5 @@
 """The file with the COTIC encoder."""
+
 from typing import Optional
 
 import torch
@@ -88,7 +89,7 @@ class CoticSeqEncoder(SeqEncoderContainer):
         input_size: int,
         trx_encoder: Optional[TrxEncoder] = None,
         is_reduce_sequence: bool = False,
-        col_time: str = "event_time", 
+        col_time: str = "event_time",
         col_type: str = "mcc_code",
         **seq_encoder_params,
     ) -> None:

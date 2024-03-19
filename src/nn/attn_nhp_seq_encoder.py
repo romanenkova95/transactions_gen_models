@@ -229,7 +229,7 @@ class AttnNHPEncoder(AbsSeqEncoder):
                 # make combined input from event emb + layer emb
                 # [batch_size, seq_len*2, hidden_size*2]
                 _combined_input = torch.cat([event_emb, layer_], dim=1)
-                enc_layer = self.heads[head_i][layer_i]
+                enc_layer = self.heads[head_i][layer_i]  # type: ignore
                 # compute the output
                 enc_output = enc_layer(_combined_input, combined_mask)
 

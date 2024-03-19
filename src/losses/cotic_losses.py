@@ -1,11 +1,13 @@
 """The module with the COTIC losses."""
+
 import math
 
 import torch
 from torch import nn
 
-from .log_cosh_loss import LogCoshLoss
 from src.nn.cotic_components.ccnn import CCNN
+
+from .log_cosh_loss import LogCoshLoss
 
 
 class CoticLoss(nn.Module):

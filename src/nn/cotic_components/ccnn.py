@@ -61,7 +61,7 @@ class CCNN(nn.Module):
         self.final_list = nn.ModuleList(
             [
                 ContConv1dSim(
-                    kernel.recreate(self.nb_filters),
+                    kernel.recreate(self.nb_filters),  # type: ignore
                     1,
                     nb_filters,
                     nb_filters,  # type: ignore

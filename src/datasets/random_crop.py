@@ -1,4 +1,5 @@
 """Module for the simple dataset, which randomly crops user sequences."""
+
 from typing import Any, Callable, Optional
 
 from ptls.data_load.augmentations import RandomSlice

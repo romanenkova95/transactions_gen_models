@@ -1,4 +1,5 @@
 """Module with cotic kernels."""
+
 import torch
 from torch import nn
 

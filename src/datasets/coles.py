@@ -1,4 +1,5 @@
 """Custom coles datamodule."""
+
 import torch
 from ptls.data_load.datasets import MemoryMapDataset
 from ptls.data_load.iterable_processing import SeqLenFilter

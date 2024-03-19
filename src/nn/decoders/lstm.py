@@ -1,4 +1,5 @@
 """File with the LSTM Decoder."""
+
 import typing as tp
 
 from torch import Tensor, nn

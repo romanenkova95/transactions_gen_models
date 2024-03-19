@@ -53,7 +53,7 @@ class ARModule(VanillaAE):
         encoder_weights: Optional[str] = None,
         freeze_enc: Optional[bool] = False,
     ) -> None:
-        """Initialize ARModule internal state.
+        """Initialize GPTModule internal state.
 
         Args:
         ----
@@ -85,6 +85,8 @@ class ARModule(VanillaAE):
             encoder_weights=encoder_weights,
             freeze_enc=freeze_enc,
         )
+
+        self.encoder.is_reduce_sequence = False  # AR is trained in seq2seq regime
 
     def forward(self, x):
         """Encode the data in x."""

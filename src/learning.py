@@ -1,4 +1,5 @@
 """Main coles learning script."""
+
 from pathlib import Path
 from typing import Union
 

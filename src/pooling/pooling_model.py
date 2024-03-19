@@ -1,6 +1,7 @@
 """The file with the pooling model."""
-from typing import Optional
+
 import warnings
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
@@ -75,7 +76,9 @@ class PoolingModel(nn.Module):
         else:
             self.learnable_attention_matrix = None
 
-    def prepare_data_for_one_user(self, x, device):
+    def prepare_data_for_one_user(
+        self, x: Dict[str, torch.Tensor], device: str
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare one user's embedings and last times for this embedings.
 
         Args:
@@ -320,5 +323,6 @@ class PoolingModel(nn.Module):
         if pooling_type == "learnable_attention":
             if self.learnable_attention_matrix is None:
                 self.learnable_attention_matrix = nn.Linear(
-                    self.backbone_embd_size, self.backbone_embd_size  # type: ignore
+                    self.backbone_embd_size,
+                    self.backbone_embd_size,  # type: ignore
                 )

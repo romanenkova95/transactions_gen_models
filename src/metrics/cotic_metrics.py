@@ -1,4 +1,5 @@
 """Module with metrics for COTIC."""
+
 from abc import ABC
 
 import torch

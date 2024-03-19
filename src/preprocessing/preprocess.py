@@ -1,4 +1,5 @@
 """Module which contains the universal preprocess function."""
+
 import pandas as pd
 from hydra.utils import instantiate
 from joblib import Memory

@@ -1,4 +1,5 @@
 """File with the preprocessing transforms for categorical columns."""
+
 import pandas as pd
 from ptls.preprocessing.pandas.frequency_encoder import FrequencyEncoder
 

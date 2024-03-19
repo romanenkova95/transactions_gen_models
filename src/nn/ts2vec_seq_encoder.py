@@ -1,4 +1,5 @@
 """The file with the TS2Vec encoder."""
+
 from typing import Optional
 
 import torch

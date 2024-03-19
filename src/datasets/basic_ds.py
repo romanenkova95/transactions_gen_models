@@ -1,4 +1,5 @@
 """Module with function for creating the basic dataset."""
+
 from typing import Any, Callable, Optional
 
 from ptls.data_load.datasets.memory_dataset import MemoryMapDataset

@@ -1,4 +1,5 @@
 """The main logic of the MLM model."""
+
 import torch
 from ptls.data_load import PaddedBatch
 

@@ -1,4 +1,5 @@
 """The module with the main TS2Vec logic."""
+
 from typing import Optional, Union
 
 import numpy as np

@@ -1,4 +1,5 @@
 """Global target validation script."""
+
 import warnings
 from pathlib import Path
 
@@ -7,15 +8,13 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ptls.data_load.utils import collate_feature_dict
+from src.utils.logging_utils import get_logger
 from torchmetrics.classification import (
     AUROC,
     Accuracy,
     AveragePrecision,
     F1Score,
 )
-
-from src.preprocessing import preprocess
-from src.utils.logging_utils import get_logger
 
 
 def global_target_validation(

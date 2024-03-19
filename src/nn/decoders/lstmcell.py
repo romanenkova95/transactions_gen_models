@@ -1,4 +1,5 @@
 """File with the LSTM NLP-style decoder."""
+
 from typing import Optional
 
 import torch

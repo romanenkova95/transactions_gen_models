@@ -1,4 +1,5 @@
 """File with the base decoder class."""
+
 from typing import Optional
 
 from torch import nn
