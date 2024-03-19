@@ -13,3 +13,5 @@ datamodule:
 
 trainer:
   max_epochs: 60
+  accelerator: gpu
+  devices: 1

@@ -1,8 +1,8 @@
 defaults:
   - preprocessing: churn
-  - backbone: coles_churn
-  - validation: [global_target, event_type, local_target]
-  - logger: comet_my
+  - backbone: coles
+  - validation: [global_target, event_type, local_target] # Note: NO local_target for Age
+  - logger: wandb
   - _self_
 
 pretrain: true

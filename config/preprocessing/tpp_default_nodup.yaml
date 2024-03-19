@@ -1,3 +1,5 @@
+# used for TPP models: COTIC, NHP, and A-NHP
+
 transforms:
  - 
     _target_: src.preprocessing.ToType

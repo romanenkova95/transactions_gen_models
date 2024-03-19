@@ -1,3 +1,5 @@
+# used to train CoLES on Default only
+
 _target_: ptls.nn.RnnSeqEncoder
 trx_encoder:
   _target_: ptls.nn.TrxEncoder
