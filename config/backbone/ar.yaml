@@ -1,6 +1,6 @@
 defaults:
  - dataset: basic
- - encoder: rnn_encoder_churn # change to 'rnn_encoder_*' for other datasets
+ - encoder: rnn_encoder
  - module: ar
  - _self_
 

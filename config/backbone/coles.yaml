@@ -1,7 +1,7 @@
 defaults:
  - dataset: coles
- - encoder: rnn_encoder_churn # change to 'rnn_encoder_*' for other datasets
- - module: coles_churn # change to 'coles_*' for other datasets
+ - encoder: rnn_encoder # used for Churn, Age and HSBC; change to 'rnn_encoder_default' for the Default dataset
+ - module: coles
  - _self_
 
 datamodule:
