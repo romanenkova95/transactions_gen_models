@@ -19,7 +19,7 @@ To reproduce the experiments from the paper, please build and run the docker con
      ```
 
 ## Usage
-To run a full experiment specified in `config/master.yaml`, including model training and validation, run
+To conduct a full experiment specified in `config/master.yaml`, including model training and validation, run
 ```console
 foo@bar:~/transactions_gen_models$ python main.py
 ```
