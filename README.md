@@ -42,9 +42,14 @@ With use a hydra-based experiment configuration structure. To assemble the set-u
 In the paper, we propose a representation learning model for transactions that accounts for the external context information of other users. It uses the pretrained CoLES model as a backbone. Please, look to the `notebooks/` directory, to reproduce the experiments with these models. The corresponding configuration files are specified in `config/pooling_*_validation.yaml` files.
 
 ## Results summary
-We compare representation learning approaches of 3 classes: contrastive SSL (CoLES, TS2Vec), generative SSL (AE, MLM, AR), and Temporal Point processing models (COTIC, NHP, A-NHP). Note that these generative SSL models have been adapted to the transactional data domain for the first time. The approaches are validated in terms of global and local propoerties of their embeddings. See the paper for the details of validation procedures and their motivation. The key findings are highlighted below.
+We compare representation learning approaches of 3 classes: contrastive SSL (CoLES, TS2Vec), generative SSL (AE, MLM, AR), and Temporal Point processing models (COTIC, NHP, A-NHP). Note that these generative SSL models have been adapted to the transactional data domain for the first time. The approaches are validated in terms of global and local propoerties of their embeddings. See the paper for the details of validation procedures and their motivation. The key findings are highlighted here.
 
+The Figure below shows the trade of between global validation (x-axis) and local validation (y-axis) results. Thus, the upper and righter the dot is, the better model it represents. It is seen that generative SSL approaches (AE, MLM, and AR) come on top in terms of the local patterns, while staying competative with the contrastive methods, regarding the global embedding features. Consequently, we recommend this class of models as the optimal choice for representation learning for transactional data.
 ![main_result-1](https://github.com/romanenkova95/transactions_gen_models/assets/44891804/07c09b0f-6956-45c1-a91c-406aa67589e9)
+
+The similar Figure below presents how existing representation learning approaches (e.g. CoLES) can be improved via the usage of the external context information from all the users in the dataser.
+![pooling_result2-1](https://github.com/romanenkova95/transactions_gen_models/assets/44891804/63d95a2f-871a-465e-b8c3-f93c4e61eaea)
+
 
 
 ## Citation
