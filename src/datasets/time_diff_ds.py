@@ -1,4 +1,5 @@
 """File with tools for creation of the time diff dataset."""
+
 from typing import Any
 
 from .basic_ds import create_basic_dataset

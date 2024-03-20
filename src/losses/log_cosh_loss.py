@@ -1,4 +1,5 @@
 """Module with the log cosh loss."""
+
 import math
 
 import torch

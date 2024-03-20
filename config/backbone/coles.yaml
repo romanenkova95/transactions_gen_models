@@ -1,0 +1,18 @@
+defaults:
+ - dataset: coles
+ - encoder: rnn_encoder # used for Churn, Age and HSBC; change to 'rnn_encoder_default' for the Default dataset
+ - module: coles
+ - _self_
+
+datamodule:
+  _target_: ptls.frames.PtlsDataModule
+  train_batch_size: 128
+  valid_batch_size: 128
+  train_num_workers: 8
+  valid_num_workers: 8
+
+trainer:
+  max_epochs: 60
+  log_every_n_steps: 10
+  accelerator: gpu
+  devices: 1

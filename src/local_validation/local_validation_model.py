@@ -1,4 +1,5 @@
 """Module containtaining LocalValidationModel class."""
+
 from typing import Callable, Optional
 
 import pytorch_lightning as pl

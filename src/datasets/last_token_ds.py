@@ -1,4 +1,5 @@
 """Last token prediction dataset."""
+
 from typing import Any
 
 from .basic_ds import create_basic_dataset

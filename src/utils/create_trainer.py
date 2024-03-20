@@ -1,4 +1,5 @@
 """File with the logic of trainer creation."""
+
 import os
 from ast import literal_eval
 from typing import Optional

@@ -1,4 +1,5 @@
 """Code from the EasyTPP repo: https://github.com/ant-research/EasyTemporalPointProcess."""
+
 from typing import Tuple
 
 import torch
@@ -35,7 +36,7 @@ class ContTimeLSTMCell(nn.Module):
         self.init_dense_layer(embed_dim, hidden_dim, bias=True, beta=beta)
 
     def init_dense_layer(
-        self, embed_dim: int, hidden_dim: int, bias: bool, beta: float
+        self, embed_dim: int, hidden_dim: int, bias: bool, beta: int
     ) -> None:
         """Initialize linear layers given Equations (5a-6c) in the paper.
 

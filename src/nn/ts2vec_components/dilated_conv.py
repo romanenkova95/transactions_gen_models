@@ -1,4 +1,5 @@
 """File with the definition of custom convolutions for TS2Vec."""
+
 import torch
 import torch.nn.functional as F
 from torch import nn

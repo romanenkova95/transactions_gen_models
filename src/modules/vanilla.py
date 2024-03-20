@@ -1,5 +1,5 @@
 """Main logic for the classic autoencoder method."""
-from copy import deepcopy
+
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
@@ -10,19 +10,15 @@ from ptls.data_load import PaddedBatch
 from ptls.nn.seq_encoder.containers import SeqEncoderContainer
 from pytorch_lightning import LightningModule
 from pytorch_lightning.utilities.types import STEP_OUTPUT, LRSchedulerTypeUnion
-from sklearn import multiclass
 from torch import Tensor, nn
 from torchmetrics import (
     AUROC,
     Accuracy,
     AveragePrecision,
     F1Score,
-    Metric,
     MetricCollection,
-    MultitaskWrapper,
     R2Score,
 )
-from torchmetrics.functional import auroc, average_precision, f1_score, r2_score
 
 from src.nn.decoders.base import AbsDecoder
 from src.utils.logging_utils import get_logger
@@ -146,7 +142,7 @@ class VanillaAE(LightningModule):
 
         MetricsType = dict[Literal["mcc", "amount"], MetricCollection]
 
-        def make_metrics(stage: str) -> MetricsType:
+        def make_metrics(stage: str) -> MetricsType:  # type: ignore
             return nn.ModuleDict(
                 {
                     "mcc": MetricCollection(
@@ -160,9 +156,9 @@ class VanillaAE(LightningModule):
                 }
             )  # type: ignore
 
-        self.train_metrics: MetricsType = make_metrics("train")
-        self.val_metrics: MetricsType = make_metrics("val")
-        self.test_metrics: MetricsType = make_metrics("test")
+        self.train_metrics: MetricsType = make_metrics("train")  # type: ignore
+        self.val_metrics: MetricsType = make_metrics("val")  # type: ignore
+        self.test_metrics: MetricsType = make_metrics("test")  # type: ignore
 
     @property
     def metric_name(self):

@@ -1,4 +1,5 @@
 """Module for datetime features transforms."""
+
 from typing import Literal, Optional
 
 import pandas as pd
@@ -22,9 +23,7 @@ def time_normalization(x: pd.Series, min_timestamp: int) -> pd.Series:
     return (
         pd.to_datetime(x).astype("datetime64[s]").astype("int64") / 1000000000
         - min_timestamp
-    ) / (
-        60 * 60 * 24
-    )  # seconds in day
+    ) / (60 * 60 * 24)  # seconds in day
 
 
 class CustomDatetimeNormalization(ColTransformerPandasMixin, ColTransformer):

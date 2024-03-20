@@ -67,7 +67,7 @@ class NHP(ABSModule):
             num_types=self.encoder.seq_encoder.num_types,
         )
 
-        loss = self._loss.compute_loss(
+        loss = self._loss.compute_loss(  # type: ignore
             self.encoder.seq_encoder,
             time_seqs,
             time_delta,

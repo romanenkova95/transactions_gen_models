@@ -1,4 +1,5 @@
 """File with the TransformerSeqEncoder class which accepts a hidden_size argument for compatibility."""
+
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ptls.nn import TransformerSeqEncoder as TransformerSeqEncoder_

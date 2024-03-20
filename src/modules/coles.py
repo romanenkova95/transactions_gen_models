@@ -1,4 +1,5 @@
 """CoLES model."""
+
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ptls.frames.coles import CoLESModule

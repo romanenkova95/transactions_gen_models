@@ -1,4 +1,5 @@
 """File with the main logic for the COTIC method."""
+
 from typing import Optional
 
 import torch
