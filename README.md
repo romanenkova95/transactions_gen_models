@@ -44,7 +44,7 @@ In the paper, we propose a representation learning model for transactions that a
 ## Results summary
 We compare representation learning approaches of 3 classes: contrastive SSL (CoLES, TS2Vec), generative SSL (AE, MLM, AR), and Temporal Point processing models (COTIC, NHP, A-NHP). Note that these generative SSL models have been adapted to the transactional data domain for the first time. The approaches are validated in terms of their embeddings' global and local properties. See the paper for details on validation procedures and their motivation. The key findings are highlighted here.
 
-#### Genetal benchmarking
+#### General benchmarking
 The Figure below shows the trade-off between global validation (x-axis) and local validation (y-axis) results. Thus, the upper and righter the dot is, the better the model it represents. It is seen that ***generative SSL approaches*** (AE, MLM, and AR) come on top in terms of the local patterns while staying competitive with the contrastive methods regarding the global embedding features. Consequently, we recommend this class of models as the optimal choice for representation learning for transactional data.
 
 <p align="center">
