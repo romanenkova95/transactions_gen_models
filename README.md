@@ -55,7 +55,7 @@ The Figure below shows the trade-off between global validation (x-axis) and loca
 The similar Figure below presents how existing representation learning approaches (e.g., CoLES) can be improved by using ***external context information*** from all the users in the dataset.
 
 <p align="center">
-  <img src="https://github.com/romanenkova95/transactions_gen_models/assets/44891804/63d95a2f-871a-465e-b8c3-f93c4e61eaea" width="750">
+  <img src="https://github.com/romanenkova95/transactions_gen_models/assets/44891804/4759c14e-5e27-43aa-b496-a3d9fd7d8dcf" width="750">
 </p>
 
 ## Citation
