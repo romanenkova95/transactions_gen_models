@@ -1,5 +1,7 @@
 # Learning Transactions Representations for Information Management in Banks: Mastering Local, Global, and External Knowledge
 
+The work is currently [available](https://arxiv.org/abs/2404.02047) as an arXiv preprint.
+
 ## Abstract
 Nowadays, banks use artificial intelligence to solve thousands of business problems that can improve customer’s experience. There exist two kinds of tasks: 1) local ones that focus on a client's current state, e.g., forecasting future actions, and 2) global ones, which consider the general customer behavior, e.g., predicting loan payment completion. Unfortunately, maintaining a large number of different models is challenging. To improve the quality of information management, we propose to examine the possibilities of learning a universal representation of a client given a sequence of transactional data. We introduce a novel approach that integrates external information into a client's representation, leveraging insights from other customers' activities. It is experimentally shown that our method outperforms single-task traditional models. For example, incorporating external information enhances accuracy by 20\%. Contrastive self-supervised learning methods are demonstrated to excel in global problems, while generative techniques are superior at local tasks.
 
@@ -61,4 +63,11 @@ The similar Figure below presents how existing representation learning approache
 ## Citation
 If you find this repository useful, please feel free to star it and cite our paper.
 
-TODO: Add citation when the paper is published.
+```
+@article{bazarova2024universal,
+  title={Universal representations for financial transactional data: embracing local, global, and external contexts},
+  author={Bazarova, Alexandra and Kovaleva, Maria and Kuleshov, Ilya and Romanenkova, Evgenia and Stepikin, Alexander and Yugay, Alexandr and Mollaev, Dzhambulat and Kireev, Ivan and Savchenko, Andrey and Zaytsev, Alexey},
+  journal={arXiv preprint arXiv:2404.02047},
+  year={2024}
+}
+```
